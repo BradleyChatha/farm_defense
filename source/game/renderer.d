@@ -24,6 +24,13 @@ final class Renderer
         bgfx_vertex_layout_t       _vertexLayout;   // Again, with basic 2D every object's the same, so we can just do this all beforehand.
         bgfx_program_handle_t      _shader; // There will only ever be one shader for this game, we're not gonna do anything fancy.
         bgfx_uniform_handle_t      _uniformTextureColour;
+
+        void setupGenericCamera()
+        {
+            auto view = mat4f.identity;
+            auto proj = mat4f.orthographic(0, Window.WIDTH, Window.HEIGHT, 0, -1, 1);
+            bgfx_set_view_transform(0, view.v.ptr, proj.v.ptr);
+        }
     }
 
     public
@@ -52,6 +59,15 @@ final class Renderer
             this._uniformTextureColour = bgfx_create_uniform("s_texColor", bgfx_uniform_type_t.BGFX_UNIFORM_TYPE_SAMPLER, 1);
         }
 
+        void drawTextured(QuadBuffer buffer, const Texture texture)
+        {
+            this.setupGenericCamera();
+            
+            buffer.bind();
+            bgfx_set_texture(0, this._uniformTextureColour, texture.handle, uint.max);
+            bgfx_submit(0, this._shader, 0, cast(byte)BGFX_DISCARD_ALL);
+        }
+
         void testDraw()
         {
             auto verts = 
@@ -62,20 +78,9 @@ final class Renderer
                 Vertex(Color(255, 255, 255), vec2f(200, 200), vec2f(32, 32))
             ];
 
-            bgfx_set_texture(0, this._uniformTextureColour, Resources.loadTexture("./resources/images/default.ktx").handle, uint.max);
-
-            auto view = mat4f.identity;
-            auto proj = mat4f.orthographic(0, Window.WIDTH, Window.HEIGHT, 0, -1, 1);
-            bgfx_set_view_transform(0, view.v.ptr, proj.v.ptr);
-
-            auto model = mat4f.translation(vec3f(400, 0, 0));
-            bgfx_set_transform(model.v.ptr, 1);
-
             auto buffer = new QuadBuffer(this);
             buffer.addQuad(verts[0..4]);
-            buffer.bind();
-            
-            bgfx_submit(0, this._shader, 0, cast(byte)BGFX_DISCARD_ALL);
+            this.drawTextured(buffer, Resources.loadTexture("./resources/images/default.ktx"));
         }
     }
 }
