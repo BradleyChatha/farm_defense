@@ -148,6 +148,7 @@ final class Resources
                 0,
                 &info
             );
+            bgfx_set_texture_name(handle, path.ptr, cast(int)path.length); // How weird that it uses uint everywhere, except here.
 
             auto texture = StaticTexture(handle, info, cast(ubyte[])content);
             if(cache)
