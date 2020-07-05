@@ -24,12 +24,21 @@ final class Renderer
         bgfx_vertex_layout_t       _vertexLayout;   // Again, with basic 2D every object's the same, so we can just do this all beforehand.
         bgfx_program_handle_t      _shader; // There will only ever be one shader for this game, we're not gonna do anything fancy.
         bgfx_uniform_handle_t      _uniformTextureColour;
+        bool                       _showDebugStats;
 
         void setupGenericCamera()
         {
             auto view = mat4f.identity;
             auto proj = mat4f.orthographic(0, Window.WIDTH, Window.HEIGHT, 0, -1, 1);
             bgfx_set_view_transform(0, view.v.ptr, proj.v.ptr);
+        }
+        
+        void updateDebugFlags()
+        {
+            uint flags;
+            flags |= (this._showDebugStats) ? BGFX_DEBUG_STATS : 0;
+
+            bgfx_set_debug(flags);
         }
     }
 
@@ -57,6 +66,12 @@ final class Renderer
 
             // Create all uniforms.
             this._uniformTextureColour = bgfx_create_uniform("s_texColor", bgfx_uniform_type_t.BGFX_UNIFORM_TYPE_SAMPLER, 1);
+        }
+
+        void toggleDebugStats()
+        {
+            this._showDebugStats = !this._showDebugStats;
+            this.updateDebugFlags();
         }
 
         void drawTextured(QuadBuffer buffer, const Texture texture)
@@ -125,8 +140,8 @@ struct SwappableBuffer(T)
             if(newLength > this.currentBuffer.length)
                 this.currentBuffer.length = newLength * 2;
 
-            const start = this.currentSlice.length;
-            this.currentSlice = this.currentBuffer[0..newLength];
+            const start                 = this.currentSlice.length;
+            this.currentSlice           = this.currentBuffer[0..newLength];
             this.currentSlice[start..$] = toAdd;
         }
 

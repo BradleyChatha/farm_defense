@@ -54,6 +54,16 @@ final class Engine
                     this._doLoop = false;
                     break;
 
+                case SDL_EventType.SDL_KEYDOWN:
+                    switch(event.key.keysym.scancode) with(SDL_Scancode)
+                    {
+                        case SDL_SCANCODE_ESCAPE: this._doLoop = false;              break;
+                        case SDL_SCANCODE_F1:     this._renderer.toggleDebugStats(); break;
+
+                        default: break;
+                    }
+                    break;
+
                 default: break;
             }
         }
