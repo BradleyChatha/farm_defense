@@ -23,16 +23,11 @@ struct Sprite
 
         this._verts = 
         [
-            Vertex(Color.white, vec2f(0)),
-            Vertex(Color.white, vec2f(0)),
-            Vertex(Color.white, vec2f(0)),
-            Vertex(Color.white, vec2f(0))
+            Vertex(Color.white, vec2f(0), vec2f(texture.area.x,                  texture.area.y)),
+            Vertex(Color.white, vec2f(0), vec2f(texture.area.x + texture.area.z, texture.area.y)),
+            Vertex(Color.white, vec2f(0), vec2f(texture.area.x,                  texture.area.y + texture.area.w)),
+            Vertex(Color.white, vec2f(0), vec2f(texture.area.x + texture.area.z, texture.area.y + texture.area.w))
         ];
-
-        this._verts[0].uv = vec2f(texture.area.x,                  texture.area.y);
-        this._verts[1].uv = vec2f(texture.area.x + texture.area.z, texture.area.y);
-        this._verts[2].uv = vec2f(texture.area.x,                  texture.area.y + texture.area.w);
-        this._verts[3].uv = vec2f(texture.area.x + texture.area.z, texture.area.y + texture.area.w);
     }
 
     this(const StaticTexture texture)
