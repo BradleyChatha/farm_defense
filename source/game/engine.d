@@ -39,7 +39,6 @@ final class Engine
             while(Window.nextEvent(&event))
                 this.onWindowEvent(event);
                 
-            this._renderer.testDraw();
             this._renderer.renderFrame();
         }
     }

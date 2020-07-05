@@ -112,20 +112,6 @@ final class Renderer
             buffer.addQuad(sprite.verts);
         }
 
-        void testDraw()
-        {
-            auto verts = 
-            [
-                Vertex(Color(255, 0, 0),     vec2f(0, 0),     vec2f(0, 0)),
-                Vertex(Color(0, 255, 0),     vec2f(200, 0),   vec2f(32, 0)),
-                Vertex(Color(0, 0, 255),     vec2f(0, 200),   vec2f(0, 32)),
-                Vertex(Color(255, 255, 255), vec2f(200, 200), vec2f(32, 32))
-            ];
-
-            auto sprite = Sprite(Resources.loadAndStitchTexture("", 0));
-            this.draw(sprite);
-        }
-
         void renderFrame()
         {
             foreach(buffer; this._buffers)

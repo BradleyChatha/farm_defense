@@ -41,6 +41,20 @@ struct Sprite
     }
 
     @property
+    void position(vec2f pos) { this._position = pos; this._dirty = true; }
+    @property
+    void size(vec2i siz)     { this._size = siz; this._dirty = true; }
+    @property
+    void color(Color col)    { this._colour = col; this._dirty = true; }
+
+    @property
+    vec2f position() { return this._position; }
+    @property
+    vec2i size() { return this._size; }
+    @property
+    Color color() { return this._colour; }
+
+    @property
     Vertex[4] verts()
     {
         if(!this._dirty)
