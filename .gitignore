@@ -1,0 +1,15 @@
+.dub
+docs.json
+__dummy.html
+docs/
+/farm_defense
+farm_defense.so
+farm_defense.dylib
+farm_defense.dll
+farm_defense.a
+farm_defense.lib
+farm_defense-test-*
+bin/
+*.o
+*.obj
+*.lst
