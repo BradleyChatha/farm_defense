@@ -40,7 +40,7 @@ final class Engine
                 this.onWindowEvent(event);
                 
             this._renderer.testDraw();
-            bgfx_frame(false);
+            this._renderer.renderFrame();
         }
     }
 

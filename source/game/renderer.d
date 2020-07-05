@@ -3,7 +3,7 @@ module game.renderer;
 import std.file : fread = read;
 import std.experimental.logger;
 import bgfx, gfm.math, arsd.color;
-import game.window, game.resources;
+import game.window, game.resources, game.sprite;
 
 struct Vertex
 {
@@ -21,9 +21,16 @@ final class Renderer
 {
     private
     {
+        struct TextureAndBuffer
+        {
+            StaticTexture texture;
+            QuadBuffer buffer;
+        }
+
         bgfx_vertex_layout_t       _vertexLayout;   // Again, with basic 2D every object's the same, so we can just do this all beforehand.
         bgfx_program_handle_t      _shader; // There will only ever be one shader for this game, we're not gonna do anything fancy.
         bgfx_uniform_handle_t      _uniformTextureColour;
+        TextureAndBuffer[]         _buffers; // One buffer per texture/atlas, to simplify sprite batching.
         bool                       _showDebugStats;
 
         void setupGenericCamera()
@@ -39,6 +46,22 @@ final class Renderer
             flags |= (this._showDebugStats) ? BGFX_DEBUG_STATS : 0;
 
             bgfx_set_debug(flags);
+        }
+
+        QuadBuffer getBufferForTexture(StaticTexture texture)
+        {
+            const index = texture.handle.idx;
+            if(this._buffers.length <= index)
+                this._buffers.length = index + 1;
+
+            auto buffer = this._buffers[index];
+            if(buffer.buffer is null)
+            {
+                buffer = TextureAndBuffer(texture, new QuadBuffer(this));
+                this._buffers[index] = buffer;
+            }
+
+            return buffer.buffer;
         }
     }
 
@@ -83,6 +106,12 @@ final class Renderer
             bgfx_submit(0, this._shader, 0, cast(byte)BGFX_DISCARD_ALL);
         }
 
+        void draw(ref scope Sprite sprite)
+        {
+            auto buffer = this.getBufferForTexture(sprite.texture);
+            buffer.addQuad(sprite.verts);
+        }
+
         void testDraw()
         {
             auto verts = 
@@ -93,9 +122,19 @@ final class Renderer
                 Vertex(Color(255, 255, 255), vec2f(200, 200), vec2f(32, 32))
             ];
 
-            auto buffer = new QuadBuffer(this);
-            buffer.addQuad(verts[0..4]);
-            this.drawTextured(buffer, Resources.loadAndStitchTexture("", 0).atlas);
+            auto sprite = Sprite(Resources.loadAndStitchTexture("", 0));
+            this.draw(sprite);
+        }
+
+        void renderFrame()
+        {
+            foreach(buffer; this._buffers)
+            {
+                if(buffer.buffer !is null)
+                    this.drawTextured(buffer.buffer, buffer.texture);
+            }
+
+            bgfx_frame(false);
         }
     }
 }
