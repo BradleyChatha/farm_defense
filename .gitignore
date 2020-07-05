@@ -13,3 +13,5 @@ bin/
 *.o
 *.obj
 *.lst
+compile.exe
+.compile_config*

@@ -1,2 +1,0 @@
-"./tools/win/shaderc.exe" -f ./resources/shaders/vertex.sc -o ./bin/resources/shaders/vertex.bin --type v --platform windows -p 130
-"./tools/win/shaderc.exe" -f ./resources/shaders/fragment.sc -o ./bin/resources/shaders/fragment.bin --type f --platform windows -p 130

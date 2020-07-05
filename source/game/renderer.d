@@ -95,7 +95,7 @@ final class Renderer
 
             auto buffer = new QuadBuffer(this);
             buffer.addQuad(verts[0..4]);
-            this.drawTextured(buffer, Resources.loadTexture("./resources/images/default.ktx"));
+            this.drawTextured(buffer, Resources.loadTexture(""));
         }
     }
 }

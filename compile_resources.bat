@@ -1,0 +1,1 @@
+dub run --single compile_resources.d -- %*

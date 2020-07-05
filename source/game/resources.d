@@ -33,7 +33,7 @@ final class Resources
             if(!path.exists)
             {
                 info("Texture not found, loading default texture instead.");
-                return loadTexture("./resources/images/default.ktx"); // Possible infinite loop, just don't delete the default texture 4head
+                return loadTexture("./resources/images/static/default.ktx"); // Possible infinite loop, just don't delete the default texture 4head
             }
 
             const ptr = (path in _textures);
