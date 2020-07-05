@@ -74,7 +74,7 @@ final class Renderer
             this.updateDebugFlags();
         }
 
-        void drawTextured(QuadBuffer buffer, const Texture texture)
+        void drawTextured(QuadBuffer buffer, const StaticTexture texture)
         {
             this.setupGenericCamera();
             
@@ -95,7 +95,7 @@ final class Renderer
 
             auto buffer = new QuadBuffer(this);
             buffer.addQuad(verts[0..4]);
-            this.drawTextured(buffer, Resources.loadTexture(""));
+            this.drawTextured(buffer, Resources.loadAndStitchTexture("", 0).atlas);
         }
     }
 }
