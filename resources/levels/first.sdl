@@ -3,8 +3,10 @@ background "./resources/images/dynamic/levels/1.png"
 background_atlas 0
 
 path {
-    node 64   64
-    node 400  64
-    node 200 128
-    node 64  128
+    node 160 -64
+    node 160 416
+    node 352 416
+    node 352 32
+    node 736 32
+    node 736 850
 }

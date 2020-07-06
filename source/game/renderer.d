@@ -9,10 +9,17 @@ struct Vertex
 {
     align(1): // Just so the compiler doesn't decide to add alignment padding.
 
-    static assert(Vertex.sizeof == 4 + 8 + 8); // Colour + vec2f + vec2f
     Color color;
     vec2f position;
+    float zIndex = 0;
     vec2f uv;
+
+    this(Color color, vec2f position, vec2f uv)
+    {
+        this.color = color;
+        this.position = position;
+        this.uv = uv;
+    }
 }
 
 // While the renderer could also be a singleton like a bunch of other things in this game, we want to limit which sections of code can actually
@@ -74,7 +81,7 @@ final class Renderer
             // Create the vertex definition for our `Vertex` struct.
             bgfx_vertex_layout_begin(&this._vertexLayout, bgfx_renderer_type_t.BGFX_RENDERER_TYPE_NOOP);
                 bgfx_vertex_layout_add(&this._vertexLayout, bgfx_attrib_t.BGFX_ATTRIB_COLOR0,    4, bgfx_attrib_type_t.BGFX_ATTRIB_TYPE_UINT8, true,  false);
-                bgfx_vertex_layout_add(&this._vertexLayout, bgfx_attrib_t.BGFX_ATTRIB_POSITION,  2, bgfx_attrib_type_t.BGFX_ATTRIB_TYPE_FLOAT, false, false);
+                bgfx_vertex_layout_add(&this._vertexLayout, bgfx_attrib_t.BGFX_ATTRIB_POSITION,  3, bgfx_attrib_type_t.BGFX_ATTRIB_TYPE_FLOAT, false, false);
                 bgfx_vertex_layout_add(&this._vertexLayout, bgfx_attrib_t.BGFX_ATTRIB_TEXCOORD0, 2, bgfx_attrib_type_t.BGFX_ATTRIB_TYPE_FLOAT, false, false);
             bgfx_vertex_layout_end(&this._vertexLayout);
 
@@ -89,8 +96,6 @@ final class Renderer
 
             // Create all uniforms.
             this._uniformTextureColour = bgfx_create_uniform("s_texColor", bgfx_uniform_type_t.BGFX_UNIFORM_TYPE_SAMPLER, 1);
-
-            // Misc
         }
 
         void toggleDebugStats()
@@ -116,6 +121,8 @@ final class Renderer
 
         void renderFrame()
         {
+            bgfx_set_view_mode(0, bgfx_view_mode_t.BGFX_VIEW_MODE_SEQUENTIAL);
+
             foreach(buffer; this._buffers)
             {
                 if(buffer.buffer !is null)

@@ -23,28 +23,46 @@ struct Andy
 
         this.sprite.position = pathNode.position - (this.sprite.size / vec2f(2));
     }
+
+    @property
+    uint level()
+    {
+        switch(this.hp)
+        {
+            case 1:
+            default: return 0;
+        }
+    }
 }
 
 final class DefenseScene : Scene
 {
+    const ANDY_LEVELS = 1;
+
     private
     {
-        Level             _level;
-        Sprite            _nodeSprite;
-        Andy[]            _andies;
-        StitchedTexture[] _andyTextures;
-        size_t            _hp;
-        size_t            _waveCount;
-        size_t            _deadCount;
+        Level  _level;
+        Sprite _nodeSprite;
+        Andy[] _andies;
+        size_t _hp;
+        size_t _waveCount;
+        size_t _deadCount;
+
+        StitchedTexture[ANDY_LEVELS] _andyTextures;
+        float[ANDY_LEVELS] _andySpeeds = 
+        [
+            // pixels/s
+            128.0f
+        ];
     }
 
     public override
     {
         void onInit()
         {
-            this._level = Resources.loadLevel("./resources/levels/first.sdl");
-            this._nodeSprite = Sprite(Resources.loadAndStitchTexture("", 0));
-            this._andyTextures ~= cast()Resources.loadAndStitchTexture("", 1);
+            this._level           = Resources.loadLevel("./resources/levels/first.sdl");
+            this._nodeSprite      = Sprite(Resources.loadAndStitchTexture("", 0));
+            this._andyTextures[0] = cast()Resources.loadAndStitchTexture("./resources/images/dynamic/andies/level_0.png", 1);
         }
 
         void onReset()
@@ -57,13 +75,15 @@ final class DefenseScene : Scene
 
         void onUpdate(uint gameTime)
         {
+            this.doUserInput();
             this.doPathFinding(gameTime);
             this.doChecks();
         }
 
         void onDraw(Renderer renderer)
         {
-            // NOTE: For.. some reason, things need to be drawn in reverse order.
+            // NOTE: BGFX automatically sorts draws by depth (z axis), so order or render
+            //       doesn't matter, only the zIndex of each sprite.
             foreach(ref andy; this._andies)
                 renderer.draw(andy.sprite);
             this.drawPathNodes(renderer);
@@ -87,9 +107,16 @@ final class DefenseScene : Scene
 
         foreach(i; 0..waveIndex)
         {
-            this._andies[i] = Andy(Sprite(this._andyTextures[0]), 1, cast()node);
-            this._andies[i].sprite.color = Color.red;
-            this._andies[i].sprite.position = this._andies[i].sprite.position - (this._andies[i].sprite.size * vec2f(i));
+            auto andy = &this._andies[i];
+            *andy     = Andy(Sprite(this._andyTextures[0]), 1, cast()node);
+
+            auto texture    = this._andyTextures[andy.level];
+            auto sprite     = &andy.sprite;
+            sprite.color    = Color.red;
+            sprite.position = sprite.position - (sprite.size * vec2f(i));
+            sprite.texture  = texture.atlas;
+            sprite.size     = texture.area.zw;
+            sprite.zIndex   = 0.00001; // Sprites default to 0, so this will render over every sprite that doesn't have a specific z-index.
         }
 
         this._waveCount = waveIndex + 1;
@@ -98,13 +125,12 @@ final class DefenseScene : Scene
 
     void doPathFinding(uint gameTime)
     {
-        const ANDY_LEVEL_1_SPEED = 128.0f; // pixels/s
-        const DELTA_FLOAT        = (cast(float)gameTime / 1000.0f);
-        const SPEED_THIS_FRAME   = ANDY_LEVEL_1_SPEED * DELTA_FLOAT;
+        const DELTA_FLOAT = (cast(float)gameTime / 1000.0f);
 
         foreach(ref andy; this._andies)
         {
-            const andyCenter = andy.sprite.position + (andy.sprite.size / 2);
+            const SPEED_THIS_FRAME  = this._andySpeeds[andy.level] * DELTA_FLOAT;
+            const andyCenter        = andy.sprite.position + (andy.sprite.size / 2);
             const remainingDistance = (andyCenter - andy.pathNode.position).absByElem;
 
             // I'm aware of this being an issue with diagonal nodes, but we'll just avoid that for now.
@@ -146,6 +172,13 @@ final class DefenseScene : Scene
 
         if(this._deadCount == this._andies.length)
             this.spawnWave(this._waveCount);
+    }
+
+    void doUserInput()
+    {
+        // Normally I'd setup a proper input manager thing, but honestly that's just a waste of time atm for this project.
+        // Again, maybe if someone's interested in me developing this past a fun little prototype, then I'm probably going
+        // to rewrite it all anyway, so I'll do things properly then.
     }
 }
 
