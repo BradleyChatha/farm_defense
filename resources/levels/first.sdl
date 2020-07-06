@@ -1,5 +1,5 @@
 name "Test Level"
-background "./resources/images/dynamic/levels/1.png"
+background "./resources/images/dynamic/levels/grid.png"
 background_atlas 0
 
 path {
