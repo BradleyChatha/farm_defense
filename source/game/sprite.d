@@ -61,6 +61,9 @@ struct Sprite
         this._verts[2].position = vec2f(0, this._size.y);
         this._verts[3].position = vec2f(this._size);
 
+        foreach(i; 0..4)
+            this._verts[i].color = this._colour;
+
         const transform = mat4f.translation(vec3f(this._position, 0));
         foreach(ref vert; this._verts)
             vert.position = (transform * vec4f(vert.position, 0, 1)).xy;

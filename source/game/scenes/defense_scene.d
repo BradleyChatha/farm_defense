@@ -1,7 +1,7 @@
 module game.scenes.defense_scene;
 
 import std;
-import game, gfm.math;
+import game, gfm.math, arsd.color;
 
 struct PathNode
 {
@@ -29,10 +29,13 @@ final class DefenseScene : Scene
 {
     private
     {
-        Level  _level;
-        Sprite _nodeSprite;
-        Andy[] _andies;
+        Level             _level;
+        Sprite            _nodeSprite;
+        Andy[]            _andies;
         StitchedTexture[] _andyTextures;
+        size_t            _hp;
+        size_t            _waveCount;
+        size_t            _deadCount;
     }
 
     public override
@@ -46,13 +49,16 @@ final class DefenseScene : Scene
 
         void onReset()
         {
+            this._hp = 100;
             this._andies.length = 0;
-            this.spawnWave(0);
+            this._waveCount = 0;
+            this.spawnWave(1);
         }
 
         void onUpdate(uint gameTime)
         {
             this.doPathFinding(gameTime);
+            this.doChecks();
         }
 
         void onDraw(Renderer renderer)
@@ -77,12 +83,22 @@ final class DefenseScene : Scene
     void spawnWave(size_t waveIndex)
     {
         const node = this._level.pathNodes[0];
-        this._andies ~= Andy(Sprite(this._andyTextures[0]), 1, cast()node);
+        this._andies.length = waveIndex;
+
+        foreach(i; 0..waveIndex)
+        {
+            this._andies[i] = Andy(Sprite(this._andyTextures[0]), 1, cast()node);
+            this._andies[i].sprite.color = Color.red;
+            this._andies[i].sprite.position = this._andies[i].sprite.position - (this._andies[i].sprite.size * vec2f(i));
+        }
+
+        this._waveCount = waveIndex + 1;
+        this._deadCount = 0;
     }
 
     void doPathFinding(uint gameTime)
     {
-        const ANDY_LEVEL_1_SPEED = 64.0f; // pixels/s
+        const ANDY_LEVEL_1_SPEED = 128.0f; // pixels/s
         const DELTA_FLOAT        = (cast(float)gameTime / 1000.0f);
         const SPEED_THIS_FRAME   = ANDY_LEVEL_1_SPEED * DELTA_FLOAT;
 
@@ -106,9 +122,30 @@ final class DefenseScene : Scene
             if(remainingDistance == vec2f(0))
             {
                 if(andy.pathNode.next !is null)
+                {
                     andy.pathNode = *andy.pathNode.next;
+                    continue;
+                }
+
+                // Andy has reached end alive
+                this._hp -= 1;
+                andy.sprite.position = vec2f(float.nan);
+                andy.pathNode.position = vec2f(float.nan);
+                this._deadCount++;
             }
         }
+    }
+
+    void doChecks()
+    {
+        if(this._hp == 0)
+        {
+            this.onReset();
+            return;
+        }
+
+        if(this._deadCount == this._andies.length)
+            this.spawnWave(this._waveCount);
     }
 }
 
