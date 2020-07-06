@@ -57,6 +57,14 @@ enum ulong BGFX_STATE_BLEND_INV_FACTOR = 0x000000000000d000; /// 1-Blend factor
 enum ulong BGFX_STATE_BLEND_SHIFT = 12; /// Blend state bit shift
 enum ulong BGFX_STATE_BLEND_MASK = 0x000000000ffff000; /// Blend state bit mask
 
+auto BGFX_STATE_BLEND_FUNC_SEPARATE(ulong _srcRGB, ulong _dstRGB, ulong _srcA, ulong _dstA)
+{
+
+	return (_srcRGB | (_dstRGB << 4)) | ((_srcA | (_dstA << 4)) << 8);
+
+}
+auto BGFX_STATE_BLEND_FUNC(ulong _src, ulong _dst) { return BGFX_STATE_BLEND_FUNC_SEPARATE(_src, _dst, _src, _dst); }
+
 /**
  * Use BGFX_STATE_BLEND_EQUATION(_equation) or BGFX_STATE_BLEND_EQUATION_SEPARATE(_equationRGB, _equationA)
  * helper macros.

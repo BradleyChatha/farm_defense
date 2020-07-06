@@ -23,10 +23,11 @@ struct Sprite
 
         this._verts = 
         [
-            Vertex(Color.white, vec2f(0), vec2f(texture.area.x,                  texture.area.y)),
-            Vertex(Color.white, vec2f(0), vec2f(texture.area.x + texture.area.z, texture.area.y)),
+            // UVs are based from bottom-left, because OpenGL.
             Vertex(Color.white, vec2f(0), vec2f(texture.area.x,                  texture.area.y + texture.area.w)),
-            Vertex(Color.white, vec2f(0), vec2f(texture.area.x + texture.area.z, texture.area.y + texture.area.w))
+            Vertex(Color.white, vec2f(0), vec2f(texture.area.x + texture.area.z, texture.area.y + texture.area.w)),
+            Vertex(Color.white, vec2f(0), vec2f(texture.area.x,                  texture.area.y)),
+            Vertex(Color.white, vec2f(0), vec2f(texture.area.x + texture.area.z, texture.area.y))
         ];
     }
 

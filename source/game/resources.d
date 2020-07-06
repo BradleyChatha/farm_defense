@@ -1,9 +1,10 @@
 module game.resources;
 
 import std.path : absolutePath;
-import std.file : fread = read;
+import std.file : fread = read, exists;
 import std.experimental.logger;
-import bgfx, gfm.math, imagefmt;
+import bgfx, gfm.math, imagefmt, sdlang;
+import game;
 
 struct StaticTexture
 {
@@ -100,6 +101,8 @@ struct StitchableAtlas
                 ushort.max
             );
 
+            this._cursor.x += area.z;
+            info("Cursor is now ", this._cursor);
             return StitchedTexture(StaticTexture(this._handle), area);
         }
     }
@@ -114,14 +117,13 @@ final class Resources
         StaticTexture[string]   _staticTextures; // key is absolute path to file.
         StitchedTexture[string] _stitchedTextures;
         StitchableAtlas[]       _atlases;
+        Level[string]           _levels; // Key is absolute path to definition file.
     }
 
     public static
     {
         const(StaticTexture) loadStaticTexture(string relativeOrAbsolutePath, bool cache = true)
         {
-            import std.file : exists;
-
             const path = relativeOrAbsolutePath.absolutePath;
             info("Loading texture: ", path);
 
@@ -159,8 +161,6 @@ final class Resources
 
         const(StitchedTexture) loadAndStitchTexture(string relativeOrAbsolutePath, size_t atlasNum)
         {
-            import std.file : exists;
-
             const path = relativeOrAbsolutePath.absolutePath;
             info("Loading texture: ", path);
 
@@ -198,6 +198,32 @@ final class Resources
             auto texture = this._atlases[atlasNum].stitch(image.buf8, vec2i(image.w, image.h));
             this._stitchedTextures[path] = texture;
             return texture;
+        }
+
+        Level loadLevel(string relativeOrAbsolutePath)
+        {
+            const path = relativeOrAbsolutePath.absolutePath;
+            info("Loading level: ", path);
+
+            if(!path.exists)
+                criticalf("Path to level definition does not exist: ", path);
+
+            const ptr = (path in _levels);
+            if(ptr !is null)
+            {
+                info("Level was cached.");
+                return cast()*ptr;
+            }
+
+            info("Level wasn't cached, loading from disk.");
+            auto  sdl        = parseFile(path);
+            const name       = sdl.expectTagValue!string("name");
+            const background = sdl.expectTagValue!string("background");
+            const backAtlas  = sdl.expectTagValue!int("background_atlas");
+            auto level       = new Level(name, Sprite(loadAndStitchTexture(background, backAtlas)));
+
+            _levels[path] = level;
+            return level;
         }
     }
 }

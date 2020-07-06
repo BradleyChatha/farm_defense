@@ -10,8 +10,8 @@ public import bindbc.sdl;
 final class Window
 {
     // Hard coded since strong configuration options really aren't needed for this small of a game (unless Nathan wants it to expand in scope).
-    static const WIDTH  = 800;
-    static const HEIGHT = 600;
+    static const WIDTH  = 832;
+    static const HEIGHT = 832;
     static const TITLE  = "Farm Defense";
     static const FLAGS  = SDL_WindowFlags.SDL_WINDOW_SHOWN;
 

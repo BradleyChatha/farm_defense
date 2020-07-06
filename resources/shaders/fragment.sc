@@ -19,4 +19,9 @@ void main()
 
     //
     gl_FragColor = texture(s_texColor, texel); //* v_color0;
+	
+	// I have actually 0 idea on how to properly enable alpha blending in BGFX, and any code I
+	// find online doesn't really work, so.... we'll just do this.
+	if(gl_FragColor.a == 0)
+		discard;
 }

@@ -57,6 +57,12 @@ struct DefaultCommand
             copy(pair.sourceFile, pair.destinationFile);
         });
 
+        this.iterateFilePairs("resources/levels/", null, conf, (pair)
+        {
+            UserIO.logInfof("[LEVEL       ] %s", pair);
+            copy(pair.sourceFile, pair.destinationFile);
+        });
+
         //"./tools/win/shaderc.exe" -f ./resources/shaders/vertex.sc -o ./bin/resources/shaders/vertex.bin --type v --platform windows -p 130
         this.iterateFilePairs("resources/shaders/", "bin", conf, (pair)
         {

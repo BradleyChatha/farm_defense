@@ -89,6 +89,8 @@ final class Renderer
 
             // Create all uniforms.
             this._uniformTextureColour = bgfx_create_uniform("s_texColor", bgfx_uniform_type_t.BGFX_UNIFORM_TYPE_SAMPLER, 1);
+
+            // Misc
         }
 
         void toggleDebugStats()

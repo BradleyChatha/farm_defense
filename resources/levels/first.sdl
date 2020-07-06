@@ -1,0 +1,3 @@
+name "Test Level"
+background "./resources/images/dynamic/levels/1.png"
+background_atlas 0
