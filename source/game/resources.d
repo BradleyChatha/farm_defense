@@ -220,8 +220,20 @@ final class Resources
             const name       = sdl.expectTagValue!string("name");
             const background = sdl.expectTagValue!string("background");
             const backAtlas  = sdl.expectTagValue!int("background_atlas");
-            auto level       = new Level(name, Sprite(loadAndStitchTexture(background, backAtlas)));
 
+            PathNode[] pathing;
+            auto pathSdl = sdl.expectTag("path");
+            pathing.reserve(pathSdl.tags.length);
+            foreach(child; pathSdl.tags)
+            {
+                assert(child.name == "node", child.name);
+                pathing ~= PathNode(vec2f(child.values[0].coerce!float, child.values[1].coerce!float));
+
+                if(pathing.length != 1)
+                    pathing[$-2].next = &pathing[$-1];
+            }
+
+            auto level    = new Level(name, Sprite(loadAndStitchTexture(background, backAtlas)), pathing);
             _levels[path] = level;
             return level;
         }
