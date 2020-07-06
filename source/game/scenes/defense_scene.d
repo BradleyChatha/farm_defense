@@ -52,39 +52,7 @@ final class DefenseScene : Scene
 
         void onUpdate(uint gameTime)
         {
-            const ANDY_LEVEL_1_SPEED = 20.0f; // pixels/s
-            const DELTA_FLOAT        = (cast(float)gameTime / 1000.0f);
-            const SPEED_THIS_FRAME   = ANDY_LEVEL_1_SPEED * DELTA_FLOAT;
-
-            writeln(gameTime, " ", DELTA_FLOAT, " ", SPEED_THIS_FRAME);
-
-            foreach(ref andy; this._andies)
-            {
-                const andyCenter = andy.sprite.position + (andy.sprite.size / 2);
-                const remainingDistance = (andyCenter - andy.pathNode.position).absByElem;
-
-                writeln("START: ", andy.sprite.position, " ", andy.pathNode, " ", remainingDistance, " ", andyCenter);
-
-                // I'm aware of this being an issue with diagonal nodes, but we'll just avoid that for now.
-                // Also duplication
-                // Also its just ugly.
-                if(andyCenter.x < andy.pathNode.position.x)
-                    andy.sprite.position = andy.sprite.position + vec2f(min(SPEED_THIS_FRAME, remainingDistance.x), 0);
-                if(andyCenter.y < andy.pathNode.position.y)
-                    andy.sprite.position = andy.sprite.position + vec2f(0, min(SPEED_THIS_FRAME, remainingDistance.y));
-                if(andyCenter.x > andy.pathNode.position.x)
-                    andy.sprite.position = andy.sprite.position - vec2f(min(SPEED_THIS_FRAME, remainingDistance.x), 0);
-                if(andyCenter.y > andy.pathNode.position.y)
-                    andy.sprite.position = andy.sprite.position - vec2f(0, min(SPEED_THIS_FRAME, remainingDistance.y));
-
-                if(remainingDistance == vec2f(0))
-                {
-                    if(andy.pathNode.next !is null)
-                        andy.pathNode = *andy.pathNode.next;
-                }
-
-                writeln("END: ", andy.sprite.position, " ", andy.pathNode);
-            }
+            this.doPathFinding(gameTime);
         }
 
         void onDraw(Renderer renderer)
@@ -110,6 +78,37 @@ final class DefenseScene : Scene
     {
         const node = this._level.pathNodes[0];
         this._andies ~= Andy(Sprite(this._andyTextures[0]), 1, cast()node);
+    }
+
+    void doPathFinding(uint gameTime)
+    {
+        const ANDY_LEVEL_1_SPEED = 64.0f; // pixels/s
+        const DELTA_FLOAT        = (cast(float)gameTime / 1000.0f);
+        const SPEED_THIS_FRAME   = ANDY_LEVEL_1_SPEED * DELTA_FLOAT;
+
+        foreach(ref andy; this._andies)
+        {
+            const andyCenter = andy.sprite.position + (andy.sprite.size / 2);
+            const remainingDistance = (andyCenter - andy.pathNode.position).absByElem;
+
+            // I'm aware of this being an issue with diagonal nodes, but we'll just avoid that for now.
+            // Also duplication
+            // Also its just ugly.
+            if(andyCenter.x < andy.pathNode.position.x)
+                andy.sprite.position = andy.sprite.position + vec2f(min(SPEED_THIS_FRAME, remainingDistance.x), 0);
+            if(andyCenter.y < andy.pathNode.position.y)
+                andy.sprite.position = andy.sprite.position + vec2f(0, min(SPEED_THIS_FRAME, remainingDistance.y));
+            if(andyCenter.x > andy.pathNode.position.x)
+                andy.sprite.position = andy.sprite.position - vec2f(min(SPEED_THIS_FRAME, remainingDistance.x), 0);
+            if(andyCenter.y > andy.pathNode.position.y)
+                andy.sprite.position = andy.sprite.position - vec2f(0, min(SPEED_THIS_FRAME, remainingDistance.y));
+
+            if(remainingDistance == vec2f(0))
+            {
+                if(andy.pathNode.next !is null)
+                    andy.pathNode = *andy.pathNode.next;
+            }
+        }
     }
 }
 
