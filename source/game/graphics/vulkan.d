@@ -369,7 +369,7 @@ struct VulkanPipelineBuilder
             return this;
         }
 
-        DependencyBuilder waitUntilSubpassColourWritten()
+        DependencyBuilder waitUntilSubpassColourWritable()
         {
             this.value.value.dstStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
             this.value.value.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
@@ -598,7 +598,7 @@ final class Vulkan
                     .subpass(0)
                     .dependsOn(VK_SUBPASS_EXTERNAL)
                     .waitUntilSourceColourAvailable()
-                    .waitUntilSubpassColourWritten()
+                    .waitUntilSubpassColourWritable()
                 .end()
                 .drawsTriangles()
                 .setViewport(0, 0, 0, 0)
