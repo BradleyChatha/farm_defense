@@ -1,11 +1,13 @@
 {
 	"fileVersion": 1,
 	"versions": {
+		"asdf": "0.5.7",
 		"bindbc-loader": "0.3.1",
 		"bindbc-sdl": "0.19.0",
+		"erupted": "2.0.68+v1.2.148",
 		"gfm": "8.0.3",
 		"imagefmt": "2.1.0",
-		"intel-intrinsics": "1.2.5",
+		"intel-intrinsics": "1.2.6",
 		"sdlang-d": "0.10.6",
 		"taggedalgebraic": "0.11.16",
 		"unit-threaded": "0.7.55"

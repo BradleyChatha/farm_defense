@@ -1,5 +1,6 @@
-import std.stdio;
-import game.thirdparty, game.window, game.engine;
+import std.stdio, std.experimental.logger;
+import bindbc.sdl, erupted;
+import game.graphics.window, game.graphics.sdl, game.graphics.vulkan, game.graphics.renderer;
 
 void main()
 {
@@ -18,11 +19,27 @@ void main()
             chdir("..");
     }
 
-    ThirdParty.onInit();
+    SDL.onInit();
     Window.onInit();
-    ThirdParty.onPostInit();
+    Vulkan.onInit();
 
-    auto engine = new Engine();
-    engine.onInit();
-    engine.loop();
+    // Temporary loop
+    auto renderer = new Renderer();
+    bool loop = true;
+    while(loop)
+    {
+        SDL_Event event;
+        Window.nextEvent(&event);
+
+        if(event.type == SDL_QUIT)
+            loop = false;
+
+        renderer.startFrame();
+        renderer.endFrame();
+    }
+
+    Vulkan.waitUntilAllDevicesAreIdle();
+    Vulkan.onUninit();
+    Window.onUninit();
+    SDL.onUninit();
 }

@@ -63,18 +63,18 @@ struct DefaultCommand
             copy(pair.sourceFile, pair.destinationFile);
         });
 
-        //"./tools/win/shaderc.exe" -f ./resources/shaders/vertex.sc -o ./bin/resources/shaders/vertex.bin --type v --platform windows -p 130
-        this.iterateFilePairs("resources/shaders/", "bin", conf, (pair)
+        this.iterateFilePairs("resources/shaders/", "spv", conf, (pair)
         {
             if(pair.sourceFile.extension == ".h" || pair.sourceFile.canFind("varying.def.sc"))
                 return;
 
+            pair.destinationFile ~= pair.sourceFile.extension;
+
             UserIO.logInfof("[SHADER      ] %s", pair);
             Shell.executeEnforceStatusZero(
-                "\"./tools/win/shaderc.exe\" -f \"%s\" -o \"%s\" --type %s --platform windows -p 130".format(
+                "\"glslc.exe\" %s -o %s".format(
                     pair.sourceFile,
-                    pair.destinationFile,
-                    pair.sourceFile.canFind("frag") ? "f" : "v"
+                    pair.destinationFile
                 )
             );
         });
