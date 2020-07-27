@@ -37,6 +37,8 @@ struct VulkanOptionalString
 
 struct VulkanResourceArray(T)
 {
+    import std.traits : isPointer;
+
     T[] data;
     alias data this;
 
@@ -46,7 +48,19 @@ struct VulkanResourceArray(T)
         foreach(value; this.data)
             func(value);
 
-        this.data.length = 0;
+        // Keep the previous data so we can overwrite it, without losing the memory address
+        static if(!isPointer!T)
+            this.data.length = 0;
+    }
+
+    static if(isPointer!T)
+    {
+        void recreate(void delegate(T) func)
+        {
+            info("Recreating ", T.stringof);
+            foreach(value; this.data)
+                func(value);
+        }
     }
 }
 
@@ -130,6 +144,8 @@ struct VulkanImageView
     VkImageView         handle;
     VulkanImageViewType type;
     VulkanSwapchain*    swapchain;
+
+    VulkanImageView* delegate() recreateFunc;
 }
 
 struct VulkanSwapchain
@@ -139,7 +155,7 @@ struct VulkanSwapchain
     VkSurfaceFormatKHR     format;
     VkPresentModeKHR       presentMode;
     VkExtent2D             extent;
-    VulkanImage[]          images;
+    VulkanImage*[]         images;
     VulkanImageView*[]     imageColourViews;
     VulkanFramebuffer*[]   framebuffers;
     VulkanCommandBuffer*[] graphicsBuffers;
@@ -147,6 +163,7 @@ struct VulkanSwapchain
     VulkanSemaphore[]      renderFinishedSemaphores;
     VulkanFence[]          fences;
 
+    VulkanSwapchain* delegate() recreateFunc;
 }
 
 enum VulkanShaderType
@@ -178,15 +195,19 @@ struct VulkanPipeline
 {
     VkPipeline           handle;
     VulkanPipelineLayout layout;
-    VulkanRenderPass*    renderPass;
+    VulkanRenderPass     renderPass;
     VulkanDevice         device;
+
+    VulkanPipeline* delegate() recreateFunc;
 }
 
 struct VulkanFramebuffer
 {
-    VkFramebuffer     handle;
-    VulkanRenderPass* renderPass;
-    VulkanDevice      device;
+    VkFramebuffer   handle;
+    VulkanPipeline* pipeline;
+    VulkanDevice    device;
+
+    VulkanFramebuffer* delegate() recreateFunc;
 }
 
 struct VulkanCommandPool
@@ -580,12 +601,12 @@ final class Vulkan
                     .waitUntilSubpassColourWritten()
                 .end()
                 .drawsTriangles()
-                .setViewport(0, 0, swapchain.extent.width, swapchain.extent.height)
+                .setViewport(0, 0, 0, 0)
                 .setVertexShader(defaultVertShader)
                 .setFragmentShader(defaultFragShader);
 
             auto pipeline = VulkanResources.createPipeline(defaultPipeline);
-            VulkanResources.createSwapchainFramebuffers(swapchain, pipeline.renderPass);
+            VulkanResources.createSwapchainFramebuffers(swapchain, pipeline);
             VulkanResources.createDeviceCommandPools(gpuDevice);
             VulkanResources.allocateSwapchainCommandBuffers(swapchain, gpuDevice.logical.graphicsPool);
             VulkanResources.createSwapchainSemaphoresAndFences(swapchain);
@@ -617,14 +638,13 @@ final class VulkanResources
         // If we make something a pointer, then its something that has to be recreated with a swapchain reset, or
         // otherwise can be modified in such a way that all instances of it need to be kept up to date.
         VulkanInstance                             _instance;
-        VulkanResourceArray!VulkanSurface          _surfaces;
-        VulkanResourceArray!(VulkanShaderModule)   _shaderModules;
         VulkanResourceArray!(VulkanFramebuffer*)   _framebuffers;
         VulkanResourceArray!(VulkanPipeline*)      _pipelines;
-        VulkanResourceArray!(VulkanRenderPass*)    _renderPasses;
         VulkanResourceArray!(VulkanLogicalDevice*) _logicalDevices;
         VulkanResourceArray!(VulkanSwapchain*)     _swapchains;
         VulkanResourceArray!(VulkanImageView*)     _imageViews;
+        VulkanResourceArray!VulkanSurface          _surfaces;
+        VulkanResourceArray!(VulkanShaderModule)   _shaderModules;
         VulkanResourceArray!(VulkanCommandPool)    _commandPools;
         VulkanResourceArray!(VulkanSemaphore)      _semaphores;
         VulkanResourceArray!(VulkanFence)          _fences;
@@ -699,16 +719,62 @@ final class VulkanResources
             {
                 vkDestroyPipeline(p.device.logical.handle, p.handle, null);
                 vkDestroyPipelineLayout(p.device.logical.handle, p.layout.handle, null);
+                vkDestroyRenderPass(p.device.logical.handle, p.renderPass.handle, null);
             });
-            this._renderPasses.cleanup(r => vkDestroyRenderPass(r.device.logical.handle, r.handle, null));
             this._framebuffers.cleanup(f => vkDestroyFramebuffer(f.device.logical.handle, f.handle, null));
             this._imageViews.cleanup(v => vkDestroyImageView(v.swapchain.device.logical.handle, v.handle, null));
             this._swapchains.cleanup(c => vkDestroySwapchainKHR(c.device.logical.handle, c.handle, null));
-
             this._pipelineCache.clear();
         }
 
-        // TODO: Recreate swapchain.
+        void recreateSwapchain()
+        {
+            info("Recreating swapchain");
+            Vulkan.waitUntilAllDevicesAreIdle();
+            VulkanResources.cleanupSwapchain();
+
+            // By doing things this way, we can keep all current pointers valid, while still recreating the swapchain.
+            //
+            // GC will clear up danglers.
+            this._pipelineCache.clear();
+            this._pipelines.recreate((p)
+            {
+                *p = *p.recreateFunc();
+                this._pipelines.length -= 1;
+            });
+            this._swapchains.recreate((sc)
+            {
+                auto newSc = sc.recreateFunc();
+                foreach(i, image; newSc.images)
+                    *sc.images[i] = *image;
+                foreach(view; newSc.imageColourViews)
+                    vkDestroyImageView(view.swapchain.device.logical.handle, view.handle, null); // Since our original pointers will be recreated.
+
+                this._imageViews.length -= newSc.images.length;
+
+                // Transfer over data that doesn't get recreated.
+                newSc.images                      = sc.images;
+                newSc.graphicsBuffers             = sc.graphicsBuffers;
+                newSc.device.logical.graphicsPool = sc.device.logical.graphicsPool;
+                newSc.imageAvailableSemaphores    = sc.imageAvailableSemaphores;
+                newSc.renderFinishedSemaphores    = sc.renderFinishedSemaphores;
+                newSc.fences                      = sc.fences;
+                newSc.framebuffers                = sc.framebuffers;
+                *sc = *newSc;
+
+                this._swapchains.length -= 1;
+            });
+            this._imageViews.recreate((iv)
+            {
+                *iv = *iv.recreateFunc();
+                this._imageViews.length -= 1;
+            });
+            this._framebuffers.recreate((fb)
+            {
+                *fb = *fb.recreateFunc();
+                this._framebuffers.length -= 1;
+            });
+        }
     }
 
     // CREATE //
@@ -793,11 +859,14 @@ final class VulkanResources
                          VulkanDevice     device, 
                          VulkanSurface    surface,
             scope return VulkanSwapchain* oldSwapchain       = null,
-            lazy const   uint             widthIfNotDefined  = Window.WIDTH,
-            lazy const   uint             heightIfNotDefined = Window.HEIGHT
+            lazy const   uint             widthIfNotDefined  = Window.width,
+            lazy const   uint             heightIfNotDefined = Window.height
         )
         {
             info("Creating swapchain for device");
+
+            // Stay up-to-date, for example, becauase the window changes size.
+            vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device.physical.handle, surface.handle, &device.physical.swapchainSupport.capabilities);
 
             auto swapchain        = new VulkanSwapchain;
             auto swapchainSupport = device.physical.swapchainSupport;
@@ -824,6 +893,13 @@ final class VulkanResources
                 swapchainSupport.capabilities.currentExtent = VkExtent2D(widthIfNotDefined, heightIfNotDefined);
             }
             swapchain.extent = swapchainSupport.capabilities.currentExtent;
+
+            if(swapchain.extent.width != swapchainSupport.capabilities.minImageExtent.width)
+                swapchain.extent.width = swapchainSupport.capabilities.minImageExtent.width;
+            if(swapchain.extent.height != swapchainSupport.capabilities.minImageExtent.height)
+                swapchain.extent.height = swapchainSupport.capabilities.minImageExtent.height;
+
+            infof("Final swapchain size (%s, %s)", swapchain.extent.width, swapchain.extent.height);
 
             // Create Swapchain
             VkSwapchainCreateInfoKHR swapchainInfo;
@@ -864,16 +940,18 @@ final class VulkanResources
             swapchain.imageColourViews.length = handles.length;
             foreach(i, handle; handles)
             {
-                swapchain.images[i]           = VulkanImage(handle, swapchain.format, swapchain.extent, swapchain);
+                swapchain.images[i]           = new VulkanImage(handle, swapchain.format, swapchain.extent, swapchain);
                 swapchain.imageColourViews[i] = VulkanResources.createImageView(swapchain.images[i], VulkanImageViewType.colour2D);
             }
+
+            swapchain.recreateFunc = () => VulkanResources.createSwapchain(device, surface, null, widthIfNotDefined, heightIfNotDefined);
 
             this._swapchains ~= swapchain;
             return swapchain;
         }
 
         VulkanImageView* createImageView(
-            VulkanImage         image,
+            VulkanImage*        image,
             VulkanImageViewType type
         )
         {
@@ -907,8 +985,9 @@ final class VulkanResources
             auto view = new VulkanImageView();
             CHECK_VK(vkCreateImageView(image.swapchain.device.logical.handle, &info, null, &view.handle));
 
-            view.type      = type;
-            view.swapchain = image.swapchain;
+            view.type         = type;
+            view.swapchain    = image.swapchain;
+            view.recreateFunc = () => VulkanResources.createImageView(image, type);
 
             this._imageViews ~= view;
             return view;
@@ -982,6 +1061,16 @@ final class VulkanResources
             VkPipelineVertexInputStateCreateInfo vertInfo;
             // TODO
 
+            if(builder._viewport.width == 0)
+                builder._viewport.width = Window.width;
+            if(builder._viewport.height == 0)
+                builder._viewport.height = Window.height;
+
+            if(builder._scissor.extent.width == 0)
+                builder._scissor.extent.width = Window.width;
+            if(builder._scissor.extent.height == 0)
+                builder._scissor.extent.height = Window.height;
+
             VkPipelineViewportStateCreateInfo viewInfo;
             viewInfo.viewportCount = 1;
             viewInfo.scissorCount  = 1;
@@ -1006,10 +1095,8 @@ final class VulkanResources
 
             info("Creating render pass info");
             auto renderPassInfo = builder.makeRenderPassInfo();
-            pipeline.renderPass = new VulkanRenderPass();
             pipeline.renderPass.device = pipeline.device;
             CHECK_VK(vkCreateRenderPass(pipeline.device.logical.handle, &renderPassInfo, null, &pipeline.renderPass.handle));
-            this._renderPasses ~= pipeline.renderPass;
 
             VkGraphicsPipelineCreateInfo info;
             info.stageCount             = 2;
@@ -1026,6 +1113,8 @@ final class VulkanResources
 
             infof("Creating graphics pipeline");
             CHECK_VK(vkCreateGraphicsPipelines(pipeline.device.logical.handle, null, 1, &info, null, &pipeline.handle));
+
+            pipeline.recreateFunc = () => VulkanResources.createPipeline(builder);
             
             this._pipelines ~= pipeline;
             this._pipelineCache[builder.toHash()] = pipeline;
@@ -1034,28 +1123,29 @@ final class VulkanResources
 
         VulkanFramebuffer* createFramebuffer(
             VulkanDevice       device,
-            VulkanRenderPass*  renderPass,
+            VulkanPipeline*    pipeline,
             VulkanImageView*[] attachments,
-            uint               width,
-            uint               height
+            uint               width = 0,
+            uint               height = 0
         )
         {
-            info("Creating framebuffer");
+            infof("Creating framebuffer (%s, %s)", width, height);
 
-            auto framebuffer       = new VulkanFramebuffer();
-            framebuffer.device     = device;
-            framebuffer.renderPass = renderPass;
+            auto framebuffer         = new VulkanFramebuffer();
+            framebuffer.device       = device;
+            framebuffer.pipeline     = pipeline;
+            framebuffer.recreateFunc = () => VulkanResources.createFramebuffer(device, pipeline, attachments, width, height);
 
             auto vkAttachments = new VkImageView[attachments.length];
             foreach(i, attachment; attachments)
                 vkAttachments[i] = attachment.handle;
 
             VkFramebufferCreateInfo info;
-            info.renderPass      = renderPass.handle;
+            info.renderPass      = pipeline.renderPass.handle;
             info.attachmentCount = vkAttachments.length.to!uint;
             info.pAttachments    = vkAttachments.ptr;
-            info.width           = width;
-            info.height          = height;
+            info.width           = (width == 0) ? Window.width : width;
+            info.height          = (height == 0) ? Window.height : height;
             info.layers          = 1;
 
             CHECK_VK(vkCreateFramebuffer(device.logical.handle, &info, null, &framebuffer.handle));
@@ -1065,8 +1155,8 @@ final class VulkanResources
         }
 
         void createSwapchainFramebuffers(
-            scope VulkanSwapchain*  swapchain,
-                  VulkanRenderPass* renderPass
+            scope VulkanSwapchain* swapchain,
+                  VulkanPipeline*  pipeline
         )
         {
             info("Creating default framebuffers for swapchain");
@@ -1081,10 +1171,10 @@ final class VulkanResources
 
                 swapchain.framebuffers[i] = VulkanResources.createFramebuffer(
                     swapchain.device, 
-                    renderPass, 
+                    pipeline, 
                     attachments, 
-                    swapchain.extent.width, 
-                    swapchain.extent.height
+                    0, 
+                    0
                 );
             }
         }

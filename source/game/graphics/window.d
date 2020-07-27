@@ -51,5 +51,21 @@ final class Window
         {
             return _handle;
         }
+
+        uint width()
+        {
+            int w;
+            SDL_GetWindowSize(this.handle, &w, null);
+
+            return w;
+        }
+
+        uint height()
+        {
+            int h;
+            SDL_GetWindowSize(this.handle, null, &h);
+
+            return h;
+        }
     }
 }

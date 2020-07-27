@@ -17,7 +17,7 @@ final class Renderer
 
         // Get the index for our next available image
         uint imageIndex;
-        vkAcquireNextImageKHR(swapchain.vulkan.device.logical.handle, swapchain.vulkan.handle, uint.max, swapchain.imageAvailableSemaphore.handle, null, &imageIndex);
+        auto imageResult = vkAcquireNextImageKHR(swapchain.vulkan.device.logical.handle, swapchain.vulkan.handle, uint.max, swapchain.imageAvailableSemaphore.handle, null, &imageIndex);
         swapchain.setFrame(imageIndex);
 
         vkWaitForFences(swapchain.vulkan.device.logical.handle, 1, &swapchain.fence.handle, VK_TRUE, uint.max);
@@ -37,6 +37,14 @@ final class Renderer
         renderInfo.pClearValues      = &this._clearColour;
         
         vkCmdBeginRenderPass(swapchain.graphicsBuffer.handle, &renderInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+        if(imageResult == VK_ERROR_OUT_OF_DATE_KHR || imageResult == VK_SUBOPTIMAL_KHR)
+        {
+            this.endFrame(); // Clear any state that'd end up in limbo otherwise.
+            VulkanResources.recreateSwapchain();
+            this.startFrame();
+            return;
+        }
 
         // Bind the pipeline
         vkCmdBindPipeline(swapchain.graphicsBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, RendererResources._pipeline.handle);
@@ -140,7 +148,7 @@ private final class Swapchain
     }
 
     @property
-    VulkanImage image()
+    VulkanImage* image()
     {
         return this._swapchain.images[this._currentFrame];
     }

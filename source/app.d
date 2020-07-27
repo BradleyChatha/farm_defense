@@ -34,6 +34,12 @@ void main()
         if(event.type == SDL_QUIT)
             loop = false;
 
+        if(event.window.event == SDL_WINDOWEVENT_MINIMIZED)
+        {
+            while(event.window.event != SDL_WINDOWEVENT_RESTORED)
+                Window.nextEvent(&event);
+        }
+
         renderer.startFrame();
         renderer.endFrame();
     }
