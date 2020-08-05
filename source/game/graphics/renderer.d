@@ -89,14 +89,6 @@ final class Renderer
         
         vkCmdBeginRenderPass(swapchain.graphicsBuffer.handle, &renderInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-        if(imageResult == VK_ERROR_OUT_OF_DATE_KHR || imageResult == VK_SUBOPTIMAL_KHR)
-        {
-            this.endFrame(); // Clear any state that'd end up in limbo otherwise.
-            VulkanResources.recreateSwapchain();
-            this.startFrame();
-            return;
-        }
-
         // Bind the pipeline and main vertex buffer
         vkCmdBindPipeline(swapchain.graphicsBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, RendererResources._pipeline.handle);
 
@@ -109,6 +101,14 @@ final class Renderer
             VkDeviceSize(0)
         ];
         vkCmdBindVertexBuffers(swapchain.graphicsBuffer.handle, 0, 1, buffers.ptr, offsets.ptr);
+
+        if(imageResult == VK_ERROR_OUT_OF_DATE_KHR || imageResult == VK_SUBOPTIMAL_KHR)
+        {
+            this.endFrame(); // Clear any state that'd end up in limbo otherwise.
+            VulkanResources.recreateSwapchain();
+            this.startFrame();
+            return;
+        }
 
         // TEMP
         this.drawQuad(Quad(vec2f(200, 400), vec2f(100, 100), Color.red));
