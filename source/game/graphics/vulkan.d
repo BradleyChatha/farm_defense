@@ -233,6 +233,27 @@ struct VulkanFence
     VulkanDevice device;
 }
 
+enum VulkanBufferType
+{
+    error,
+    vertex
+}
+
+struct VulkanBuffer
+{
+    VkBuffer           handle;
+    VulkanDevice       device;
+    VulkanBufferType   type;
+    VulkanDeviceMemory memory;
+}
+
+struct VulkanDeviceMemory
+{
+    VkDeviceMemory handle;
+    VulkanDevice   device;
+    size_t         size;
+}
+
 // Pipeline builder //
 
 struct VulkanPipelineBuilder
@@ -611,9 +632,11 @@ final class Vulkan
             VulkanResources.allocateSwapchainCommandBuffers(swapchain, gpuDevice.logical.graphicsPool);
             VulkanResources.createSwapchainSemaphoresAndFences(swapchain);
 
+            auto vertBuffer = VulkanResources.createBuffer(gpuDevice, VulkanBufferType.vertex, 4096);
             RendererResources.onPostVulkanInit(
                 swapchain,
-                pipeline
+                pipeline,
+                vertBuffer
             );
         }
 
@@ -648,6 +671,8 @@ final class VulkanResources
         VulkanResourceArray!(VulkanCommandPool)    _commandPools;
         VulkanResourceArray!(VulkanSemaphore)      _semaphores;
         VulkanResourceArray!(VulkanFence)          _fences;
+        VulkanResourceArray!(VulkanBuffer)         _buffers;
+        VulkanResourceArray!(VulkanDeviceMemory)   _memory;
         VulkanPipeline*[size_t]                    _pipelineCache; // Key is builder's hash.
 
         const VkApplicationInfo APP_INFO =
@@ -704,6 +729,8 @@ final class VulkanResources
             this._commandPools.cleanup(p => vkDestroyCommandPool(p.device.logical.handle, p.handle, null));
             this._semaphores.cleanup(s => vkDestroySemaphore(s.device.logical.handle, s.handle, null));
             this._fences.cleanup(f => vkDestroyFence(f.device.logical.handle, f.handle, null));
+            this._buffers.cleanup(b => vkDestroyBuffer(b.device.logical.handle, b.handle, null));
+            this._memory.cleanup(m => vkFreeMemory(m.device.logical.handle, m.handle, null));
             this._logicalDevices.cleanup(d => vkDestroyDevice(d.handle, null));
             this._surfaces.cleanup(s => vkDestroySurfaceKHR(this._instance.handle, s.handle, null));
 
@@ -1058,8 +1085,34 @@ final class VulkanResources
             assert(builder._vertexShader   != VulkanShaderModule.init);
             assert(builder._fragmentShader != VulkanShaderModule.init);
 
+            // We'll only ever have one vertex type pre-rewrite.
+            import game.graphics.renderer : Vertex;
+            VkVertexInputBindingDescription bindInfo;
+            bindInfo.binding   = 0;
+            bindInfo.stride    = Vertex.sizeof;
+            bindInfo.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+            VkVertexInputAttributeDescription[2] attributes;
+            with(&attributes[0])
+            {
+                binding  = 0;
+                location = 0;
+                format   = VK_FORMAT_R32G32_SFLOAT;
+                offset   = Vertex.position.offsetof;
+            }
+            with(&attributes[1])
+            {
+                binding  = 0;
+                location = 1;
+                format   = VK_FORMAT_R8G8B8A8_UINT;
+                offset   = Vertex.colour.offsetof;
+            }
+
             VkPipelineVertexInputStateCreateInfo vertInfo;
-            // TODO
+            vertInfo.vertexBindingDescriptionCount   = 1;
+            vertInfo.vertexAttributeDescriptionCount = attributes.length.to!uint;
+            vertInfo.pVertexBindingDescriptions      = &bindInfo;
+            vertInfo.pVertexAttributeDescriptions    = attributes.ptr;
 
             if(builder._viewport.width == 0)
                 builder._viewport.width = Window.width;
@@ -1283,6 +1336,57 @@ final class VulkanResources
 
             this._fences ~= fence;
             return fence;
+        }
+
+        VulkanBuffer createBuffer(
+            VulkanDevice     device,
+            VulkanBufferType type,
+            size_t           size
+        )
+        {
+            VkBufferCreateInfo info;
+            info.size        = size;
+            info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+            final switch(type) with(VulkanBufferType)
+            {
+                case error: assert(false);
+                case vertex: info.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT; break;
+            }
+
+            VulkanBuffer buffer;
+            buffer.device = device;
+            buffer.memory.device = device;
+            CHECK_VK(vkCreateBuffer(device.logical.handle, &info, null, &buffer.handle));
+
+            VkMemoryPropertyFlags            properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+            VkPhysicalDeviceMemoryProperties physicalMemory;
+            VkMemoryRequirements             requirements;
+
+            vkGetBufferMemoryRequirements(device.logical.handle, buffer.handle, &requirements);
+            vkGetPhysicalDeviceMemoryProperties(device.physical.handle, &physicalMemory);
+
+            uint i;
+            for(i = 0; i < physicalMemory.memoryTypeCount; i++)
+            {
+                if(requirements.memoryTypeBits & (1 << i)
+                && physicalMemory.memoryTypes[i].propertyFlags & properties)
+                    break;
+            }
+            assert(i != physicalMemory.memoryTypeCount);
+
+            VkMemoryAllocateInfo allocInfo;
+            allocInfo.allocationSize  = requirements.size;
+            allocInfo.memoryTypeIndex = i;
+
+            CHECK_VK(vkAllocateMemory(device.logical.handle, &allocInfo, null, &buffer.memory.handle));
+            vkBindBufferMemory(device.logical.handle, buffer.handle, buffer.memory.handle, 0);
+
+            this._buffers ~= buffer;
+            this._memory  ~= buffer.memory;
+
+            buffer.memory.size = requirements.size;
+            return buffer;
         }
     }
     

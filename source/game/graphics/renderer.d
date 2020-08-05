@@ -1,14 +1,37 @@
 module game.graphics.renderer;
 
 import std.experimental.logger;
-import erupted, erupted.vulkan_lib_loader, bindbc.sdl;
+import erupted, erupted.vulkan_lib_loader, bindbc.sdl, arsd.color, gfm.math;
 import game.graphics.window, game.graphics.sdl, game.common.util, game.graphics.vulkan;
+
+struct Vertex
+{
+    vec2f position;
+    Color colour;
+
+    this(vec2f position, Color colour)
+    {
+        this.position = position;
+        this.colour   = colour;
+    }
+
+    this(float x, float y, Color colour)
+    {
+        this(vec2f(x, y), colour);
+    }
+}
 
 final class Renderer
 {
     private
     {
         VkClearValue _clearColour = VkClearValue(VkClearColorValue([0.0f, 0.0f, 0.0f, 1.0f]));
+    }
+
+    void drawTriangle(Vertex[3] verts)
+    {
+        const start = RendererResources._vertsToRenderCount;
+        RendererResources.addVerts(verts);
     }
 
     void startFrame()
@@ -46,16 +69,34 @@ final class Renderer
             return;
         }
 
-        // Bind the pipeline
+        // Bind the pipeline and main vertex buffer
         vkCmdBindPipeline(swapchain.graphicsBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, RendererResources._pipeline.handle);
 
+        VkBuffer[1] buffers = 
+        [
+            RendererResources._gpuVertBuffer.handle
+        ];
+        VkDeviceSize[1] offsets =
+        [
+            VkDeviceSize(0)
+        ];
+        vkCmdBindVertexBuffers(swapchain.graphicsBuffer.handle, 0, 1, buffers.ptr, offsets.ptr);
+
         // TEMP
-        vkCmdDraw(swapchain.graphicsBuffer.handle, 3, 1, 0, 0);
+        this.drawTriangle([
+            Vertex(0.0f, -0.0f, Color.red),
+            Vertex(0.5f, 0.5f,  Color.green),
+            Vertex(-0.5f, 0.5f, Color.blue)
+        ]);
     }
 
     void endFrame()
     {
         auto swapchain = RendererResources._swapchain;
+
+        // Upload verticies, and issue draw commands.
+        vkCmdDraw(swapchain.graphicsBuffer.handle, cast(uint)RendererResources._vertsToRenderCount, 1, 0, 0);
+        RendererResources.submitFrame();
 
         // Finish frame
         vkCmdEndRenderPass(swapchain.graphicsBuffer.handle);
@@ -98,21 +139,54 @@ final class RendererResources
     {
         Swapchain       _swapchain;
         VulkanPipeline* _pipeline;
+        VulkanBuffer    _gpuVertBuffer;
+        Vertex[]        _vertBuffer;
+        size_t          _vertsToRenderCount;
     }
 
     public static
     {
     }
 
+    private static
+    {
+        void addVerts(Vertex[] verts)
+        {
+            const end = this._vertsToRenderCount + verts.length;
+            if(end > this._vertBuffer.length)
+                this._vertBuffer.length = end * 2;
+
+            this._vertBuffer[this._vertsToRenderCount..end] = verts[];
+            this._vertsToRenderCount = end;
+        }
+
+        void submitFrame()
+        {
+            import std.math : fmin;
+
+            const countInBytes = cast(size_t)fmin(this._vertsToRenderCount * Vertex.sizeof, this._gpuVertBuffer.memory.size);
+
+            // Upload verts
+            scope void* data;
+            vkMapMemory(this._gpuVertBuffer.device.logical.handle, this._gpuVertBuffer.memory.handle, 0, countInBytes, 0, &data);
+            data[0..countInBytes] = cast(ubyte[])(this._vertBuffer[0..countInBytes / Vertex.sizeof]);
+            vkUnmapMemory(this._gpuVertBuffer.device.logical.handle, this._gpuVertBuffer.memory.handle);
+
+            this._vertsToRenderCount = 0;
+        }
+    }
+
     package static
     {
         void onPostVulkanInit(
             VulkanSwapchain* swapchain,
-            VulkanPipeline*  pipeline
+            VulkanPipeline*  pipeline,
+            VulkanBuffer     vertBuffer
         )
         {
-            this._swapchain = new Swapchain(swapchain);
-            this._pipeline  = pipeline;
+            this._swapchain     = new Swapchain(swapchain);
+            this._pipeline      = pipeline;
+            this._gpuVertBuffer = vertBuffer;
         }
     }
 }
