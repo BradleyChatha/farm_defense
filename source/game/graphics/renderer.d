@@ -48,7 +48,7 @@ final class Renderer
             verts[0], verts[2], verts[3],
             verts[3], verts[1], verts[0]
         ];
-
+        
         RendererResources.addVerts(quadVerts);
     }
 
@@ -111,7 +111,7 @@ final class Renderer
         vkCmdBindVertexBuffers(swapchain.graphicsBuffer.handle, 0, 1, buffers.ptr, offsets.ptr);
 
         // TEMP
-        this.drawQuad(Quad(vec2f(-0.5f, -0.5f), vec2f(1.0f, 1.0f), Color.red));
+        this.drawQuad(Quad(vec2f(200, 400), vec2f(100, 100), Color.red));
     }
 
     void endFrame()
