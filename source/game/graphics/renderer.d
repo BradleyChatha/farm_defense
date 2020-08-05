@@ -21,6 +21,13 @@ struct Vertex
     }
 }
 
+struct Quad
+{
+    vec2f position;
+    vec2f size;
+    Color colour;
+}
+
 final class Renderer
 {
     private
@@ -30,8 +37,29 @@ final class Renderer
 
     void drawTriangle(Vertex[3] verts)
     {
-        const start = RendererResources._vertsToRenderCount;
         RendererResources.addVerts(verts);
+    }
+
+    // Expected: [top-left, top-right, bot-left, bot-right]
+    void drawQuad(Vertex[4] verts)
+    {
+        Vertex[6] quadVerts = 
+        [
+            verts[0], verts[2], verts[3],
+            verts[3], verts[1], verts[0]
+        ];
+
+        RendererResources.addVerts(quadVerts);
+    }
+
+    void drawQuad(Quad quad)
+    {
+        this.drawQuad([
+            Vertex(quad.position,                         quad.colour),
+            Vertex(quad.position + vec2f(quad.size.x, 0), quad.colour),
+            Vertex(quad.position + vec2f(0, quad.size.y), quad.colour),
+            Vertex(quad.position + quad.size,             quad.colour)
+        ]);
     }
 
     void startFrame()
@@ -74,7 +102,7 @@ final class Renderer
 
         VkBuffer[1] buffers = 
         [
-            RendererResources._gpuVertBuffer.handle
+            RendererResources._swapchain.vertBuffer.handle
         ];
         VkDeviceSize[1] offsets =
         [
@@ -83,11 +111,7 @@ final class Renderer
         vkCmdBindVertexBuffers(swapchain.graphicsBuffer.handle, 0, 1, buffers.ptr, offsets.ptr);
 
         // TEMP
-        this.drawTriangle([
-            Vertex(0.0f, -0.0f, Color.red),
-            Vertex(0.5f, 0.5f,  Color.green),
-            Vertex(-0.5f, 0.5f, Color.blue)
-        ]);
+        this.drawQuad(Quad(vec2f(-0.5f, -0.5f), vec2f(1.0f, 1.0f), Color.red));
     }
 
     void endFrame()
@@ -139,9 +163,9 @@ final class RendererResources
     {
         Swapchain       _swapchain;
         VulkanPipeline* _pipeline;
-        VulkanBuffer    _gpuVertBuffer;
         Vertex[]        _vertBuffer;
         size_t          _vertsToRenderCount;
+        bool            _updateBuffers;
     }
 
     public static
@@ -150,29 +174,49 @@ final class RendererResources
 
     private static
     {
+        void addVert(size_t index, Vertex vert)
+        {
+            if(index >= this._vertBuffer.length)
+                this._vertBuffer.length += (index - this._vertBuffer.length) + (1024 * 1024);
+
+            this._updateBuffers     = this._updateBuffers || this._vertBuffer[index] != vert;
+            this._vertBuffer[index] = vert;
+            this._vertsToRenderCount++;
+        }
+
         void addVerts(Vertex[] verts)
         {
-            const end = this._vertsToRenderCount + verts.length;
-            if(end > this._vertBuffer.length)
-                this._vertBuffer.length = end * 2;
-
-            this._vertBuffer[this._vertsToRenderCount..end] = verts[];
-            this._vertsToRenderCount = end;
+            foreach(vert; verts)
+                addVert(this._vertsToRenderCount, vert);
         }
 
         void submitFrame()
         {
             import std.math : fmin;
 
-            const countInBytes = cast(size_t)fmin(this._vertsToRenderCount * Vertex.sizeof, this._gpuVertBuffer.memory.size);
+            // Mark buffers dirty if needed
+            if(this._updateBuffers)
+            {
+                this._updateBuffers = false;
 
-            // Upload verts
-            scope void* data;
-            vkMapMemory(this._gpuVertBuffer.device.logical.handle, this._gpuVertBuffer.memory.handle, 0, countInBytes, 0, &data);
-            data[0..countInBytes] = cast(ubyte[])(this._vertBuffer[0..countInBytes / Vertex.sizeof]);
-            vkUnmapMemory(this._gpuVertBuffer.device.logical.handle, this._gpuVertBuffer.memory.handle);
+                foreach(ref buffer; this._swapchain._vertBuffers)
+                    buffer.cleanFrameCount = 0;
+            }
 
+            // Upload verts if needed
+            if(this._swapchain.vertBuffer.cleanFrameCount == 0)
+            {
+                const countInBytes = cast(size_t)fmin(this._vertsToRenderCount * Vertex.sizeof, this._swapchain.vertBuffer.memory.size);
+
+                scope void* data;
+                vkMapMemory(this._pipeline.device.logical.handle, this._swapchain.vertBuffer.memory.handle, 0, countInBytes, 0, &data);
+                data[0..countInBytes] = cast(ubyte[])(this._vertBuffer[0..countInBytes / Vertex.sizeof]);
+                vkUnmapMemory(this._pipeline.device.logical.handle, this._swapchain.vertBuffer.memory.handle);
+            }
+
+            // Misc final stuff
             this._vertsToRenderCount = 0;
+            this._swapchain.vertBuffer.cleanFrameCount++;
         }
     }
 
@@ -181,12 +225,11 @@ final class RendererResources
         void onPostVulkanInit(
             VulkanSwapchain* swapchain,
             VulkanPipeline*  pipeline,
-            VulkanBuffer     vertBuffer
+            VulkanBuffer[]   vertBuffers
         )
         {
-            this._swapchain     = new Swapchain(swapchain);
-            this._pipeline      = pipeline;
-            this._gpuVertBuffer = vertBuffer;
+            this._swapchain = new Swapchain(swapchain, vertBuffers);
+            this._pipeline  = pipeline;
         }
     }
 }
@@ -198,14 +241,16 @@ private final class Swapchain
     private
     {
         VulkanSwapchain* _swapchain;
+        VulkanBuffer[]   _vertBuffers;
         size_t           _frameCount;
         size_t           _currentFrame;
     }
 
-    this(VulkanSwapchain* swapchain)
+    this(VulkanSwapchain* swapchain, VulkanBuffer[] vertBuffers)
     {
-        this._swapchain  = swapchain;
-        this._frameCount = swapchain.framebuffers.length;
+        this._swapchain   = swapchain;
+        this._frameCount  = swapchain.framebuffers.length;
+        this._vertBuffers = vertBuffers;
 
         infof("Wrapping swapchain with %s frames", this._frameCount);
     }
@@ -267,5 +312,11 @@ private final class Swapchain
     ref VulkanFence fence()
     {
         return this._swapchain.fences[this._currentFrame];
+    }
+
+    @property
+    ref VulkanBuffer vertBuffer()
+    {
+        return this._vertBuffers[this._currentFrame];
     }
 }

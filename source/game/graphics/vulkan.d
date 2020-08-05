@@ -245,6 +245,7 @@ struct VulkanBuffer
     VulkanDevice       device;
     VulkanBufferType   type;
     VulkanDeviceMemory memory;
+    size_t             cleanFrameCount; // Used by the renderer to track how many frames a buffer has been "clean" for.
 }
 
 struct VulkanDeviceMemory
@@ -436,7 +437,7 @@ struct VulkanPipelineBuilder
         this._rasterInfo.polygonMode             = VK_POLYGON_MODE_FILL;
         this._rasterInfo.lineWidth               = 1.0f;
         this._rasterInfo.cullMode                = VK_CULL_MODE_BACK_BIT;
-        this._rasterInfo.frontFace               = VK_FRONT_FACE_CLOCKWISE;
+        this._rasterInfo.frontFace               = VK_FRONT_FACE_COUNTER_CLOCKWISE;
         this._rasterInfo.depthBiasEnable         = VK_FALSE;
         this._rasterInfo.depthBiasClamp          = 0.0f;
 
@@ -581,6 +582,8 @@ struct VulkanPipelineBuilder
 
 final class Vulkan
 {
+    enum MAX_QUADS = 10_000;
+
     private static
     {
     }
@@ -632,11 +635,17 @@ final class Vulkan
             VulkanResources.allocateSwapchainCommandBuffers(swapchain, gpuDevice.logical.graphicsPool);
             VulkanResources.createSwapchainSemaphoresAndFences(swapchain);
 
-            auto vertBuffer = VulkanResources.createBuffer(gpuDevice, VulkanBufferType.vertex, 4096);
+            const MAX_VERTS = (MAX_QUADS * 6); // cba to do indexing with just 2D, so we'll just settle with 6 verts to a quad.
+            const MAX_BYTES = MAX_VERTS * Vertex.sizeof;
+
+            VulkanBuffer[] vertBuffers;
+            foreach(i; 0..swapchain.images.length)
+                vertBuffers ~= VulkanResources.createBuffer(gpuDevice, VulkanBufferType.vertex, MAX_BYTES);
+
             RendererResources.onPostVulkanInit(
                 swapchain,
                 pipeline,
-                vertBuffer
+                vertBuffers
             );
         }
 
