@@ -26,6 +26,9 @@ void main()
     // Temporary loop
     auto renderer = new Renderer();
     bool loop = true;
+    uint lastTicks = 0;
+    uint ticks = 0;
+    uint frame = 0;
     while(loop)
     {
         SDL_Event event;
@@ -42,6 +45,17 @@ void main()
 
         renderer.startFrame();
         renderer.endFrame();
+
+        frame++;
+        ticks += SDL_GetTicks() - lastTicks;
+        if(ticks >= 1000)
+        {
+            info("FPS: ", frame);
+            ticks -= 1000;
+            frame = 0;
+        }
+
+        lastTicks = SDL_GetTicks();
     }
 
     Vulkan.waitUntilAllDevicesAreIdle();
