@@ -12,7 +12,7 @@ final class Window
     static const WIDTH  = 832;
     static const HEIGHT = 832;
     static const TITLE  = "Farm Defense";
-    static const FLAGS  = SDL_WindowFlags.SDL_WINDOW_SHOWN | SDL_WindowFlags.SDL_WINDOW_VULKAN | SDL_WindowFlags.SDL_WINDOW_RESIZABLE;
+    static const FLAGS  = SDL_WindowFlags.SDL_WINDOW_SHOWN | SDL_WindowFlags.SDL_WINDOW_VULKAN;
 
     private static
     {
