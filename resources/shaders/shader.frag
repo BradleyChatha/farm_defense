@@ -5,17 +5,13 @@ layout(push_constant) uniform _PushConstant {
     uint ticks;
 } PushConstant;
 
+layout(binding = 1) uniform sampler2D texSampler;
+
 layout(location = 0) in vec4 fragColor;
+layout(location = 1) in vec2 uv;
 
 layout(location = 0) out vec4 outColor;
 
 void main() {
-    //outColor = (fragColor / vec4(255));
-    const float scale = mod(PushConstant.ticks, 1000) / 1000;
-    outColor = vec4(
-        scale, 
-        scale * 2, 
-        scale * 0.5, 
-        1.0
-    );
+    outColor = texture(texSampler, uv) * (fragColor / vec4(255));
 }

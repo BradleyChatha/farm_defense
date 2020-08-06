@@ -4,7 +4,7 @@ import std.conv : to;
 import std.string : fromStringz;
 import std.typecons : Flag, Nullable;
 import std.experimental.logger;
-import erupted, erupted.vulkan_lib_loader, bindbc.sdl;
+import erupted, erupted.vulkan_lib_loader, bindbc.sdl, gfm.math;
 import game.graphics.window, game.graphics.sdl, game.common.util, game.graphics.renderer;
 
 // ALIASES //
@@ -191,10 +191,12 @@ struct VulkanSwapchain
     VulkanImage*[]         images;
     VulkanImageView*[]     imageColourViews;
     VulkanFramebuffer*[]   framebuffers;
+    VkDescriptorPool       descriptorPool;
     VulkanCommandBuffer*[] graphicsBuffers;
     VulkanSemaphore[]      imageAvailableSemaphores;
     VulkanSemaphore[]      renderFinishedSemaphores;
     VulkanFence[]          fences;
+    VkDescriptorSet[]      imageSets;
 
     VulkanSwapchain* delegate() recreateFunc;
 }
@@ -231,6 +233,7 @@ struct VulkanPipeline
     VulkanRenderPass     renderPass;
     VulkanDevice         device;
     TypedPointer         pushConstant;
+    VkDescriptorSetLayout  descriptorSetLayout;
 
     VulkanPipeline* delegate() recreateFunc;
 }
@@ -270,7 +273,8 @@ struct VulkanFence
 enum VulkanBufferType
 {
     error,
-    vertex
+    vertex,
+    transferSrc
 }
 
 struct VulkanBuffer
@@ -287,6 +291,16 @@ struct VulkanDeviceMemory
     VkDeviceMemory handle;
     VulkanDevice   device;
     size_t         size;
+}
+
+struct VulkanTexture
+{
+    VkImage      handle;
+    vec2!uint    size;
+    VulkanDevice device;
+    VulkanDeviceMemory memory;
+    VulkanImageView view;
+    VkSampler samplerHandle;
 }
 
 // Pipeline builder //
@@ -674,7 +688,7 @@ final class Vulkan
             auto pipeline = VulkanResources.createPipeline(defaultPipeline);
             VulkanResources.createSwapchainFramebuffers(swapchain, pipeline);
             VulkanResources.createDeviceCommandPools(gpuDevice);
-            VulkanResources.allocateSwapchainCommandBuffers(swapchain, gpuDevice.logical.graphicsPool);
+            VulkanResources.allocateSwapchainCommandBuffers(swapchain, gpuDevice.logical.graphicsPool, pipeline);
             VulkanResources.createSwapchainSemaphoresAndFences(swapchain);
 
             const MAX_VERTS = (MAX_QUADS * 6); // cba to do indexing with just 2D, so we'll just settle with 6 verts to a quad.
@@ -724,6 +738,7 @@ final class VulkanResources
         VulkanResourceArray!(VulkanFence)          _fences;
         VulkanResourceArray!(VulkanBuffer)         _buffers;
         VulkanResourceArray!(VulkanDeviceMemory)   _memory;
+        VulkanResourceArray!(VulkanTexture)        _textures;
         VulkanPipeline*[size_t]                    _pipelineCache; // Key is builder's hash.
 
         const VkApplicationInfo APP_INFO =
@@ -782,6 +797,12 @@ final class VulkanResources
             this._fences.cleanup(f => vkDestroyFence(f.device.logical.handle, f.handle, null));
             this._buffers.cleanup(b => vkDestroyBuffer(b.device.logical.handle, b.handle, null));
             this._memory.cleanup(m => vkFreeMemory(m.device.logical.handle, m.handle, null));
+            this._textures.cleanup((t) 
+            {
+                vkDestroySampler(t.device.logical.handle, t.samplerHandle, null);
+                vkDestroyImageView(t.device.logical.handle, t.view.handle, null);
+                vkDestroyImage(t.device.logical.handle, t.handle, null);
+            });
             this._logicalDevices.cleanup(d => vkDestroyDevice(d.handle, null));
             this._surfaces.cleanup(s => vkDestroySurfaceKHR(this._instance.handle, s.handle, null));
 
@@ -795,13 +816,18 @@ final class VulkanResources
 
             this._pipelines.cleanup((p)
             {
+                vkDestroyDescriptorSetLayout(p.device.logical.handle, p.descriptorSetLayout, null);
                 vkDestroyPipeline(p.device.logical.handle, p.handle, null);
                 vkDestroyPipelineLayout(p.device.logical.handle, p.layout.handle, null);
                 vkDestroyRenderPass(p.device.logical.handle, p.renderPass.handle, null);
             });
             this._framebuffers.cleanup(f => vkDestroyFramebuffer(f.device.logical.handle, f.handle, null));
             this._imageViews.cleanup(v => vkDestroyImageView(v.swapchain.device.logical.handle, v.handle, null));
-            this._swapchains.cleanup(c => vkDestroySwapchainKHR(c.device.logical.handle, c.handle, null));
+            this._swapchains.cleanup((c)
+            {
+                vkDestroyDescriptorPool(c.device.logical.handle, c.descriptorPool, null);
+                vkDestroySwapchainKHR(c.device.logical.handle, c.handle, null);
+            });
             this._pipelineCache.clear();
         }
 
@@ -1022,8 +1048,18 @@ final class VulkanResources
                 swapchain.imageColourViews[i] = VulkanResources.createImageView(swapchain.images[i], VulkanImageViewType.colour2D);
             }
 
-            swapchain.recreateFunc = () => VulkanResources.createSwapchain(device, surface, null, widthIfNotDefined, heightIfNotDefined);
+            VkDescriptorPoolSize poolSize;
+            poolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            poolSize.descriptorCount = swapchain.images.length.to!uint;
 
+            VkDescriptorPoolCreateInfo poolInfo;
+            poolInfo.poolSizeCount = 1;
+            poolInfo.pPoolSizes = &poolSize;
+            poolInfo.maxSets = swapchain.images.length.to!uint;
+
+            CHECK_VK(vkCreateDescriptorPool(device.logical.handle, &poolInfo, null, &swapchain.descriptorPool));
+
+            swapchain.recreateFunc = () => VulkanResources.createSwapchain(device, surface, null, widthIfNotDefined, heightIfNotDefined);
             this._swapchains ~= swapchain;
             return swapchain;
         }
@@ -1143,7 +1179,7 @@ final class VulkanResources
             bindInfo.stride    = Vertex.sizeof;
             bindInfo.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
-            VkVertexInputAttributeDescription[2] attributes;
+            VkVertexInputAttributeDescription[3] attributes;
             with(&attributes[0])
             {
                 binding  = 0;
@@ -1157,6 +1193,13 @@ final class VulkanResources
                 location = 1;
                 format   = VK_FORMAT_R8G8B8A8_UINT;
                 offset   = Vertex.colour.offsetof;
+            }
+            with(&attributes[2])
+            {
+                binding = 0;
+                location = 2;
+                format = VK_FORMAT_R32G32_UINT;
+                offset = Vertex.uv.offsetof;
             }
 
             VkPipelineVertexInputStateCreateInfo vertInfo;
@@ -1198,9 +1241,25 @@ final class VulkanResources
             pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
             pushConstantRange.size       = builder._pushConstant.typeInBytes.to!uint;
 
+            VkDescriptorSetLayoutBinding imageInfo;
+            imageInfo.binding = 0;
+            imageInfo.descriptorCount = 1;
+            imageInfo.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            imageInfo.pImmutableSamplers = null;
+            imageInfo.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+            auto layoutBindings = [imageInfo];
+            VkDescriptorSetLayoutCreateInfo descriptorLayoutInfo;
+            descriptorLayoutInfo.bindingCount = layoutBindings.length.to!uint;
+            descriptorLayoutInfo.pBindings    = layoutBindings.ptr;
+
+            CHECK_VK(vkCreateDescriptorSetLayout(pipeline.device.logical.handle, &descriptorLayoutInfo, null, &pipeline.descriptorSetLayout));
+
             VkPipelineLayoutCreateInfo layoutInfo;
             layoutInfo.pushConstantRangeCount = 1;
             layoutInfo.pPushConstantRanges    = &pushConstantRange;
+            layoutInfo.setLayoutCount         = 1;
+            layoutInfo.pSetLayouts            = &pipeline.descriptorSetLayout;
             CHECK_VK(vkCreatePipelineLayout(pipeline.device.logical.handle, &layoutInfo, null, &pipeline.layout.handle));
 
             info("Creating render pass info");
@@ -1341,11 +1400,45 @@ final class VulkanResources
 
         void allocateSwapchainCommandBuffers(
             scope VulkanSwapchain*  swapchain,
-                  VulkanCommandPool pool
+                  VulkanCommandPool pool,
+                  VulkanPipeline* pipeline
         )
         {
             swapchain.graphicsBuffers.length = swapchain.framebuffers.length;
             VulkanResources.allocateCommandBuffers(pool, Ref(swapchain.graphicsBuffers));
+
+            VkDescriptorSetLayout[] layouts;
+            layouts.length = swapchain.images.length;
+            layouts[] = pipeline.descriptorSetLayout;
+
+            VkDescriptorSetAllocateInfo allocInfo;
+            allocInfo.descriptorPool = swapchain.descriptorPool;
+            allocInfo.descriptorSetCount = swapchain.images.length.to!uint;
+            allocInfo.pSetLayouts = layouts.ptr;
+
+            swapchain.imageSets.length = swapchain.images.length;
+            CHECK_VK(vkAllocateDescriptorSets(swapchain.device.logical.handle, &allocInfo, swapchain.imageSets.ptr));
+
+            // Cus I'm a lazy fuck, and this is going to get rewritten afterwards anyway, we'll just hard code a single texture
+            auto texture = VulkanResources.loadTexture(swapchain.device, "./resources/images/static/jcli_128x.png");
+
+            VkDescriptorImageInfo imageInfo;
+            imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            imageInfo.imageView = texture.view.handle;
+            imageInfo.sampler = texture.samplerHandle;
+
+            foreach(set; swapchain.imageSets)
+            {
+                VkWriteDescriptorSet setInfo;
+                setInfo.dstSet = set;
+                setInfo.dstBinding = 0;
+                setInfo.dstArrayElement = 0;
+                setInfo.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+                setInfo.descriptorCount = 1;
+                setInfo.pImageInfo = &imageInfo;
+
+                vkUpdateDescriptorSets(swapchain.device.logical.handle, 1, &setInfo, 0, null);
+            }
         }
 
         VulkanSemaphore createSemaphore(
@@ -1408,8 +1501,9 @@ final class VulkanResources
 
             final switch(type) with(VulkanBufferType)
             {
-                case error: assert(false);
-                case vertex: info.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT; break;
+                case error:       assert(false);
+                case vertex:      info.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT; break;
+                case transferSrc: info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;  break;
             }
 
             VulkanBuffer buffer;
@@ -1445,6 +1539,187 @@ final class VulkanResources
 
             buffer.memory.size = requirements.size;
             return buffer;
+        }
+
+        VulkanTexture loadTexture(
+            VulkanDevice device,
+            string location
+        )
+        {
+            import imagefmt;
+
+            auto image = read_image(location, 4);
+            assert(image.bpc == 8, "Image is 16-bit per channel");
+            if(image.e)
+                fatal(IF_ERROR[image.e]);
+            scope(exit) image.free();
+
+            VulkanTexture texture;
+            texture.device = device;
+            texture.size   = vec2!uint(image.w, image.h);
+
+            VkDeviceSize size = image.w * image.h * image.c;
+            auto buffer = VulkanResources.createBuffer(device, VulkanBufferType.transferSrc, size);
+            // scope(exit)
+            // {
+            //     this._buffers.length -= 1;
+            //     this._memory.length  -= 1;
+            //     vkDestroyBuffer(device.logical.handle, buffer.handle, null);
+            //     vkFreeMemory(device.logical.handle, buffer.memory.handle, null);
+            // }
+
+            void* pixelData;
+            vkMapMemory(device.logical.handle, buffer.memory.handle, 0, size, 0, &pixelData);
+            pixelData[0..size] = image.buf8[0..size];
+            vkUnmapMemory(device.logical.handle, buffer.memory.handle);
+
+            VkImageCreateInfo info;
+            info.imageType     = VK_IMAGE_TYPE_2D;
+            info.extent.width  = image.w;
+            info.extent.height = image.h;
+            info.extent.depth  = 1;
+            info.mipLevels     = 1;
+            info.arrayLayers   = 1;
+            info.format        = VK_FORMAT_R8G8B8A8_SRGB;
+            info.tiling        = VK_IMAGE_TILING_OPTIMAL;
+            info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+            info.usage         = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+            info.sharingMode   = VK_SHARING_MODE_EXCLUSIVE;
+            info.samples       = VK_SAMPLE_COUNT_1_BIT;
+
+            CHECK_VK(vkCreateImage(device.logical.handle, &info, null, &texture.handle));
+
+            // Copy pasted from the above function, but meh... I have *plenty* of things to design better next time >:D
+            VkMemoryPropertyFlags            properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+            VkPhysicalDeviceMemoryProperties physicalMemory;
+            VkMemoryRequirements             requirements;
+
+            vkGetImageMemoryRequirements(device.logical.handle, texture.handle, &requirements);
+            vkGetPhysicalDeviceMemoryProperties(device.physical.handle, &physicalMemory);
+
+            uint i;
+            for(i = 0; i < physicalMemory.memoryTypeCount; i++)
+            {
+                if(requirements.memoryTypeBits & (1 << i)
+                && physicalMemory.memoryTypes[i].propertyFlags & properties)
+                    break;
+            }
+            assert(i != physicalMemory.memoryTypeCount);
+
+            VkMemoryAllocateInfo allocInfo;
+            allocInfo.allocationSize  = requirements.size;
+            allocInfo.memoryTypeIndex = i;
+
+            CHECK_VK(vkAllocateMemory(device.logical.handle, &allocInfo, null, &texture.memory.handle));
+            //scope(exit) vkFreeMemory(device.logical.handle, texture.memory.handle, null);
+            vkBindImageMemory(device.logical.handle, texture.handle, texture.memory.handle, 0);
+
+            static VulkanCommandBuffer*[] commandBuffers;
+            if(commandBuffers.length == 0)
+            {
+                commandBuffers.length = 1;
+                VulkanResources.allocateCommandBuffers(device.logical.graphicsPool, Ref(commandBuffers));
+            }
+
+            VkCommandBufferBeginInfo beginInfo;
+            beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+            vkBeginCommandBuffer(commandBuffers[0].handle, &beginInfo);
+
+            void transition(VkImageLayout oldLayout, VkImageLayout newLayout)
+            {
+                VkImageMemoryBarrier barrier;
+                barrier.oldLayout = oldLayout;
+                barrier.newLayout = newLayout;
+                barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                barrier.image = texture.handle;
+                barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+                barrier.subresourceRange.baseMipLevel = 0;
+                barrier.subresourceRange.levelCount = 1;
+                barrier.subresourceRange.baseArrayLayer = 0;
+                barrier.subresourceRange.layerCount = 1;
+                barrier.srcAccessMask = 0;
+                barrier.dstAccessMask = 0;
+
+                VkPipelineStageFlags src;
+                VkPipelineStageFlags dst;
+
+                if(oldLayout == VK_IMAGE_LAYOUT_UNDEFINED)
+                {
+                    barrier.srcAccessMask = 0;
+                    barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+
+                    src = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+                    dst = VK_PIPELINE_STAGE_TRANSFER_BIT;
+                }
+                else
+                {
+                    barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+                    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+                    src = VK_PIPELINE_STAGE_TRANSFER_BIT;
+                    dst = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+                }
+
+                vkCmdPipelineBarrier(
+                    commandBuffers[0].handle,
+                    src, dst,
+                    0,
+                    0, null,
+                    0, null,
+                    1, &barrier
+                );
+            }
+            transition(VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+            VkBufferImageCopy region;
+            region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            region.imageSubresource.layerCount = 1;
+            region.imageExtent = VkExtent3D(image.w, image.h, 1);
+
+            vkCmdCopyBufferToImage(commandBuffers[0].handle, buffer.handle, texture.handle, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+
+            transition(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+            vkEndCommandBuffer(commandBuffers[0].handle);
+
+            VkSubmitInfo submitInfo;
+            submitInfo.commandBufferCount = 1;
+            submitInfo.pCommandBuffers    = &commandBuffers[0].handle;
+            vkQueueSubmit(device.logical.graphicsQueue.handle, 1, &submitInfo, null);
+            vkQueueWaitIdle(device.logical.graphicsQueue.handle); // Again, just something to improve later on.
+
+            VkImageViewCreateInfo viewInfo;
+            viewInfo.image = texture.handle;
+            viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+            viewInfo.format = VK_FORMAT_R8G8B8A8_SRGB;
+            viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            viewInfo.subresourceRange.baseMipLevel = 0;
+            viewInfo.subresourceRange.levelCount = 1;
+            viewInfo.subresourceRange.baseArrayLayer = 0;
+            viewInfo.subresourceRange.layerCount = 1;
+
+            CHECK_VK(vkCreateImageView(device.logical.handle, &viewInfo, null, &texture.view.handle));
+
+            VkSamplerCreateInfo samplerInfo;
+            samplerInfo.magFilter = VK_FILTER_LINEAR;
+            samplerInfo.minFilter = VK_FILTER_LINEAR;
+            samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+            samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+            samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+            samplerInfo.anisotropyEnable = VK_FALSE;
+            samplerInfo.maxAnisotropy = 1.0f;
+            samplerInfo.unnormalizedCoordinates = VK_TRUE;
+            samplerInfo.compareEnable = VK_FALSE;
+            samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+            samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+            samplerInfo.mipLodBias = 0.0f;
+            samplerInfo.minLod = 0.0f;
+            samplerInfo.maxLod = 0.0f;
+
+            CHECK_VK(vkCreateSampler(device.logical.handle, &samplerInfo, null, &texture.samplerHandle));
+
+            this._textures ~= texture;
+            return texture;
         }
     }
     

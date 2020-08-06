@@ -45,10 +45,11 @@ struct DefaultCommand
             this.config.save();
         }
 
-        this.iterateFilePairs("resources/images/static/", "ktx", conf, (pair)
+        this.iterateFilePairs("resources/images/static/", null, conf, (pair)
         {
             UserIO.logInfof("[STATIC IMAGE] %s", pair);
-            Shell.executeEnforceStatusZero("\"./tools/win/texturec.exe\" -f \"%s\" -o \"%s\"".format(pair.sourceFile, pair.destinationFile));
+            import std.file : fcopy = copy;
+            copy(pair.sourceFile, pair.destinationFile);
         });
 
         this.iterateFilePairs("resources/images/dynamic/", null, conf, (pair)

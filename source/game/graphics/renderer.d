@@ -8,17 +8,7 @@ struct Vertex
 {
     vec2f position;
     Color colour;
-
-    this(vec2f position, Color colour)
-    {
-        this.position = position;
-        this.colour   = colour;
-    }
-
-    this(float x, float y, Color colour)
-    {
-        this(vec2f(x, y), colour);
-    }
+    vec2i uv;
 }
 
 struct Quad
@@ -98,6 +88,7 @@ final class Renderer
         renderInfo.pClearValues      = &this._clearColour;
         
         vkCmdBeginRenderPass(swapchain.graphicsBuffer.handle, &renderInfo, VK_SUBPASS_CONTENTS_INLINE);
+        vkCmdBindDescriptorSets(swapchain.graphicsBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, RendererResources._pipeline.layout.handle, 0, 1, &swapchain._swapchain.imageSets[swapchain._currentFrame], 0, null);
 
         // Bind the pipeline and main vertex buffer
         vkCmdBindPipeline(swapchain.graphicsBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, RendererResources._pipeline.handle);
