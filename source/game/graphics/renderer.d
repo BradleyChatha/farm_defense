@@ -78,6 +78,16 @@ final class Renderer
         beginInfo.flags = 0;
         CHECK_VK(vkBeginCommandBuffer(swapchain.graphicsBuffer.handle, &beginInfo));
 
+        // Update push constants
+        vkCmdPushConstants(
+            swapchain.graphicsBuffer.handle, 
+            RendererResources._pipeline.layout.handle,
+            VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+            0,
+            cast(uint)RendererResources._pipeline.pushConstant.typeInBytes,
+            RendererResources._pipeline.pushConstant.ptr
+        );
+
         // Start render pass
         VkRenderPassBeginInfo renderInfo;
         renderInfo.renderPass        = RendererResources._pipeline.renderPass.handle;
@@ -170,6 +180,10 @@ final class RendererResources
 
     public static
     {
+        VulkanDefaultPushConstant* pushConstants()
+        {
+            return this._pipeline.pushConstant.as!VulkanDefaultPushConstant;
+        }
     }
 
     private static

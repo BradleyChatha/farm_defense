@@ -43,6 +43,7 @@ void main()
                 Window.nextEvent(&event);
         }
 
+        RendererResources.pushConstants.ticks = SDL_GetTicks();
         renderer.startFrame();
         renderer.endFrame();
 

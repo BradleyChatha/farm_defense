@@ -64,6 +64,39 @@ struct VulkanResourceArray(T)
     }
 }
 
+// Pointer with runtime type validation.
+struct TypedPointer
+{
+    void*    ptr;
+    TypeInfo type;
+    size_t   typeInBytes;
+
+    T* as(T)()
+    {
+        assert(typeid(T) is this.type, "Type mismatch");
+        return cast(T*)this.ptr;
+    }
+
+    static TypedPointer from(T)()
+    {
+        return TypedPointer(new T(), typeid(T), T.sizeof);
+    }
+}
+
+struct VulkanDefaultPushConstant
+{
+    static assert(VulkanDefaultPushConstant.sizeof % 4 == 0, "Vulkan spec states that this struct's size must be a multiple of 4");
+
+    uint ticks; // SDL_GetTicks(), used for time-based shenanigans.
+}
+
+struct VulkanDefaultUniformSet
+{
+    // Since we're in 2D only, I'm taking the following luxuries:
+    //  - Transforms are done CPU-side, as using uniforms makes sprite batching (if I ever bother with that in this project) harder than needed.
+    //  - We have a static camera, so I'm not even bothering with a projection matrix (see code for vert shader).
+}
+
 // VULKAN WRAPPER TYPES // These wrappers are thin PoD structs around Vulkan resources, abstractions are for a higher level part of the codebase //
 
 struct VulkanToggleableProperties(T)
@@ -197,6 +230,7 @@ struct VulkanPipeline
     VulkanPipelineLayout layout;
     VulkanRenderPass     renderPass;
     VulkanDevice         device;
+    TypedPointer         pushConstant;
 
     VulkanPipeline* delegate() recreateFunc;
 }
@@ -413,6 +447,7 @@ struct VulkanPipelineBuilder
         Dependency[]        _dependencies;
         VulkanShaderModule  _vertexShader;
         VulkanShaderModule  _fragmentShader;
+        TypedPointer        _pushConstant;
 
         VkPipelineInputAssemblyStateCreateInfo _inputAssemblyInfo;
         VkViewport                             _viewport;
@@ -499,6 +534,12 @@ struct VulkanPipelineBuilder
     RasterizerConfigurator configRasterizer()
     {
         return RasterizerConfigurator(this);
+    }
+
+    VulkanPipelineBuilder definePushConstant(T)()
+    {
+        this._pushConstant = TypedPointer.from!T;
+        return this;
     }
 
     VulkanPipelineBuilder drawsTriangles()
@@ -627,7 +668,8 @@ final class Vulkan
                 .drawsTriangles()
                 .setViewport(0, 0, 0, 0)
                 .setVertexShader(defaultVertShader)
-                .setFragmentShader(defaultFragShader);
+                .setFragmentShader(defaultFragShader)
+                .definePushConstant!VulkanDefaultPushConstant();
 
             auto pipeline = VulkanResources.createPipeline(defaultPipeline);
             VulkanResources.createSwapchainFramebuffers(swapchain, pipeline);
@@ -1152,7 +1194,13 @@ final class VulkanResources
             blendingInfo.pAttachments    = &framebufferBlend;
 
             info("Creating pipeline layout");
+            VkPushConstantRange pushConstantRange;
+            pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+            pushConstantRange.size       = builder._pushConstant.typeInBytes.to!uint;
+
             VkPipelineLayoutCreateInfo layoutInfo;
+            layoutInfo.pushConstantRangeCount = 1;
+            layoutInfo.pPushConstantRanges    = &pushConstantRange;
             CHECK_VK(vkCreatePipelineLayout(pipeline.device.logical.handle, &layoutInfo, null, &pipeline.layout.handle));
 
             info("Creating render pass info");
@@ -1177,6 +1225,7 @@ final class VulkanResources
             CHECK_VK(vkCreateGraphicsPipelines(pipeline.device.logical.handle, null, 1, &info, null, &pipeline.handle));
 
             pipeline.recreateFunc = () => VulkanResources.createPipeline(builder);
+            pipeline.pushConstant = builder._pushConstant; // Possible issue since we don't recreate the pointer's memory, but meh.
             
             this._pipelines ~= pipeline;
             this._pipelineCache[builder.toHash()] = pipeline;
