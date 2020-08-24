@@ -47,10 +47,11 @@ final class Window
 
             info("Creating Window Surface");
 
-            VkSurfaceKHR handle;
-            CHECK_SDL(SDL_Vulkan_CreateSurface(_handle, g_vkInstance, &handle));
+            Surface surface;
+            CHECK_SDL(SDL_Vulkan_CreateSurface(_handle, g_vkInstance, &surface.handle));
+            surface.debugName = "Window's Surface";
 
-            return Surface(handle);
+            return surface;
         }
 
         SDL_Window* handle()

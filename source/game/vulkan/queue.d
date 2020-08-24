@@ -5,7 +5,7 @@ import game.vulkan;
 
 mixin template VkQueueJAST()
 {
-    mixin VkWrapperJAST!VkQueue;
+    mixin VkWrapperJAST!(VkQueue, VK_DEBUG_REPORT_OBJECT_TYPE_QUEUE_EXT);
     uint                queueIndex;
     CommandPoolManager* commandPools;
 
@@ -13,8 +13,9 @@ mixin template VkQueueJAST()
     {
         infof("Creating Queue using family index %s", queueIndex);
         vkGetDeviceQueue(device, queueIndex, 0, &this.handle);
-        this.queueIndex = queueIndex;
+        this.queueIndex   = queueIndex;
         this.commandPools = CommandPoolManager.getByQueueIndex(device, queueIndex);
+        this.debugName    = typeof(this).stringof;
     }
 }
 

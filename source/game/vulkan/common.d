@@ -146,17 +146,32 @@ struct VkStringArrayJAST
     }
 }
 
-mixin template VkWrapperJAST(T)
+mixin template VkWrapperJAST(T, VkDebugReportObjectTypeEXT DebugT)
 {
     T handle;
     alias handle this;
 
     invariant(this.handle !is null, "This "~T.stringof~" is null.");
+
+    @property
+    void debugName(string name)
+    {
+        import std.string : toStringz;
+        if(vkDebugMarkerSetObjectNameEXT !is null)
+        {
+            VkDebugMarkerObjectNameInfoEXT info = 
+            {
+                objectType:  DebugT,
+                object:      cast(ulong)this.handle,
+                pObjectName: name.toStringz
+            };
+        }
+    }
 }
 
-mixin template VkSwapchainResourceWrapperJAST(T)
+mixin template VkSwapchainResourceWrapperJAST(T, VkDebugReportObjectTypeEXT DebugT)
 {
-    mixin VkWrapperJAST!T;
+    mixin VkWrapperJAST!(T, DebugT);
 
     void delegate(typeof(this)*) recreateFunc;
 }

@@ -51,7 +51,7 @@ struct CommandPoolManager
 
 struct CommandPool
 {
-    mixin VkWrapperJAST!VkCommandPool;
+    mixin VkWrapperJAST!(VkCommandPool, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_POOL_EXT);
     VkCommandPoolCreateFlagBits flags;
 
     this(LogicalDevice device, uint queueIndex, VkCommandPoolCreateFlagBits flags)
@@ -92,6 +92,6 @@ struct CommandPool
 
 struct CommandBuffer
 {
-    mixin VkWrapperJAST!VkCommandBuffer;
+    mixin VkWrapperJAST!(VkCommandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT);
     VkCommandPoolCreateFlagBits flags;
 }

@@ -10,13 +10,13 @@ enum GpuImageType
 
 struct GpuImage
 {
-    mixin VkWrapperJAST!VkImage;
+    mixin VkWrapperJAST!(VkImage, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT);
     VkFormat format;
 }
 
 struct GpuImageView
 {
-    mixin VkSwapchainResourceWrapperJAST!VkImageView;
+    mixin VkSwapchainResourceWrapperJAST!(VkImageView, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT);
     GpuImage*    image;
     GpuImageType type;
 

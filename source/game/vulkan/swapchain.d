@@ -6,7 +6,7 @@ import game.vulkan, game.common.maths, game.graphics.window, game.common;
 
 struct Swapchain
 {
-    mixin VkSwapchainResourceWrapperJAST!VkSwapchainKHR;
+    mixin VkSwapchainResourceWrapperJAST!(VkSwapchainKHR, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT);
     VkPresentModeKHR            presentMode;
     VkSurfaceFormatKHR          format;
     VkSurfaceCapabilitiesKHR    capabilities;

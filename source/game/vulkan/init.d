@@ -56,6 +56,7 @@ void vkInit_02_loadInstanceExtentions(ref VkStringArrayJAST enabled)
 
     VkStringArrayJAST wanted;
     wanted.add(Window.requiredExtentions);
+    wanted.add("VK_EXT_debug_utils");
     wanted.outputToLog("Wanted Extentions");
 
     auto available = vkGetArrayJAST!(VkExtensionProperties, vkEnumerateInstanceExtensionProperties)(null);
@@ -110,6 +111,7 @@ void vkInit_04_createInstance(ref VulkanInstance handle, ref VkStringArrayJAST l
 
     CHECK_VK(vkCreateInstance(&info, null, &handle.handle));
     loadInstanceLevelFunctions(handle);
+    loadDeviceLevelFunctions(handle);
 
     handle.layers = layers;
 }
