@@ -170,5 +170,6 @@ void vkInit_07_createLogicalDevice(ref LogicalDevice device, PhysicalDevice gpu)
 
 void vkInit_08_createSwapchain(ref Swapchain* swapchain)
 {
+    info("08. Creating initial swapchain");
     Swapchain.create(swapchain);
 }

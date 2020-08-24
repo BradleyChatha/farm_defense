@@ -48,14 +48,14 @@ struct Swapchain
         ptr.format = formatFilter.front;
 
         scope extent    = &ptr.capabilities.currentExtent;
-        scope minExtent = &ptr.capabilities.minImageExtent;
+        scope maxExtent = &ptr.capabilities.maxImageExtent;
         if(extent.width == uint.max || extent.height == uint.max)
             *extent = Window.size.toExtent;
 
-        if(extent.width != minExtent.width)
-            extent.width = minExtent.width;
-        if(extent.height != minExtent.height)
-            extent.height = minExtent.height;
+        if(extent.width > maxExtent.width)
+            extent.width = maxExtent.width;
+        if(extent.height > maxExtent.height)
+            extent.height = maxExtent.height;
 
         info("Swapchain Settings:");
         infof("\tPresent Mode: %s", ptr.presentMode);

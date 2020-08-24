@@ -150,6 +150,8 @@ mixin template VkWrapperJAST(T)
 {
     T handle;
     alias handle this;
+
+    invariant(this.handle !is null, "This "~T.stringof~" is null.");
 }
 
 mixin template VkSwapchainResourceWrapperJAST(T)
