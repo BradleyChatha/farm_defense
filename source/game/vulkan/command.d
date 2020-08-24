@@ -2,6 +2,7 @@ module game.vulkan.command;
 
 import std.experimental.logger;
 import std.typecons : Flag;
+import arsd.color;
 import game.vulkan;
 
 alias IsPrimaryBuffer = Flag!"isPrimaryBuffer";
@@ -94,4 +95,31 @@ struct CommandBuffer
 {
     mixin VkWrapperJAST!(VkCommandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT);
     VkCommandPoolCreateFlagBits flags;
+
+    void insertDebugMarker(string name, Color colour = Color(0, 0, 0, 0))
+    {
+        import std.string : toStringz;
+
+        VkDebugMarkerMarkerInfoEXT info;
+        info.pMarkerName = name.toStringz;
+        info.color       = [colour.r, colour.g, colour.b, colour.a];
+
+        vkCmdDebugMarkerInsertEXT(this, &info);
+    }
+
+    void pushDebugRegion(string name, Color colour = Color(0, 0, 0, 0))
+    {
+        import std.string : toStringz;
+
+        VkDebugMarkerMarkerInfoEXT info;
+        info.pMarkerName = name.toStringz;
+        info.color       = [colour.r, colour.g, colour.b, colour.a];
+
+        vkCmdDebugMarkerBeginEXT(this, &info);
+    }
+
+    void popDebugRegion()
+    {
+        vkCmdDebugMarkerEndEXT(this);
+    }
 }
