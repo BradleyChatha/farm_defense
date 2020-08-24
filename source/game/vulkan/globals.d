@@ -11,3 +11,4 @@ PhysicalDevice[] g_physicalDevices;
 PhysicalDevice   g_gpu;
 LogicalDevice    g_device;
 VulkanInstance   g_vkInstance;
+Swapchain*       g_swapchain;

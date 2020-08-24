@@ -14,6 +14,7 @@ struct PhysicalDevice
     VkPhysicalDeviceFeatures    features;
     Nullable!int                graphicsQueueIndex;
     Nullable!int                presentQueueIndex;
+    Nullable!int                transferQueueIndex;
     VkSurfaceCapabilitiesKHR    capabilities;
     VkSurfaceFormatKHR[]        formats;
     VkPresentModeKHR[]          presentModes;
@@ -27,10 +28,12 @@ struct PhysicalDevice
         this.handle  = handle;
         this.surface = surface;
 
+        // Get misc data about the gpu.
         this.extentions = vkGetArrayJAST!(VkExtensionProperties, vkEnumerateDeviceExtensionProperties)(handle, null);
         vkGetPhysicalDeviceProperties(handle, &this.properties);
         vkGetPhysicalDeviceFeatures(handle, &this.features);
 
+        // Find the queue families for graphics, present, and transfer.
         auto queueFamilies = vkGetArrayJAST!(VkQueueFamilyProperties, vkGetPhysicalDeviceQueueFamilyProperties)(handle);
         foreach(i, family; queueFamilies)
         {
@@ -41,12 +44,17 @@ struct PhysicalDevice
                 this.graphicsQueueIndex = i.to!uint;
             else if(canPresent && this.presentQueueIndex.isNull)
                 this.presentQueueIndex = i.to!uint;
+            
+            if((family.queueFlags & VK_QUEUE_TRANSFER_BIT) && this.transferQueueIndex.isNull)
+                this.transferQueueIndex = i.to!uint;
         }
 
-        vkGetPhysicalDeviceSurfaceCapabilitiesKHR(handle, surface, &this.capabilities);
+        // Get colour support and present.
+        this.updateCapabilities();
         this.formats = vkGetArrayJAST!(VkSurfaceFormatKHR, vkGetPhysicalDeviceSurfaceFormatsKHR)(handle, surface);
         this.presentModes = vkGetArrayJAST!(VkPresentModeKHR, vkGetPhysicalDeviceSurfacePresentModesKHR)(handle, surface);
 
+        // Log information to console so I can examine things.
         info("[Physical Device]");
         info("Extentions:");
         foreach(ext; this.extentions)
@@ -69,6 +77,11 @@ struct PhysicalDevice
         this.enabledExtentions = wanted.filter(this.extentions.map!(e => e.extensionName.ptr.asSlice));
         return this.enabledExtentions.slices.length == wanted.slices.length;
     }
+
+    void updateCapabilities()
+    {
+        vkGetPhysicalDeviceSurfaceCapabilitiesKHR(this, this.surface, &this.capabilities);
+    }
 }
 
 struct LogicalDevice
@@ -76,20 +89,25 @@ struct LogicalDevice
     mixin VkWrapperJAST!VkDevice;
     GraphicsQueue graphics;
     PresentQueue  present;
+    TransferQueue transfer;
 
     this(PhysicalDevice gpu)
     {
         import std.conv : to;
+        import containers.hashset;
 
+        // Create a queue for each unique family index.
         const graphicsIndex  = gpu.graphicsQueueIndex.get();
         const presentIndex   = gpu.presentQueueIndex.get();
-        const uniqueIndicies = (graphicsIndex == presentIndex)
-                               ? [graphicsIndex]
-                               : [graphicsIndex, presentIndex];
+        const transferIndex  = gpu.transferQueueIndex.get();
+        auto  indexSet       = HashSet!int();
+        indexSet.insert(graphicsIndex);
+        indexSet.insert(presentIndex);
+        indexSet.insert(transferIndex);
 
         const priority = 1.0f;
         VkDeviceQueueCreateInfo[] queueCreateInfos;
-        foreach(index; uniqueIndicies)
+        foreach(index; indexSet)
         {
             VkDeviceQueueCreateInfo info = 
             {
@@ -100,9 +118,11 @@ struct LogicalDevice
             queueCreateInfos ~= info;
         }
 
+        // Define features we want to use.
         VkPhysicalDeviceFeatures features;
         // TODO:
 
+        // Create the device.
         VkDeviceCreateInfo info = 
         {
             queueCreateInfoCount:       queueCreateInfos.length.to!uint,
@@ -117,7 +137,9 @@ struct LogicalDevice
         CHECK_VK(vkCreateDevice(gpu, &info, null, &this.handle));
         loadDeviceLevelFunctions(this);
 
+        // Create the queues.
         this.graphics = GraphicsQueue(this, graphicsIndex);
         this.present  = PresentQueue(this, presentIndex);
+        this.transfer = TransferQueue(this, transferIndex);
     }
 }

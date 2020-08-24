@@ -22,10 +22,16 @@ void vkInitJAST()
     vkInit_05_loadPhysicalDevices(Ref(g_physicalDevices));
     vkInit_06_findSuitableGpu(Ref(g_gpu), g_physicalDevices);
     vkInit_07_createLogicalDevice(Ref(g_device), g_gpu);
+    vkInit_08_createSwapchain(Ref(g_swapchain));
 }
 
 void vkUninitJAST()
 {
+    vkDestroyAllJAST();
+    vkDestroySwapchainKHR(g_device, g_swapchain.handle, null);
+    vkDestroySurfaceKHR(g_vkInstance, g_gpu.surface, null);
+    vkDestroyDevice(g_device, null);
+    vkDestroyInstance(g_vkInstance, null);
 }
 
 /+
@@ -160,4 +166,9 @@ void vkInit_07_createLogicalDevice(ref LogicalDevice device, PhysicalDevice gpu)
     info("07. Creating logical device.");
 
     device = LogicalDevice(gpu);  
+}
+
+void vkInit_08_createSwapchain(ref Swapchain* swapchain)
+{
+    Swapchain.create(swapchain);
 }

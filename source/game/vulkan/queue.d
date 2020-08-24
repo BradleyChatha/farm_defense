@@ -23,3 +23,8 @@ struct PresentQueue
 {
     mixin VkQueueJAST;
 }
+
+struct TransferQueue
+{
+    mixin VkQueueJAST;
+}

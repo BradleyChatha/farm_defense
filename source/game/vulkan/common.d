@@ -151,3 +151,10 @@ mixin template VkWrapperJAST(T)
     T handle;
     alias handle this;
 }
+
+mixin template VkSwapchainResourceWrapperJAST(T)
+{
+    mixin VkWrapperJAST!T;
+
+    void delegate(typeof(this)*) recreateFunc;
+}
