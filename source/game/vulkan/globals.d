@@ -7,13 +7,19 @@ import game.vulkan, game.common.maths;
 // Most globals will be created during `init.d`, and from that point on won't be modified outside of being passed to Vulkan functions.
 __gshared:
 
-PhysicalDevice[]    g_physicalDevices;
-PhysicalDevice      g_gpu;
-LogicalDevice       g_device;
-VulkanInstance      g_vkInstance;
-Swapchain*          g_swapchain;
-VkPipelineCache     g_pipelineCache;
-TexturedQuadShader  g_shaderQuadTextured;
+PhysicalDevice[]            g_physicalDevices;
+PhysicalDevice              g_gpu;
+LogicalDevice               g_device;
+VulkanInstance              g_vkInstance;
+Swapchain*                  g_swapchain;
+VkPipelineCache             g_pipelineCache;
+TexturedQuadShader          g_shaderQuadTextured;
+TexturedQuadOpaquePipeline* g_pipelineQuadTexturedOpaque;
+
+// START aliases //
+alias TexturedQuadShader          = Shader!(TexturedQuadPushConstants, TexturedQuadUniform);
+alias TexturedQuadOpaquePipeline  = Pipeline!(TexturedQuadVertex);
+alias TexturedQuadPipelineBuilder = PipelineBuilder!(TexturedQuadVertex);
 
 // START Additional data types //
 struct TexturedQuadPushConstants
@@ -25,4 +31,18 @@ struct TexturedQuadUniform
 {
 }
 
-alias TexturedQuadShader = Shader!(TexturedQuadPushConstants, TexturedQuadUniform);
+struct TexturedQuadVertex
+{
+    import arsd.color;
+
+    vec2f position;
+    vec2u uv;
+    Color colour;
+
+    static void defineAttributes(VertexAttributeBuilder builder)
+    {
+        builder = builder.location(0).format(VK_FORMAT_R32G32_SFLOAT).offset(TexturedQuadVertex.position.offsetof).build()
+                         .location(1).format(VK_FORMAT_R32G32_UINT)  .offset(TexturedQuadVertex.uv.offsetof)      .build()
+                         .location(2).format(VK_FORMAT_R8G8B8A8_UINT).offset(TexturedQuadVertex.colour.offsetof)  .build();
+    }
+}

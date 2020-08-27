@@ -29,6 +29,7 @@ void vkInitJAST()
     vkInit_08_createSwapchain(Ref(g_swapchain));
     vkInit_09_loadPipelineCache(Ref(g_pipelineCache));
     vkInit_10_loadShaders();
+    vkInit_11_buildPipelines();
 }
 
 void vkUninitJAST()
@@ -218,4 +219,14 @@ void vkInit_10_loadShaders()
 {
     info("10. Loading shaders.");
     g_shaderQuadTextured = TexturedQuadShader(TEXTURED_QUAD_VERTEX_SHADER, TEXTURED_QUAD_FRAGMENT_SHADER, "Textured Quad Shader");
+}
+
+void vkInit_11_buildPipelines()
+{
+    info("11. Building pipelines.");
+
+    g_pipelineQuadTexturedOpaque = 
+        TexturedQuadPipelineBuilder()
+            .initialSetup()
+        .build();
 }
