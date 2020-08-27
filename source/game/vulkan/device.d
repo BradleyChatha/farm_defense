@@ -7,7 +7,7 @@ import game.vulkan, erupted;
 
 struct PhysicalDevice
 {
-    mixin VkWrapperJAST!(VkPhysicalDevice, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT);
+    mixin VkWrapperJAST!VkPhysicalDevice;
 
     VkExtensionProperties[]     extentions;
     VkPhysicalDeviceProperties  properties;
@@ -86,7 +86,7 @@ struct PhysicalDevice
 
 struct LogicalDevice
 {
-    mixin VkWrapperJAST!(VkDevice, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT);
+    mixin VkWrapperJAST!VkDevice;
     GraphicsQueue graphics;
     PresentQueue  present;
     TransferQueue transfer;

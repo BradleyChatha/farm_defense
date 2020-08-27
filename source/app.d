@@ -1,8 +1,17 @@
 import std.stdio, std.experimental.logger, std.exception;
 import bindbc.sdl, erupted;
 
+private bool goBack = false;
+
 void main()
-{
+{   
+    scope(exit)
+    {
+        import std.file : chdir;
+        if(goBack)
+            chdir("..");
+    }
+
     main_01_ensureCorrectDirectory();
     main_02_loadThirdPartyDeps();
     main_03_runGame();
@@ -20,16 +29,10 @@ void main_01_ensureCorrectDirectory()
     import std.file : exists, chdir;
 
     // Support running the game from "dub run"
-    bool goBack = false;
     if("dub.sdl".exists)
     {
         chdir("bin");
         goBack = true;
-    }    
-    scope(exit)
-    {
-        if(goBack)
-            chdir("..");
     }
 }
 

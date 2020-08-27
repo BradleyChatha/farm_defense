@@ -9,6 +9,10 @@ import game.vulkan, game.common, game.graphics.window;
 //
 // Not *too* heavily, just for functions that can't be associated with singular objects. E.g. these init routines.
 
+private const PIPELINE_CACHE_FILE           = "./pipeline.cache";
+private const TEXTURED_QUAD_VERTEX_SHADER   = "./resources/shaders/shader.spv.vert";
+private const TEXTURED_QUAD_FRAGMENT_SHADER = "./resources/shaders/shader.spv.frag";
+
 void vkInitJAST()
 {
     VkStringArrayJAST instanceExtensions;
@@ -23,12 +27,29 @@ void vkInitJAST()
     vkInit_06_findSuitableGpu(Ref(g_gpu), g_physicalDevices);
     vkInit_07_createLogicalDevice(Ref(g_device), g_gpu);
     vkInit_08_createSwapchain(Ref(g_swapchain));
+    vkInit_09_loadPipelineCache(Ref(g_pipelineCache));
+    vkInit_10_loadShaders();
 }
 
 void vkUninitJAST()
 {
+    import std.file : write;
+    import std.conv : to;
+
+    if(g_pipelineCache != VkPipelineCache.init)
+    {
+        info("Writing pipeline cache to disk.");
+        ulong pipelineDataLength;
+        vkGetPipelineCacheData(g_device, g_pipelineCache, &pipelineDataLength, null);
+
+        auto data = new ubyte[pipelineDataLength.to!size_t];
+        vkGetPipelineCacheData(g_device, g_pipelineCache, &pipelineDataLength, data.ptr);
+        write(PIPELINE_CACHE_FILE, data);
+    }
+
     vkDestroyAllJAST();
     vkDestroySwapchainKHR(g_device, g_swapchain.handle, null);
+    vkDestroyPipelineCache(g_device, g_pipelineCache, null);
     vkDestroySurfaceKHR(g_vkInstance, g_gpu.surface, null);
     vkDestroyDevice(g_device, null);
     vkDestroyInstance(g_vkInstance, null);
@@ -174,4 +195,27 @@ void vkInit_08_createSwapchain(ref Swapchain* swapchain)
 {
     info("08. Creating initial swapchain");
     Swapchain.create(swapchain);
+}
+
+void vkInit_09_loadPipelineCache(ref VkPipelineCache cache)
+{
+    import std.file : exists, read;
+
+    info("09. Loading Pipeline Cache from ", PIPELINE_CACHE_FILE);
+
+    ubyte[] data;
+    if(PIPELINE_CACHE_FILE.exists)
+        data = cast(ubyte[])read(PIPELINE_CACHE_FILE);
+
+    VkPipelineCacheCreateInfo info;
+    info.initialDataSize = data.length;
+    info.pInitialData    = data.ptr;
+
+    CHECK_VK(vkCreatePipelineCache(g_device, &info, null, &cache));
+}
+
+void vkInit_10_loadShaders()
+{
+    info("10. Loading shaders.");
+    g_shaderQuadTextured = TexturedQuadShader(TEXTURED_QUAD_VERTEX_SHADER, TEXTURED_QUAD_FRAGMENT_SHADER, "Textured Quad Shader");
 }

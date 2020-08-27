@@ -146,16 +146,50 @@ struct VkStringArrayJAST
     }
 }
 
-mixin template VkWrapperJAST(T, VkDebugReportObjectTypeEXT DebugT)
+string debugTypeOf(T)()
+{
+    import std.uni : isUpper, toUpper;
+    static assert(T.stringof[0..2] == "Vk");
+
+    char[] buffer;
+    buffer.reserve(T.stringof.length);
+
+    foreach(ch; T.stringof[2..$])
+    {
+        if(ch.isUpper)
+            buffer ~= "_";
+        buffer ~= ch.toUpper();
+    }
+
+    const HANDLE_SUFFIX = "_HANDLE*";
+    if(buffer.length >= HANDLE_SUFFIX.length && buffer[$-HANDLE_SUFFIX.length..$] == HANDLE_SUFFIX)
+        buffer.length -= HANDLE_SUFFIX.length;
+    
+    if(buffer.length >= 6 && buffer[$-6..$] == "_K_H_R")
+    {
+        buffer[$-5..$-2] = "KHR";
+        buffer.length -= 2;
+    }
+
+    return "VK_DEBUG_REPORT_OBJECT_TYPE"~buffer~"_EXT";
+}
+static assert(debugTypeOf!VkSwapchainKHR == "VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT", debugTypeOf!VkSwapchainKHR);
+
+mixin template VkWrapperJAST(T)
 {
     T handle;
     alias handle this;
 
+    private string _debugName;
+
     invariant(this.handle !is null, "This "~T.stringof~" is null.");
+    mixin("alias DebugT = "~debugTypeOf!T~";");
 
     @property
     void debugName(string name)
     {
+        this._debugName = name;
+
         import std.string : toStringz;
         if(vkDebugMarkerSetObjectNameEXT !is null)
         {
@@ -167,11 +201,24 @@ mixin template VkWrapperJAST(T, VkDebugReportObjectTypeEXT DebugT)
             };
         }
     }
+
+    @property
+    string debugName()
+    {
+        return this._debugName;
+    }
+
+    string toString() const
+    {
+        import std.traits : Unqual;
+        import std.format : format;
+        return "%s%s with handle %s".format(Unqual!(typeof(this)).stringof, this._debugName is null ? "" : " called "~this._debugName, this.handle);
+    }
 }
 
-mixin template VkSwapchainResourceWrapperJAST(T, VkDebugReportObjectTypeEXT DebugT)
+mixin template VkSwapchainResourceWrapperJAST(T)
 {
-    mixin VkWrapperJAST!(T, DebugT);
+    mixin VkWrapperJAST!T;
 
     void delegate(typeof(this)*) recreateFunc;
 }

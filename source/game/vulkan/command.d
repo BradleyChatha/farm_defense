@@ -6,6 +6,7 @@ import arsd.color;
 import game.vulkan;
 
 alias IsPrimaryBuffer = Flag!"isPrimaryBuffer";
+alias ResetOnSubmit   = Flag!"isBufferSingleUse";
 
 private CommandPoolManager*[uint] g_managersByQueueIndex;
 
@@ -52,8 +53,9 @@ struct CommandPoolManager
 
 struct CommandPool
 {
-    mixin VkWrapperJAST!(VkCommandPool, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_POOL_EXT);
+    mixin VkWrapperJAST!VkCommandPool;
     VkCommandPoolCreateFlagBits flags;
+    uint                        queueIndex;
 
     this(LogicalDevice device, uint queueIndex, VkCommandPoolCreateFlagBits flags)
     {
@@ -65,6 +67,7 @@ struct CommandPool
             flags:            flags
         };
 
+        this.queueIndex = queueIndex;
         CHECK_VK(vkCreateCommandPool(device, &info, null, &this.handle));
     }
 
@@ -85,7 +88,7 @@ struct CommandPool
 
         auto buffers = new CommandBuffer[count];
         foreach(i, handle; handles)
-            buffers[i] = CommandBuffer(handle);
+            buffers[i] = CommandBuffer(handle, this.queueIndex);
 
         return buffers;
     }
@@ -93,8 +96,30 @@ struct CommandPool
 
 struct CommandBuffer
 {
-    mixin VkWrapperJAST!(VkCommandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT);
+    mixin VkWrapperJAST!VkCommandBuffer;
     VkCommandPoolCreateFlagBits flags;
+    uint                        queueIndex;
+
+    this(VkCommandBuffer handle, uint queueIndex)
+    {
+        this.handle     = handle;
+        this.queueIndex = queueIndex;
+    }
+
+    void begin(ResetOnSubmit resetOnSubmit)
+    {
+        VkCommandBufferBeginInfo info;
+
+        if(resetOnSubmit)
+            info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+        vkBeginCommandBuffer(this, &info);
+    }
+
+    void end()
+    {
+        vkEndCommandBuffer(this);
+    }
 
     void insertDebugMarker(string name, Color colour = Color(0, 0, 0, 0))
     {

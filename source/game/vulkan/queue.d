@@ -5,7 +5,7 @@ import game.vulkan;
 
 mixin template VkQueueJAST()
 {
-    mixin VkWrapperJAST!(VkQueue, VK_DEBUG_REPORT_OBJECT_TYPE_QUEUE_EXT);
+    mixin VkWrapperJAST!VkQueue;
     uint                queueIndex;
     CommandPoolManager* commandPools;
 

@@ -15,3 +15,4 @@ bin/
 *.lst
 compile.exe
 .compile_config*
+pipeline.cache

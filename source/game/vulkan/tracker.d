@@ -6,9 +6,6 @@ import std.meta   : AliasSeq;
 import containers.hashset;
 import game.vulkan;
 
-private struct IsGeneric;
-private struct IsSwapchainResource;
-
 private const SYMBOL_PREFIX = "__set_";
 private enum SymbolNameOf(alias VkType) = (isPointer!VkType) ? SYMBOL_PREFIX~VkType.stringof[0..$-1] : SYMBOL_PREFIX~VkType.stringof;
 
@@ -19,20 +16,21 @@ if(isType!VkType && isCallable!DestroyFunc)
 
     bool vkTrackJAST(VkType value)
     {
-        infof("Begin tracking %s %s", VkType.stringof, value);
+        infof("Begin tracking %s", value.toString());
         return mixin(SymbolNameOf!VkType~".insert(value)");
     }
 
     bool vkUntrackJAST(VkType value)
     {
-        infof("Stop tracking %s %s", VkType.stringof, value);
+        infof("Stop tracking %s", value.toString());
         return mixin(SymbolNameOf!VkType~".remove(value)");
     }
 
     void vkDestroyJAST(VkType value)
     {
-        infof("Destroying tracked %s %s", VkType.stringof, value);
-        assert(vkUntrackJAST(value), "Value was not being tracked by the tracker.");
+        infof("Destroying tracked %s", value.toString());
+        const untracked = vkUntrackJAST(value);
+        assert(untracked, "Value was not being tracked by the tracker.");
 
         alias Params = Parameters!DestroyFunc;
         static if(is(Params[0] == VkInstance))
@@ -52,13 +50,16 @@ if(isType!VkType && isCallable!DestroyFunc)
 
     void vkRecreateJAST(VkType value)
     {
-        infof("Recreating tracked %s %s", VkType.stringof, value);
+        infof("Recreating tracked %s", value.toString());
         RecreateFunc(value);
+        infof("New handle is %s", value.handle);
     }
 }
 
 void vkDestroyAllJAST()
 {
+    import std.array : array;
+
     info("Destroying all tracked Vulkan objects.");
     static foreach(member; __traits(allMembers, game.vulkan.tracker))
     {{
@@ -66,13 +67,15 @@ void vkDestroyAllJAST()
                && member[0..SYMBOL_PREFIX.length] == SYMBOL_PREFIX
         )
         {
-            mixin("foreach(value; "~member~"){ vkDestroyJAST(value); }");
+            mixin("foreach(value; "~member~"[].array){ vkDestroyJAST(value); }");
         }
     }}
 }
 
 void vkRecreateAllJAST()
 {
+    import std.array : array;
+
     info("Recreating all tracked Vulkan objects.");
     static foreach(member; __traits(allMembers, game.vulkan.tracker))
     {{
@@ -82,7 +85,7 @@ void vkRecreateAllJAST()
         {
             alias VkType = Parameters!(typeof(typeof(__traits(getMember, game.vulkan.tracker, member)).insert))[0];
             static if(__traits(compiles, vkRecreateJAST(VkType.init)))
-                mixin("foreach(value; "~member~"){ vkDestroyJAST(value); }");
+                mixin("foreach(value; "~member~"[].array){ vkRecreateJAST(value); }");
         }
     }}
 }
@@ -92,5 +95,6 @@ private void genericRecreate(T)(T value)
     value.recreateFunc(value);
 }
 
+mixin GenericTracking!(ShaderModule, vkDestroyShaderModule);
 mixin GenericTracking!(Surface, vkDestroySurfaceKHR);
 mixin SwapchainResourceTracking!(GpuImageView*, vkDestroyImageView, genericRecreate!(GpuImageView*));
