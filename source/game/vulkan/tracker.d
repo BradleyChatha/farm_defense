@@ -37,7 +37,7 @@ if(isType!VkType && isCallable!DestroyFunc)
             DestroyFunc(g_vkInstance, value.handle, null);
         else static if(is(Params[0] == VkDevice))
             DestroyFunc(g_device, value.handle, null);
-        else static assert(false, "Don't know how to handle destroy func automatically: "~DestroyFunc.stringof);
+        else static assert(false, "Don't know how to handle destroy func automatically: "~typeof(DestroyFunc).stringof);
     }
 }
 
@@ -95,6 +95,29 @@ private void genericRecreate(T)(T value)
     value.recreateFunc(value);
 }
 
+template wrapperNameOf(alias VkType)
+{
+    const wrapperNameOf = debugTypeOf!VkType~"_WRAPPER";
+}
+
+mixin template GenericWrapper(alias VkType, alias DestroyFunc) 
+{
+    const NAME = wrapperNameOf!VkType;
+
+    // When do we reach the point of too many mixins?
+    mixin("struct "~NAME~" { mixin VkWrapperJAST!VkType; }");
+    mixin("mixin GenericTracking!("~NAME~", DestroyFunc);");
+}
+
+template wrapperOf(alias VkType)
+{
+    mixin("alias wrapperOf = "~wrapperNameOf!VkType~";");
+}
+
 mixin GenericTracking!(ShaderModule, vkDestroyShaderModule);
 mixin GenericTracking!(Surface, vkDestroySurfaceKHR);
+mixin GenericWrapper !(VkDescriptorSetLayout, vkDestroyDescriptorSetLayout);
+mixin GenericWrapper !(VkPipelineLayout, vkDestroyPipelineLayout);
+mixin GenericWrapper !(VkRenderPass, vkDestroyRenderPass);
 mixin SwapchainResourceTracking!(GpuImageView*, vkDestroyImageView, genericRecreate!(GpuImageView*));
+mixin SwapchainResourceTracking!(PipelineBase*, vkDestroyPipeline, genericRecreate!(PipelineBase*));

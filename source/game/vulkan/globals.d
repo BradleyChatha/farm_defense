@@ -18,13 +18,12 @@ TexturedQuadOpaquePipeline* g_pipelineQuadTexturedOpaque;
 
 // START aliases //
 alias TexturedQuadShader          = Shader!(TexturedQuadPushConstants, TexturedQuadUniform);
-alias TexturedQuadOpaquePipeline  = Pipeline!(TexturedQuadVertex);
-alias TexturedQuadPipelineBuilder = PipelineBuilder!(TexturedQuadVertex);
+alias TexturedQuadOpaquePipeline  = Pipeline!(TexturedQuadVertex, TexturedQuadPushConstants, TexturedQuadUniform);
+alias TexturedQuadPipelineBuilder = PipelineBuilder!(TexturedQuadVertex, TexturedQuadPushConstants, TexturedQuadUniform);
 
 // START Additional data types //
-struct TexturedQuadPushConstants
+align(4) struct TexturedQuadPushConstants
 {
-
 }
 
 struct TexturedQuadUniform

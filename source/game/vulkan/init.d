@@ -228,5 +228,6 @@ void vkInit_11_buildPipelines()
     g_pipelineQuadTexturedOpaque = 
         TexturedQuadPipelineBuilder()
             .initialSetup()
+            .usesShader(g_shaderQuadTextured)
         .build();
 }
