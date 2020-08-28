@@ -18,6 +18,8 @@ void vkInitJAST()
     VkStringArrayJAST instanceExtensions;
     VkStringArrayJAST instanceLayers;
 
+    vkInitEventsJAST();
+
     info("00. Initialising Vulkan");
     vkInit_01_loadFunctions();
     vkInit_02_loadInstanceExtentions(Ref(instanceExtensions));

@@ -1,31 +1,33 @@
 module game.vulkan.framefuncs;
 
+import std.experimental.logger;
 import game.vulkan;
 
+mixin template DefineEvent(string Name, alias CallbackT)
+{
+    alias EventCallbackT = EventCallback!CallbackT;
+
+    mixin("private EventArray!(CallbackT) g_"~Name~";");
+    mixin("alias "~Name~"   = CallbackT;");
+    mixin("alias "~Name~"Id = EventCallback!CallbackT;");
+    mixin("EventCallbackT vkListen"~Name~"JAST(CallbackT func){ return g_"~Name~".insert(func); }");
+    mixin("bool vkUnlistenJAST(EventCallbackT event){ return g_"~Name~".remove(event); }");
+}
+
+void vkInitEventsJAST()
+{
+    info("Initialising vulkan event system.");
+    static foreach(member; __traits(allMembers, game.vulkan.framefuncs))
+    {{
+        static if(member[0..2] == "g_")
+            mixin("typeof("~member~").create("~member~");");
+    }}
+}
+
 // START aliases //
-alias OnFrameChange   = void delegate(uint swapchainImageIndex);
 enum INVALID_EVENT_ID = size_t.max;
-
-// START globals //
-private static OnFrameChange[] g_onFrameChangeCallbacks;
-
-// START funcs //
-size_t vkListenOnFrameChangeJAST(OnFrameChange func)
-{
-    g_onFrameChangeCallbacks ~= func;
-    return g_onFrameChangeCallbacks.length - 1;
-}
-
-void vkUnlistenOnFrameChangeJAST(size_t id)
-{
-    // TODO: I kind of want to make a certain data structure for this first.
-}
-
-void vkEmitOnFrameChangeJAST(uint swapchainImageIndex)
-{
-    foreach(callback; g_onFrameChangeCallbacks)
-        callback(swapchainImageIndex);
-}
+mixin DefineEvent!("OnFrameChange",       void delegate(uint swapchainImageIndex));
+mixin DefineEvent!("OnSwapchainRecreate", void delegate(uint swapchainImageCount));
 
 // START types //
 struct EventCallback(FuncT)
@@ -43,9 +45,9 @@ struct EventArray(FuncT)
         size_t  _lastKnownNull;
     }
 
-    static void create(scope ref typeof(this)* ptr)
+    static void create(ref typeof(this) ptr)
     {
-        ptr = new typeof(this);
+        ptr = typeof(this).init;
         ptr.resize(512);
     }
 
@@ -97,7 +99,7 @@ struct EventArray(FuncT)
 unittest
 {
     alias DummyFunc = void delegate();
-    EventArray!DummyFunc* array;
+    EventArray!DummyFunc array;
     EventArray!DummyFunc.create(array);
 
     array.resize(2);

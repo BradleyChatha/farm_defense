@@ -195,7 +195,7 @@ struct DescriptorPoolManager
     private
     {
         uint              _swapchainImageIndex;
-        size_t            _onFrameChangeId;
+        OnFrameChangeId   _onFrameChangeId;
         DescriptorPool*[] _pools;
     }
 
