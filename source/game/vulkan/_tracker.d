@@ -1,4 +1,4 @@
-module game.vulkan.tracker;
+module game.vulkan._tracker;
 
 import std.experimental.logger;
 import std.traits : isType, isCallable, Parameters, isPointer;
@@ -61,7 +61,7 @@ void vkDestroyAllJAST()
     import std.array : array;
 
     info("Destroying all tracked Vulkan objects.");
-    static foreach(member; __traits(allMembers, game.vulkan.tracker))
+    static foreach(member; __traits(allMembers, game.vulkan._tracker))
     {{
         static if(member.length >= SYMBOL_PREFIX.length 
                && member[0..SYMBOL_PREFIX.length] == SYMBOL_PREFIX
@@ -77,13 +77,13 @@ void vkRecreateAllJAST()
     import std.array : array;
 
     info("Recreating all tracked Vulkan objects.");
-    static foreach(member; __traits(allMembers, game.vulkan.tracker))
+    static foreach(member; __traits(allMembers, game.vulkan._tracker))
     {{
         static if(member.length >= SYMBOL_PREFIX.length 
                && member[0..SYMBOL_PREFIX.length] == SYMBOL_PREFIX
         )
         {
-            alias VkType = Parameters!(typeof(typeof(__traits(getMember, game.vulkan.tracker, member)).insert))[0];
+            alias VkType = Parameters!(typeof(typeof(__traits(getMember, game.vulkan._tracker, member)).insert))[0];
             static if(__traits(compiles, vkRecreateJAST(VkType.init)))
                 mixin("foreach(value; "~member~"[].array){ vkRecreateJAST(value); }");
         }
