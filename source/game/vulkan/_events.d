@@ -1,4 +1,4 @@
-module game.vulkan.framefuncs;
+module game.vulkan._events;
 
 import std.experimental.logger;
 import game.vulkan;
