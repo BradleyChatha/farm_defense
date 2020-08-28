@@ -17,7 +17,7 @@ mixin template DefineEvent(string Name, alias CallbackT)
 void vkInitEventsJAST()
 {
     info("Initialising vulkan event system.");
-    static foreach(member; __traits(allMembers, game.vulkan.framefuncs))
+    static foreach(member; __traits(allMembers, game.vulkan._events))
     {{
         static if(member[0..2] == "g_")
             mixin("typeof("~member~").create("~member~");");
