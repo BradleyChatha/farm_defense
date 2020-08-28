@@ -134,11 +134,13 @@ struct DescriptorPool
     mixin VkSwapchainResourceWrapperJAST!VkDescriptorPool;
 
     static void create(scope ref DescriptorPool* ptr)
-    {        
+    {
         const areWeRecreating = ptr !is null;
         if(!areWeRecreating)
             ptr = new DescriptorPool();
         infof("%s the DescriptorPool.", (areWeRecreating) ? "Recreating" : "Creating");
+
+        ptr.recreateFunc = (p) => create(p);
 
         VkDescriptorPoolSize[2] sizes;
         with(sizes[0])
