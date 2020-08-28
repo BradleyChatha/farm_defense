@@ -12,6 +12,7 @@ PhysicalDevice              g_gpu;
 LogicalDevice               g_device;
 VulkanInstance              g_vkInstance;
 Swapchain*                  g_swapchain;
+DescriptorPoolManager*      g_descriptorPools;
 VkPipelineCache             g_pipelineCache;
 TexturedQuadShader          g_shaderQuadTextured;
 TexturedQuadOpaquePipeline* g_pipelineQuadTexturedOpaque;

@@ -30,6 +30,7 @@ void vkInitJAST()
     vkInit_09_loadPipelineCache(Ref(g_pipelineCache));
     vkInit_10_loadShaders();
     vkInit_11_buildPipelines();
+    vkInit_12_createDescriptorPools(Ref(g_descriptorPools));
 }
 
 void vkUninitJAST()
@@ -230,4 +231,10 @@ void vkInit_11_buildPipelines()
             .initialSetup()
             .usesShader(g_shaderQuadTextured)
         .build();
+}
+
+void vkInit_12_createDescriptorPools(ref DescriptorPoolManager* pool)
+{
+    info("12. Create descriptor pools.");
+    DescriptorPoolManager.create(Ref(pool));
 }

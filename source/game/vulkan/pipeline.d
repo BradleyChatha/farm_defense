@@ -18,8 +18,10 @@ struct PipelineBase
     VkRenderPass            renderPassHandle;
 }
 
-struct Pipeline(VertexT, PushConstantsT, UniformT)
+struct Pipeline(VertexT, PushConstantsT, UniformT_)
 {
+    alias UniformT = UniformT_;
+
     PipelineBase* base;
     alias base this;
 

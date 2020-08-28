@@ -119,5 +119,7 @@ mixin GenericTracking!(Surface, vkDestroySurfaceKHR);
 mixin GenericWrapper !(VkDescriptorSetLayout, vkDestroyDescriptorSetLayout);
 mixin GenericWrapper !(VkPipelineLayout, vkDestroyPipelineLayout);
 mixin GenericWrapper !(VkRenderPass, vkDestroyRenderPass);
+mixin GenericWrapper !(VkDescriptorPool, vkDestroyDescriptorPool);
 mixin SwapchainResourceTracking!(GpuImageView*, vkDestroyImageView, genericRecreate!(GpuImageView*));
 mixin SwapchainResourceTracking!(PipelineBase*, vkDestroyPipeline, genericRecreate!(PipelineBase*));
+mixin SwapchainResourceTracking!(DescriptorPool*, vkDestroyDescriptorPool, genericRecreate!(DescriptorPool*));
