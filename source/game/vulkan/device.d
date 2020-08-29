@@ -9,17 +9,18 @@ struct PhysicalDevice
 {
     mixin VkWrapperJAST!VkPhysicalDevice;
 
-    VkExtensionProperties[]     extentions;
-    VkPhysicalDeviceProperties  properties;
-    VkPhysicalDeviceFeatures    features;
-    Nullable!int                graphicsQueueIndex;
-    Nullable!int                presentQueueIndex;
-    Nullable!int                transferQueueIndex;
-    VkSurfaceCapabilitiesKHR    capabilities;
-    VkSurfaceFormatKHR[]        formats;
-    VkPresentModeKHR[]          presentModes;
-    Surface                     surface;
-    VkStringArrayJAST           enabledExtentions;
+    VkExtensionProperties[]             extentions;
+    VkPhysicalDeviceProperties          properties;
+    VkPhysicalDeviceFeatures            features;
+    VkPhysicalDeviceMemoryProperties    memoryProperties;
+    Nullable!int                        graphicsQueueIndex;
+    Nullable!int                        presentQueueIndex;
+    Nullable!int                        transferQueueIndex;
+    VkSurfaceCapabilitiesKHR            capabilities;
+    VkSurfaceFormatKHR[]                formats;
+    VkPresentModeKHR[]                  presentModes;
+    Surface                             surface;
+    VkStringArrayJAST                   enabledExtentions;
 
     this(VkPhysicalDevice handle, Surface surface)
     {
@@ -54,6 +55,9 @@ struct PhysicalDevice
         this.formats = vkGetArrayJAST!(VkSurfaceFormatKHR, vkGetPhysicalDeviceSurfaceFormatsKHR)(handle, surface);
         this.presentModes = vkGetArrayJAST!(VkPresentModeKHR, vkGetPhysicalDeviceSurfacePresentModesKHR)(handle, surface);
 
+        // Get memory properties.
+        vkGetPhysicalDeviceMemoryProperties(handle, &this.memoryProperties);
+
         // Log information to console so I can examine things.
         info("[Physical Device]");
         info("Extentions:");
@@ -81,6 +85,20 @@ struct PhysicalDevice
     void updateCapabilities()
     {
         vkGetPhysicalDeviceSurfaceCapabilitiesKHR(this, this.surface, &this.capabilities);
+    }
+
+    VkMemoryType getMemoryType(VkMemoryPropertyFlags flags, ref uint index)
+    {
+        foreach(i, type; this.memoryProperties.memoryTypes[0..this.memoryProperties.memoryTypeCount])
+        {
+            if((type.propertyFlags & flags) == flags)
+            {
+                index = cast(uint)i;
+                return type;
+            }
+        }
+
+        throw new Exception("GPU not supported.");
     }
 }
 

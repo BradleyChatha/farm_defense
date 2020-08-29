@@ -13,7 +13,13 @@ private const PIPELINE_CACHE_FILE           = "./pipeline.cache";
 private const TEXTURED_QUAD_VERTEX_SHADER   = "./resources/shaders/shader.spv.vert";
 private const TEXTURED_QUAD_FRAGMENT_SHADER = "./resources/shaders/shader.spv.frag";
 
-void vkInitJAST()
+void vkInitAllJAST()
+{
+    vkInitCoreJAST();
+    vkInitGraphicsJAST();
+}
+
+void vkInitCoreJAST()
 {
     VkStringArrayJAST instanceExtensions;
     VkStringArrayJAST instanceLayers;
@@ -28,6 +34,10 @@ void vkInitJAST()
     vkInit_05_loadPhysicalDevices(Ref(g_physicalDevices));
     vkInit_06_findSuitableGpu(Ref(g_gpu), g_physicalDevices);
     vkInit_07_createLogicalDevice(Ref(g_device), g_gpu);
+}
+
+void vkInitGraphicsJAST()
+{
     vkInit_08_createSwapchain(Ref(g_swapchain));
     vkInit_09_loadPipelineCache(Ref(g_pipelineCache));
     vkInit_10_loadShaders();
@@ -186,6 +196,9 @@ void vkInit_06_findSuitableGpu(ref PhysicalDevice gpu, PhysicalDevice[] devices)
 
     enforce(gpu != VK_NULL_HANDLE, "Could not find suitable graphics device.");
     infof("Chosen device called %s as graphics device.", gpu.properties.deviceName.ptr.asSlice);
+
+    info("Creating allocator objects.");
+    g_gpuAllocator.init();
 }
 
 void vkInit_07_createLogicalDevice(ref LogicalDevice device, PhysicalDevice gpu)

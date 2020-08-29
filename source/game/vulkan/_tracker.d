@@ -16,19 +16,19 @@ if(isType!VkType && isCallable!DestroyFunc)
 
     bool vkTrackJAST(VkType value)
     {
-        infof("Begin tracking %s", value.toString());
+        tracef("Begin tracking %s", value.toString());
         return mixin(SymbolNameOf!VkType~".insert(value)");
     }
 
     bool vkUntrackJAST(VkType value)
     {
-        infof("Stop tracking %s", value.toString());
+        tracef("Stop tracking %s", value.toString());
         return mixin(SymbolNameOf!VkType~".remove(value)");
     }
 
     void vkDestroyJAST(VkType value)
     {
-        infof("Destroying tracked %s", value.toString());
+        tracef("Destroying tracked %s", value.toString());
         const untracked = vkUntrackJAST(value);
         assert(untracked, "Value was not being tracked by the tracker.");
 
@@ -50,9 +50,9 @@ if(isType!VkType && isCallable!DestroyFunc)
 
     void vkRecreateJAST(VkType value)
     {
-        infof("Recreating tracked %s", value.toString());
+        tracef("Recreating tracked %s", value.toString());
         RecreateFunc(value);
-        infof("New handle is %s", value.handle);
+        tracef("New handle is %s", value.handle);
     }
 }
 
@@ -121,6 +121,7 @@ mixin GenericWrapper !(VkDescriptorSetLayout, vkDestroyDescriptorSetLayout);
 mixin GenericWrapper !(VkPipelineLayout, vkDestroyPipelineLayout);
 mixin GenericWrapper !(VkRenderPass, vkDestroyRenderPass);
 mixin GenericWrapper !(VkDescriptorPool, vkDestroyDescriptorPool);
+mixin GenericWrapper !(VkDeviceMemory, vkFreeMemory);
 mixin SwapchainResourceTracking!(GpuImageView*, vkDestroyImageView, genericRecreate!(GpuImageView*));
 mixin SwapchainResourceTracking!(PipelineBase*, vkDestroyPipeline, genericRecreate!(PipelineBase*));
 mixin SwapchainResourceTracking!(DescriptorPool*, vkDestroyDescriptorPool, genericRecreate!(DescriptorPool*));

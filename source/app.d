@@ -48,7 +48,7 @@ void main_02_loadThirdPartyDeps()
     SDL_Init(SDL_INIT_EVERYTHING);
     Window.onInit();
 
-    vkInitJAST();
+    vkInitAllJAST();
 }
 
 void main_04_unloadThirdPartyDeps()
