@@ -40,6 +40,7 @@ void vkInitCoreJAST()
     g_gpuCpuAllocator.allocate(256, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT );
     auto t = g_gpuCpuAllocator.allocate(256, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT );
     g_gpuCpuAllocator.deallocate(t);
+    t = g_gpuCpuAllocator.allocate(256, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT );
 }
 
 void vkInitGraphicsJAST()

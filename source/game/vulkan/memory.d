@@ -2,7 +2,7 @@ module game.vulkan.memory;
 
 import std.conv : to;
 import std.experimental.logger;
-import game.vulkan, game.common.util;
+import game.vulkan, game.common;
 
 struct GpuCpuBuffer
 {
@@ -16,102 +16,39 @@ struct GpuCpuBuffer
 // Block allocator using HOST COHERENT+VISIBLE memory.
 struct GpuCpuMemoryAllocator
 {
-    enum BLOCK_SIZE        = 1024 * 1024 * 256;
-    enum PAGE_SIZE         = 512;
-    enum PAGES_PER_BLOCK   = BLOCK_SIZE / PAGE_SIZE;
-    enum BOOKKEEPING_BYTES = PAGES_PER_BLOCK / 8;
+    enum BLOCK_SIZE      = 1024 * 1024 * 256;
+    enum PAGE_SIZE       = 512;
+    enum PAGES_PER_BLOCK = BLOCK_SIZE / PAGE_SIZE;
 
     static struct GpuMemoryBlock
     {
-        VkDeviceMemory           handle;
-        ubyte[]                  mappedData;
-        ubyte[BOOKKEEPING_BYTES] bookkeeping;
+        VkDeviceMemory                        handle;
+        ubyte[]                               mappedData;
+        BitmappedBookkeeper!(PAGES_PER_BLOCK) bookkeeper;
 
         bool allocate(size_t amount, ref ubyte[] data, ref size_t offset)
         {
             const PAGE_COUNT = (amount + (amount % PAGE_SIZE)) / PAGE_SIZE;
 
-            // Find available pages.
-            size_t startBit;
-            size_t startByte;
-            size_t endBit;
-            size_t endByte;
-            size_t bitCount;
-            foreach(byteI, bookByte; this.bookkeeping)
-            {
-                for(int bitI = 0; bitI < 8; bitI++)
-                {
-                    if((bookByte & (1 << bitI)) == 0)
-                    {
-                        bitCount++;
-                        if(bitCount == 1)
-                        {
-                            startBit  = bitI;
-                            startByte = byteI;
-                        }
-                        else
-                        {
-                            endBit  = bitI;
-                            endByte = byteI;
-                        }
-                    }
-
-                    if(bitCount == PAGE_COUNT)
-                        break;
-                }
-                
-                if(bitCount == PAGE_COUNT)
-                    break;
-            }
-
-            if(bitCount != PAGE_COUNT)
+            size_t bitIndex;
+            auto couldAllocate = this.bookkeeper.markNextNBits(Ref(bitIndex), PAGE_COUNT);
+            if(!couldAllocate)
             {
                 info("Failed");
                 return false;
             }
 
-            if(bitCount == 1)
-            {
-                endBit  = startBit;
-                endByte = startByte;
-            }
-
-            // Toggle bits.
-            for(size_t byteI = startByte; byteI < endByte + 1; byteI++)
-            {
-                ubyte bookByte = this.bookkeeping[byteI];
-                size_t start;
-                size_t end;
-
-                if(byteI == startByte)
-                {
-                    start = startBit;
-                    end   = (startByte != endByte) ? 8 : endBit + 1;
-                }
-                else if(byteI != endByte)
-                {
-                    start = 0;
-                    end   = 8;
-                }
-                else
-                {
-                    start = 0;
-                    end   = endBit;
-                }
-
-                for(auto bitI = start; bitI < end; bitI++)
-                    bookByte |= (1 << bitI);
-
-                this.bookkeeping[byteI] = bookByte;
-            }
-
             // Get page range.
+            const startBit  = bitIndex % 8;
+            const endBit    = (bitIndex + PAGE_COUNT) % 8;
+            const startByte = startBit / 8;
+            const endByte   = endBit / 8;
             const firstPage = (PAGE_SIZE * startByte * 8) + (PAGE_SIZE * startBit);
-            const lastPage  = (PAGE_SIZE * endByte * 8)   + (PAGE_SIZE * endBit) + PAGE_SIZE;
+            const lastPage  = (PAGE_SIZE * endByte * 8)   + (PAGE_SIZE * endBit);
 
             infof(
-                "Allocating %s bytes (%s pages) of range %s..%s (bits %s[%s]..%s[%s]) of host coherent memory.",
-                amount, PAGE_COUNT, firstPage, lastPage, startByte, startBit, endByte, endBit + 1
+                "Allocating %s bytes (%s pages) of byte range %s..%s (bits %s[%s]..%s[%s]) of host coherent memory.",
+                amount, PAGE_COUNT, firstPage, lastPage, startByte, startBit, endByte, endBit
             );
             data   = this.mappedData[firstPage..firstPage+amount];
             offset = firstPage;
@@ -135,35 +72,7 @@ struct GpuCpuMemoryAllocator
                 data.length, (endPage - startPage), startPage, endPage, startByte, startBit, endByte, endBit
             );
 
-            // Toggle Bits (copy-pasted from above, but... meh)
-            for(size_t byteI = startByte; byteI < endByte + 1; byteI++)
-            {
-                ubyte bookByte = this.bookkeeping[byteI];
-                size_t start;
-                size_t end;
-
-                if(byteI == startByte)
-                {
-                    start = startBit;
-                    end   = (startByte != endByte) ? 8 : endBit + 1;
-                }
-                else if(byteI != endByte)
-                {
-                    start = 0;
-                    end   = 8;
-                }
-                else
-                {
-                    start = 0;
-                    end   = endBit;
-                }
-
-                for(auto bitI = start; bitI < end; bitI++)
-                    bookByte &= ~(1 << bitI);
-
-                this.bookkeeping[byteI] = bookByte;
-            }
-
+            this.bookkeeper.setBitRange!false(startPage, endPage - startPage);
             data = null;
         }
     }

@@ -1,3 +1,3 @@
 module game.common;
 
-public import game.common.maths, game.common.util;
+public import game.common.maths, game.common.util, game.common.structures;
