@@ -100,7 +100,7 @@ struct GpuMemoryAllocator
 
             infof(
                 "Allocating %s bytes (%s pages) of range %s..%s (bits %s[%s]..%s[%s]) of host coherent memory.",
-                amount, PAGE_COUNT, firstPage, lastPage, startByte, startBit, endByte, endBit
+                amount, PAGE_COUNT, firstPage, lastPage, startByte, startBit, endByte, endBit + 1
             );
             data = this.mappedData[firstPage..lastPage];
             return true;
@@ -108,8 +108,50 @@ struct GpuMemoryAllocator
 
         void deallocate(ref byte[] data)
         {
-            assert(cast(size_t)&this.mappedData[$-1] - cast(size_t)this.mappedData.ptr == this.mappedData.length - 1);
-            // TODO:
+            assert(cast(size_t)data.ptr               >= cast(size_t)this.mappedData.ptr 
+                && cast(size_t)data.ptr + data.length <= cast(size_t)this.mappedData.ptr + this.mappedData.length);
+
+            // Calculate things.
+            const startPage = (cast(size_t)data.ptr - cast(size_t)this.mappedData.ptr) / PAGE_SIZE;
+            const endPage   = startPage + ((data.length + (data.length % PAGE_SIZE)) / PAGE_SIZE);
+            const startByte = startPage / 8;
+            const startBit  = startPage % 8;
+            const endByte   = endPage   / 8;
+            const endBit    = endPage   % 8;
+            infof(
+                "Deallocating %s bytes (%s pages) of page range %s..%s (bits %s[%s]..%s[%s]) of host coherent memory.",
+                data.length, (endPage - startPage), startPage, endPage, startByte, startBit, endByte, endBit
+            );
+
+            // Toggle Bits (copy-pasted from above, but... meh)
+            for(size_t byteI = startByte; byteI < endByte + 1; byteI++)
+            {
+                byte bookByte = this.bookkeeping[byteI];
+                size_t start;
+                size_t end;
+
+                if(byteI == startByte)
+                {
+                    start = startBit;
+                    end   = (startByte != endByte) ? 8 : endBit + 1;
+                }
+                else if(byteI != endByte)
+                {
+                    start = 0;
+                    end   = 8;
+                }
+                else
+                {
+                    start = 0;
+                    end   = endBit;
+                }
+
+                for(auto bitI = start; bitI < end; bitI++)
+                    bookByte &= ~(1 << bitI);
+
+                this.bookkeeping[byteI] = bookByte;
+            }
+
             data = null;
         }
     }
@@ -124,15 +166,11 @@ struct GpuMemoryAllocator
 
         auto test = GpuMemoryBlock(new byte[BLOCK_SIZE]);
         byte[] t;
-        test.allocate(1024, t);
-        test.allocate(512, t);
-        test.allocate(1024, t);
-        test.allocate(512, t);
-        test.allocate(1024, t);
-        test.allocate(1024, t);
-        test.allocate(512, t);
-        test.allocate(1024, t);
-        test.allocate(512, t);
+        byte[] t2;
+        test.allocate(1024, t2);
+        test.allocate(1024 * 16, t);
+        test.deallocate(t);
+        test.deallocate(t2);
         test.allocate(1024, t);
         int a = 0;
         int b = a / a;
