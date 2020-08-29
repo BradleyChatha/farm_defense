@@ -33,17 +33,6 @@ void vkInitJAST()
     vkInit_10_loadShaders();
     vkInit_11_buildPipelines();
     vkInit_12_createDescriptorPools(Ref(g_descriptorPools));
-
-    // Testing.
-    scope queue = g_device.transfer;
-    uint du;
-    queue.debugPrintFences();
-    queue.submit();
-    queue.debugPrintFences();
-    queue.submit();
-    queue.debugPrintFences();
-    vkEmitOnFrameChangeJAST(0);
-    queue.debugPrintFences();
 }
 
 void vkUninitJAST()
