@@ -163,16 +163,5 @@ struct GpuMemoryAllocator
     void init()
     {
         this.memoryType = g_gpu.getMemoryType(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, Ref(this.memoryTypeIndex));
-
-        auto test = GpuMemoryBlock(new byte[BLOCK_SIZE]);
-        byte[] t;
-        byte[] t2;
-        test.allocate(1024, t2);
-        test.allocate(1024 * 16, t);
-        test.deallocate(t);
-        test.deallocate(t2);
-        test.allocate(1024, t);
-        int a = 0;
-        int b = a / a;
     }
 }
