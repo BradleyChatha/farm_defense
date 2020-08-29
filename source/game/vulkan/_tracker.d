@@ -116,6 +116,7 @@ template wrapperOf(alias VkType)
 
 mixin GenericTracking!(ShaderModule, vkDestroyShaderModule);
 mixin GenericTracking!(Surface, vkDestroySurfaceKHR);
+mixin GenericTracking!(Fence, vkDestroyFence);
 mixin GenericWrapper !(VkDescriptorSetLayout, vkDestroyDescriptorSetLayout);
 mixin GenericWrapper !(VkPipelineLayout, vkDestroyPipelineLayout);
 mixin GenericWrapper !(VkRenderPass, vkDestroyRenderPass);

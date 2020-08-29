@@ -1,17 +1,20 @@
 module game.vulkan._events;
 
+import std.traits : Parameters;
 import std.experimental.logger;
 import game.vulkan;
 
 mixin template DefineEvent(string Name, alias CallbackT)
 {
-    alias EventCallbackT = EventCallback!CallbackT;
+    alias CallbackTParams = Parameters!CallbackT;
+    alias EventCallbackT  = EventCallback!CallbackT;
 
     mixin("private EventArray!(CallbackT) g_"~Name~";");
     mixin("alias "~Name~"   = CallbackT;");
     mixin("alias "~Name~"Id = EventCallback!CallbackT;");
     mixin("EventCallbackT vkListen"~Name~"JAST(CallbackT func){ return g_"~Name~".insert(func); }");
     mixin("bool vkUnlistenJAST(EventCallbackT event){ return g_"~Name~".remove(event); }");
+    mixin("void vkEmit"~Name~"JAST(CallbackTParams params){ g_"~Name~".emit(params); }");
 }
 
 void vkInitEventsJAST()
@@ -38,6 +41,8 @@ struct EventCallback(FuncT)
 
 struct EventArray(FuncT)
 {
+    alias FuncTParams = Parameters!FuncT;
+
     private
     {
         FuncT[] _callbacks;
@@ -48,7 +53,7 @@ struct EventArray(FuncT)
     static void create(ref typeof(this) ptr)
     {
         ptr = typeof(this).init;
-        ptr.resize(512);
+        ptr.resize(32);
     }
 
     EventCallback!FuncT insert(FuncT callback)
@@ -71,6 +76,15 @@ struct EventArray(FuncT)
         this._lastKnownNull = event.id;
 
         return true;
+    }
+
+    void emit(FuncTParams params)
+    {
+        foreach(callback; this._callbacks)
+        {
+            if(callback !is null)
+                callback(params);
+        }
     }
 
     private size_t findNextNullIndex()

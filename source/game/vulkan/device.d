@@ -87,9 +87,9 @@ struct PhysicalDevice
 struct LogicalDevice
 {
     mixin VkWrapperJAST!VkDevice;
-    GraphicsQueue graphics;
-    PresentQueue  present;
-    TransferQueue transfer;
+    GraphicsQueue* graphics;
+    PresentQueue*  present;
+    TransferQueue* transfer;
 
     this(PhysicalDevice gpu)
     {
@@ -138,8 +138,8 @@ struct LogicalDevice
         loadDeviceLevelFunctions(this);
 
         // Create the queues.
-        this.graphics = GraphicsQueue(this, graphicsIndex);
-        this.present  = PresentQueue(this, presentIndex);
-        this.transfer = TransferQueue(this, transferIndex);
+        this.graphics = new GraphicsQueue(this, graphicsIndex);
+        this.present  = new PresentQueue(this, presentIndex);
+        this.transfer = new TransferQueue(this, transferIndex);
     }
 }
