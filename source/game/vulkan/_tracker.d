@@ -121,6 +121,7 @@ mixin GenericWrapper !(VkDescriptorSetLayout, vkDestroyDescriptorSetLayout);
 mixin GenericWrapper !(VkPipelineLayout, vkDestroyPipelineLayout);
 mixin GenericWrapper !(VkRenderPass, vkDestroyRenderPass);
 mixin GenericWrapper !(VkDescriptorPool, vkDestroyDescriptorPool);
+mixin GenericTracking!(GpuCpuBuffer*, vkDestroyBuffer);
 mixin GenericWrapper !(VkDeviceMemory, vkFreeMemory);
 mixin SwapchainResourceTracking!(GpuImageView*, vkDestroyImageView, genericRecreate!(GpuImageView*));
 mixin SwapchainResourceTracking!(PipelineBase*, vkDestroyPipeline, genericRecreate!(PipelineBase*));

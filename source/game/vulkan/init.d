@@ -34,6 +34,12 @@ void vkInitCoreJAST()
     vkInit_05_loadPhysicalDevices(Ref(g_physicalDevices));
     vkInit_06_findSuitableGpu(Ref(g_gpu), g_physicalDevices);
     vkInit_07_createLogicalDevice(Ref(g_device), g_gpu);
+
+    g_gpuCpuAllocator.allocate(256, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT );
+    g_gpuCpuAllocator.allocate(256, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT );
+    g_gpuCpuAllocator.allocate(256, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT );
+    auto t = g_gpuCpuAllocator.allocate(256, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT );
+    g_gpuCpuAllocator.deallocate(t);
 }
 
 void vkInitGraphicsJAST()
@@ -198,7 +204,7 @@ void vkInit_06_findSuitableGpu(ref PhysicalDevice gpu, PhysicalDevice[] devices)
     infof("Chosen device called %s as graphics device.", gpu.properties.deviceName.ptr.asSlice);
 
     info("Creating allocator objects.");
-    g_gpuAllocator.init();
+    g_gpuCpuAllocator.init();
 }
 
 void vkInit_07_createLogicalDevice(ref LogicalDevice device, PhysicalDevice gpu)

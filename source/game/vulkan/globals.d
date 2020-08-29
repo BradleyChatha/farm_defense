@@ -16,7 +16,7 @@ DescriptorPoolManager*      g_descriptorPools;
 VkPipelineCache             g_pipelineCache;
 TexturedQuadShader          g_shaderQuadTextured;
 TexturedQuadOpaquePipeline* g_pipelineQuadTexturedOpaque;
-GpuMemoryAllocator          g_gpuAllocator;
+GpuCpuMemoryAllocator       g_gpuCpuAllocator;
 
 // START aliases //
 alias TexturedQuadShader          = Shader!(TexturedQuadPushConstants, TexturedQuadUniform);
