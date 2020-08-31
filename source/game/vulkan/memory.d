@@ -34,8 +34,10 @@ struct GpuMemoryBlock
     enum PAGE_SIZE       = 512;
     enum PAGES_PER_BLOCK = BLOCK_SIZE / PAGE_SIZE;
 
-    VkDeviceMemory                        handle;
-    BitmappedBookkeeper!(PAGES_PER_BLOCK) bookkeeper;
+    alias Bookkeeper = BitmappedBookkeeper!PAGES_PER_BLOCK;
+
+    VkDeviceMemory handle;
+    Bookkeeper     bookkeeper;
 
     this(uint memoryTypeIndex)
     {
@@ -48,6 +50,8 @@ struct GpuMemoryBlock
 
         CHECK_VK(vkAllocateMemory(g_device, &info, null, &this.handle));
         vkTrackJAST(wrapperOf!VkDeviceMemory(this.handle));
+
+        this.bookkeeper.setup();
     }
 
     void map(ref ubyte[] mapped)

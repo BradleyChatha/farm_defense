@@ -65,11 +65,25 @@ T[] vkGetArrayJAST(T, alias Func, Args...)(Args args)
 
 const(char)[] asSlice(VkStringJAST str)
 {
-    import core.stdc.string;
+    version(DigitalMars)
+    {
+        import core.stdc.string;
+        return str is null
+            ? null
+            : str[0..strlen(str)];
+    }
+    else version(LDC) // I've got no idea, LDC's code gen breaks every attempt to slice the `str` pointer.
+    {
+        char[] buffer;
+        foreach(i; 0..1024)
+        {
+            if(str[i] == '\0')
+                break;
 
-    return str is null
-         ? null
-         : str[0..strlen(str)];
+            buffer ~= str[i];
+        }
+        return buffer;
+    }
 }
 
 struct VkStringArrayJAST
@@ -115,9 +129,12 @@ struct VkStringArrayJAST
 
         VkStringJAST[] strings;
 
+        import std.algorithm;
+        foreach(str; enabledList)
+            info(str);
+        info(this._pointers.map!(p => p.asSlice));
         foreach(i; 0..this._pointers.length)
         {
-
             if(enabledList.canFind(this._slices[i]))
                 strings ~= this._pointers[i];
         }

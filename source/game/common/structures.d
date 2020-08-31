@@ -1,17 +1,25 @@
 module game.common.structures;
 
+import game.common.maths;
+
 struct BitmappedBookkeeper(size_t MaxValues)
 {
-    import game.common.maths;
     enum BOOKKEEPING_BYTES = amountDivideMagnitudeRounded(MaxValues, 8);
 
     private ubyte[BOOKKEEPING_BYTES] _bookkeeping;
+    private bool                     _setup;
 
     @disable
     this(this){}
 
+    void setup()
+    {
+        this._setup = true;
+    }
+
     void setBitRange(bool BitValue)(size_t startBit, size_t bitsToSet)
     {
+        assert(this._setup, "Please call .setup() first.");
         assert(startBit < this._bookkeeping.length * 8);
         
         auto startByte = startBit / 8;
@@ -21,9 +29,15 @@ struct BitmappedBookkeeper(size_t MaxValues)
         for(auto i = 0; i < bitsToSet; i++)
         {
             static if(BitValue)
+            {
+                assert((this._bookkeeping[byteI] & (1 << bitI)) == 0, "Bit is already set.");
                 this._bookkeeping[byteI] |= (1 << bitI++);
+            }
             else
+            {
+                assert((this._bookkeeping[byteI] & (1 << bitI)) != 0, "Bit is already unset.");
                 this._bookkeeping[byteI] &= ~(1 << bitI++);
+            }
 
             if(bitI == 8)
             {
@@ -37,22 +51,25 @@ struct BitmappedBookkeeper(size_t MaxValues)
 
     bool markNextNBits(ref size_t startBit, size_t n)
     {
-        size_t byteI      = 0;
-        size_t bitI       = 0;
-        size_t unsetCount = 0;
-        for(auto i = 0; i < this._bookkeeping.length * 8; i++)
+        assert(this._setup, "Please call .setup() first.");
+
+        size_t byteI    = 0;
+        size_t bitI     = 0;
+        size_t setCount = 0;
+
+        for(auto i = byteI * 8; i < this._bookkeeping.length * 8; i++)
         {
             if((this._bookkeeping[byteI] & (1 << bitI++)) == 0)
             {
-                unsetCount++;
-                if(unsetCount == 1)
+                setCount++;
+                if(setCount == 1)
                     startBit = i;
 
-                if(unsetCount == n)
+                if(setCount == n)
                     break;
             }
             else
-                unsetCount = 0;
+                setCount = 0;
 
             if(bitI == 8)
             {
@@ -62,7 +79,7 @@ struct BitmappedBookkeeper(size_t MaxValues)
             }
         }
 
-        if(unsetCount != n)
+        if(setCount != n)
             return false;
         
         this.setBitRange!true(startBit, n);
@@ -76,6 +93,7 @@ unittest
     import std.format : format;
 
     auto keeper = BitmappedBookkeeper!64();
+    keeper.setup();
 
     keeper.setBitRange!true(0, 4);
     assert(keeper._bookkeeping[0] == 0b00001111);
@@ -119,6 +137,7 @@ unittest
     import std.format : format;
 
     auto keeper = BitmappedBookkeeper!16();
+    keeper.setup();
     keeper._bookkeeping[0] = 0b11111111;
     keeper._bookkeeping[1] = 0b00000001;
 
