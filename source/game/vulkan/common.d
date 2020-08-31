@@ -129,10 +129,6 @@ struct VkStringArrayJAST
 
         VkStringJAST[] strings;
 
-        import std.algorithm;
-        foreach(str; enabledList)
-            info(str);
-        info(this._pointers.map!(p => p.asSlice));
         foreach(i; 0..this._pointers.length)
         {
             if(enabledList.canFind(this._slices[i]))
