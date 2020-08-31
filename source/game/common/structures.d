@@ -7,6 +7,9 @@ struct BitmappedBookkeeper(size_t MaxValues)
 
     private ubyte[BOOKKEEPING_BYTES] _bookkeeping;
 
+    @disable
+    this(this){}
+
     void setBitRange(bool BitValue)(size_t startBit, size_t bitsToSet)
     {
         assert(startBit < this._bookkeeping.length * 8);

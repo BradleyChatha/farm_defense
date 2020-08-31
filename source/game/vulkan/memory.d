@@ -19,6 +19,15 @@ struct GpuMemoryRange
     size_t         length;
 }
 
+/++
+ + Giant chunk of GPU memory of any memory type, managed with in bitmapped blocks.
+ +
+ + Notes:
+ +  Data can only be mapped if the memory type is HOST_VISIBLE.
+ +
+ + Issues:
+ +  This block allocator doesn't perform defragging, which for this game won't be an issue (hopefully).
+ + ++/
 struct GpuMemoryBlock
 {
     enum BLOCK_SIZE      = 1024 * 1024 * 256;
