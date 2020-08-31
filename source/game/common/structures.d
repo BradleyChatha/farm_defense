@@ -2,7 +2,8 @@ module game.common.structures;
 
 struct BitmappedBookkeeper(size_t MaxValues)
 {
-    enum BOOKKEEPING_BYTES = (MaxValues + (MaxValues % 8)) / 8;
+    import game.common.maths;
+    enum BOOKKEEPING_BYTES = amountDivideMagnitudeRounded(MaxValues, 8);
 
     private ubyte[BOOKKEEPING_BYTES] _bookkeeping;
 
@@ -38,7 +39,7 @@ struct BitmappedBookkeeper(size_t MaxValues)
         size_t unsetCount = 0;
         for(auto i = 0; i < this._bookkeeping.length * 8; i++)
         {
-            if((this._bookkeeping[byteI] & (1 << i)) == 0)
+            if((this._bookkeeping[byteI] & (1 << bitI++)) == 0)
             {
                 unsetCount++;
                 if(unsetCount == 1)
@@ -71,7 +72,7 @@ unittest
 {
     import std.format : format;
 
-    auto keeper = BitmappedBookkeeper!32();
+    auto keeper = BitmappedBookkeeper!64();
 
     keeper.setBitRange!true(0, 4);
     assert(keeper._bookkeeping[0] == 0b00001111);
@@ -92,5 +93,33 @@ unittest
     assert(startBit == 1);
     assert(keeper._bookkeeping[0] == 0b00111111);
 
-    assert(!keeper.markNextNBits(startBit, 30));
+    assert(!keeper.markNextNBits(startBit, 900));
+
+    assert(keeper.markNextNBits(startBit, 3)); // Cross-byte marking
+    assert(startBit == 6);
+    assert(keeper._bookkeeping[0] == 0b11111111);
+    assert(keeper._bookkeeping[1] == 0b00000001);
+
+    assert(keeper.markNextNBits(startBit, 7)); // Fill up this byte
+    assert(startBit == 9, "%s".format(startBit));
+
+    assert(keeper.markNextNBits(startBit, 17));
+    assert(startBit == 16, "%s".format(startBit));
+    assert(keeper._bookkeeping[2] == 0b11111111);
+    assert(keeper._bookkeeping[3] == 0b11111111);
+    assert(keeper._bookkeeping[4] == 0b00000001);
+}
+
+@("Cross-byte issue")
+unittest
+{
+    import std.format : format;
+
+    auto keeper = BitmappedBookkeeper!16();
+    keeper._bookkeeping[0] = 0b11111111;
+    keeper._bookkeeping[1] = 0b00000001;
+
+    size_t startBit;
+    assert(keeper.markNextNBits(startBit, 1));
+    assert(startBit == 9, "%s".format(startBit));
 }

@@ -7,79 +7,111 @@ import game.vulkan, game.common;
 struct GpuCpuBuffer
 {
     mixin VkWrapperJAST!VkBuffer;
-    VkDeviceMemory memoryHandle;
-    size_t         memoryOffset;
-    size_t         blockIndex;
-    ubyte[]        data;
+    ubyte[]         data;
+    GpuMemoryRange  memoryRange;
+    GpuMemoryBlock* memoryBlock;
 }
 
-// Block allocator using HOST COHERENT+VISIBLE memory.
-struct GpuCpuMemoryAllocator
+struct GpuMemoryRange
+{
+    VkDeviceMemory memoryHandle;
+    size_t         offset;
+    size_t         length;
+}
+
+struct GpuMemoryBlock
 {
     enum BLOCK_SIZE      = 1024 * 1024 * 256;
     enum PAGE_SIZE       = 512;
     enum PAGES_PER_BLOCK = BLOCK_SIZE / PAGE_SIZE;
 
-    static struct GpuMemoryBlock
+    VkDeviceMemory                        handle;
+    BitmappedBookkeeper!(PAGES_PER_BLOCK) bookkeeper;
+
+    this(uint memoryTypeIndex)
     {
-        VkDeviceMemory                        handle;
-        ubyte[]                               mappedData;
-        BitmappedBookkeeper!(PAGES_PER_BLOCK) bookkeeper;
-
-        bool allocate(size_t amount, ref ubyte[] data, ref size_t offset)
+        infof("Creating new memory block for memory type %s", memoryTypeIndex);
+        VkMemoryAllocateInfo info = 
         {
-            const PAGE_COUNT = (amount + (amount % PAGE_SIZE)) / PAGE_SIZE;
+            allocationSize:  BLOCK_SIZE,
+            memoryTypeIndex: memoryTypeIndex
+        };
 
-            size_t bitIndex;
-            auto couldAllocate = this.bookkeeper.markNextNBits(Ref(bitIndex), PAGE_COUNT);
-            if(!couldAllocate)
-            {
-                info("Failed");
-                return false;
-            }
-
-            // Get page range.
-            const startBit  = bitIndex % 8;
-            const endBit    = (bitIndex + PAGE_COUNT) % 8;
-            const startByte = startBit / 8;
-            const endByte   = endBit / 8;
-            const firstPage = (PAGE_SIZE * startByte * 8) + (PAGE_SIZE * startBit);
-            const lastPage  = (PAGE_SIZE * endByte * 8)   + (PAGE_SIZE * endBit);
-
-            infof(
-                "Allocating %s bytes (%s pages) of byte range %s..%s (bits %s[%s]..%s[%s]) of host coherent memory.",
-                amount, PAGE_COUNT, firstPage, lastPage, startByte, startBit, endByte, endBit
-            );
-            data   = this.mappedData[firstPage..firstPage+amount];
-            offset = firstPage;
-            return true;
-        }
-
-        void deallocate(ref ubyte[] data)
-        {
-            assert(cast(size_t)data.ptr               >= cast(size_t)this.mappedData.ptr 
-                && cast(size_t)data.ptr + data.length <= cast(size_t)this.mappedData.ptr + this.mappedData.length);
-
-            // Calculate things.
-            const startPage = (cast(size_t)data.ptr - cast(size_t)this.mappedData.ptr) / PAGE_SIZE;
-            const endPage   = startPage + ((data.length + (data.length % PAGE_SIZE)) / PAGE_SIZE);
-            const startByte = startPage / 8;
-            const startBit  = startPage % 8;
-            const endByte   = endPage   / 8;
-            const endBit    = endPage   % 8;
-            infof(
-                "Deallocating %s bytes (%s pages) of page range %s..%s (bits %s[%s]..%s[%s]) of host coherent memory.",
-                data.length, (endPage - startPage), startPage, endPage, startByte, startBit, endByte, endBit
-            );
-
-            this.bookkeeper.setBitRange!false(startPage, endPage - startPage);
-            data = null;
-        }
+        CHECK_VK(vkAllocateMemory(g_device, &info, null, &this.handle));
+        vkTrackJAST(wrapperOf!VkDeviceMemory(this.handle));
     }
 
-    uint             memoryTypeIndex;
-    VkMemoryType     memoryType;
-    GpuMemoryBlock[] blocks;
+    void map(ref ubyte[] mapped)
+    {
+        info("Mapping memory");
+
+        void* ptr;
+        CHECK_VK(vkMapMemory(g_device, this.handle, 0, BLOCK_SIZE, 0, &ptr));
+        mapped = cast(ubyte[])ptr[0..BLOCK_SIZE];
+    }
+
+    bool allocate(size_t amount, ref GpuMemoryRange memory)
+    {
+        const PAGE_COUNT = amountDivideMagnitudeRounded(amount, PAGE_SIZE);
+        assert(PAGE_COUNT != 0);
+
+        size_t bitIndex;
+        auto couldAllocate = this.bookkeeper.markNextNBits(Ref(bitIndex), PAGE_COUNT);
+        if(!couldAllocate)
+        {
+            info("Failed");
+            return false;
+        }
+
+        // Get page range.
+        const startBit  = bitIndex % 8;
+        const endBit    = (bitIndex + PAGE_COUNT) % 8;
+        const startByte = bitIndex / 8;
+        const endByte   = (bitIndex + PAGE_COUNT) / 8;
+        const firstPage = (PAGE_SIZE * startByte * 8) + (PAGE_SIZE * startBit);
+        const lastPage  = (PAGE_SIZE * endByte * 8)   + (PAGE_SIZE * endBit);
+
+        infof(
+            "Allocating %s bytes (%s pages) of byte range %s..%s (bits %s[%s]..%s[%s]) of host coherent memory.",
+            amount, PAGE_COUNT, firstPage, lastPage, startByte, startBit, endByte, endBit
+        );
+        memory = GpuMemoryRange(this.handle, firstPage, amount);
+        return true;
+    }
+
+    void deallocate(ref GpuMemoryRange memory)
+    {
+        assert(memory.memoryHandle == this.handle);
+
+        // Calculate things.
+        const startPage = memory.offset / PAGE_SIZE;
+        const endPage   = ((memory.offset + memory.length) + ((memory.offset + memory.length) % PAGE_SIZE)) / PAGE_SIZE;
+        const startByte = startPage / 8;
+        const startBit  = startPage % 8;
+        const endByte   = endPage   / 8;
+        const endBit    = endPage   % 8;
+        infof(
+            "Deallocating %s bytes (%s pages) of page range %s..%s (bits %s[%s]..%s[%s]) of host coherent memory.",
+            memory.length, (endPage - startPage), startPage, endPage, startByte, startBit, endByte, endBit
+        );
+
+        this.bookkeeper.setBitRange!false(startPage, endPage - startPage);
+        memory = GpuMemoryRange.init;
+    }
+}
+
+// Block allocator using HOST COHERENT+VISIBLE memory.
+struct GpuCpuMemoryAllocator
+{
+    struct BlockInfo
+    {
+        GpuMemoryBlock* block;
+        ubyte[]         mappedData;
+    }
+
+    uint         memoryTypeIndex;
+    VkMemoryType memoryType;
+    BlockInfo[]  blocks;
 
     void init()
     {
@@ -88,39 +120,28 @@ struct GpuCpuMemoryAllocator
 
     GpuCpuBuffer* allocate(size_t amount, VkBufferUsageFlags usage)
     {
-        assert(amount <= BLOCK_SIZE, "Allocating too much >:(");
+        assert(amount <= GpuMemoryBlock.BLOCK_SIZE, "Allocating too much >:(");
 
         GpuCpuBuffer* allocation = new GpuCpuBuffer;
         while(allocation.data is null)
         {
-            foreach(i, ref block; this.blocks)
+            foreach(i, info; this.blocks)
             {
-                if(block.allocate(amount, Ref(allocation.data), Ref(allocation.memoryOffset)))
+                if(info.block.allocate(amount, Ref(allocation.memoryRange)))
                 {
-                    allocation.blockIndex   = i;
-                    allocation.memoryHandle = block.handle;
+                    allocation.data        = info.mappedData[allocation.memoryRange.offset..allocation.memoryRange.offset + allocation.memoryRange.length];
+                    allocation.memoryBlock = info.block;
+                    assert(allocation.data.length == allocation.memoryRange.length);
+                    assert(allocation.data.length == amount);
                     break;
                 }
             }
 
-            if(allocation.data is null)
+            if(allocation.memoryRange.memoryHandle == VK_NULL_HANDLE)
             {
                 info("No blocks available, creating new one...");
-                GpuMemoryBlock newBlock;
-                VkMemoryAllocateInfo info = 
-                {
-                    allocationSize:  BLOCK_SIZE,
-                    memoryTypeIndex: this.memoryTypeIndex
-                };
-
-                CHECK_VK(vkAllocateMemory(g_device, &info, null, &newBlock.handle));
-                vkTrackJAST(wrapperOf!VkDeviceMemory(newBlock.handle));
-
-                void* mapped;
-                CHECK_VK(vkMapMemory(g_device, newBlock.handle, 0, BLOCK_SIZE, 0, &mapped));
-                newBlock.mappedData = cast(ubyte[])mapped[0..BLOCK_SIZE];
-
-                this.blocks ~= newBlock;
+                this.blocks ~= BlockInfo(new GpuMemoryBlock(this.memoryTypeIndex));
+                this.blocks[$-1].block.map(this.blocks[$-1].mappedData);
             }
         }
 
@@ -128,7 +149,7 @@ struct GpuCpuMemoryAllocator
         VkBufferCreateInfo info = 
         {                  
             flags:                 0,
-            size:                  amount,
+            size:                  allocation.memoryRange.length,
             usage:                 usage,
             sharingMode:           VK_SHARING_MODE_EXCLUSIVE,
             queueFamilyIndexCount: 1,
@@ -136,7 +157,7 @@ struct GpuCpuMemoryAllocator
         };
 
         CHECK_VK(vkCreateBuffer(g_device, &info, null, &allocation.handle));
-        CHECK_VK(vkBindBufferMemory(g_device, allocation.handle, allocation.memoryHandle, allocation.memoryOffset));
+        CHECK_VK(vkBindBufferMemory(g_device, allocation.handle, allocation.memoryRange.memoryHandle, allocation.memoryRange.offset));
         vkTrackJAST(allocation);
 
         return allocation;
@@ -144,7 +165,7 @@ struct GpuCpuMemoryAllocator
 
     void deallocate(ref GpuCpuBuffer* buffer)
     {
-        this.blocks[buffer.blockIndex].deallocate(buffer.data);
+        buffer.memoryBlock.deallocate(buffer.memoryRange);
         vkDestroyJAST(buffer);
         buffer = null;
     }

@@ -35,12 +35,10 @@ void vkInitCoreJAST()
     vkInit_06_findSuitableGpu(Ref(g_gpu), g_physicalDevices);
     vkInit_07_createLogicalDevice(Ref(g_device), g_gpu);
 
-    g_gpuCpuAllocator.allocate(256, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT );
-    g_gpuCpuAllocator.allocate(256, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT );
-    g_gpuCpuAllocator.allocate(256, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT );
-    auto t = g_gpuCpuAllocator.allocate(256, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT );
-    g_gpuCpuAllocator.deallocate(t);
-    t = g_gpuCpuAllocator.allocate(256, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT );
+    foreach(i; 0..17)
+    {
+        g_gpuCpuAllocator.allocate(256, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+    }
 }
 
 void vkInitGraphicsJAST()
