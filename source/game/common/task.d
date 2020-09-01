@@ -166,7 +166,12 @@ unittest
     taskInit();
 
     int intValue;
-    auto future = taskCreateFuture(() => 69);
+    auto future = taskCreateFuture(() { Fiber.yield(); return 69; });
+    assert(!future.finished);
+    assert(!future.observe(Ref(intValue)));
+    assert(g_taskGroups[cast(size_t)TaskGroupIndex.Future]._tasks[0].value !is null);
+
+    taskProcessAll();
     assert(!future.finished);
     assert(!future.observe(Ref(intValue)));
     assert(g_taskGroups[cast(size_t)TaskGroupIndex.Future]._tasks[0].value !is null);
