@@ -1,13 +1,24 @@
 module game.common.structures;
 
+import std.experimental.allocator, std.experimental.allocator.building_blocks, std.experimental.logger;
 import game.common.maths;
 
-struct BitmappedBookkeeper(size_t MaxValues)
-{
-    enum BOOKKEEPING_BYTES = amountDivideMagnitudeRounded(MaxValues, 8);
+public import std.experimental.allocator : chooseAtRuntime;
 
-    private ubyte[BOOKKEEPING_BYTES] _bookkeeping;
-    private bool                     _setup;
+struct BitmappedBookkeeper(size_t MaxValues = chooseAtRuntime)
+{
+    static if(MaxValues != chooseAtRuntime)
+    {
+        enum BOOKKEEPING_BYTES = amountDivideMagnitudeRounded(MaxValues, 8);
+        private ubyte[BOOKKEEPING_BYTES] _bookkeeping;
+    }
+    else
+    {
+        private ubyte[] _bookkeepingBuffer;
+        private ubyte[] _bookkeeping;
+    }
+
+    private bool _setup;
 
     @disable
     this(this){}
@@ -15,6 +26,19 @@ struct BitmappedBookkeeper(size_t MaxValues)
     void setup()
     {
         this._setup = true;
+        // TODO: This is to enforce usage of `setup`, for when we actually need this function in the future.
+    }
+
+    static if(MaxValues == chooseAtRuntime)
+    void setLengthInBits(size_t bitCount)
+    {
+        const byteCount = amountDivideMagnitudeRounded(bitCount, 8);
+        if(byteCount > this._bookkeepingBuffer.length)
+            this._bookkeepingBuffer.length = byteCount * 2;
+        else
+            this._bookkeepingBuffer[byteCount..$] = 0;
+
+        this._bookkeeping = this._bookkeepingBuffer[0..byteCount];
     }
 
     void setBitRange(bool BitValue)(size_t startBit, size_t bitsToSet)
@@ -144,4 +168,66 @@ unittest
     size_t startBit;
     assert(keeper.markNextNBits(startBit, 1));
     assert(startBit == 9, "%s".format(startBit));
+}
+
+template MemoryPoolAllocator(ObjectT, size_t ObjectsPerRegion = 100)
+{
+    static if(is(ObjectT == class))
+    {
+        alias PointerT    = ObjectT;
+        enum  OBJECT_SIZE = __traits(classInstanceSize, ObjectT);
+    }
+    else
+    {
+        alias PointerT    = ObjectT*;
+        enum  OBJECT_SIZE = ObjectT.sizeof;
+    }
+
+    enum BYTES_PER_REGION = OBJECT_SIZE * 100;
+
+    // Allocator list of free lists built ontop of GC-allocated regions, each region having enough memory for ObjectsPerRegion amount of ObjectTs.
+    alias MemoryPoolAllocator = AllocatorList!(
+        (size_t n) => FreeList!(
+            Region!GCAllocator, 
+            OBJECT_SIZE, 
+            max(size_t.sizeof, OBJECT_SIZE) // MaxSize must at least contain a pointer.
+        )
+        (Region!GCAllocator(max(n, BYTES_PER_REGION)))
+    );
+}
+
+struct PooledObject(ObjectT)
+{
+    static if(is(ObjectT == class))
+        alias FieldT = ObjectT;
+    else
+        alias FieldT = ObjectT*;
+
+    FieldT value;
+    alias value this;
+
+    bool isValid() const
+    {
+        return this.value !is null;
+    }
+}
+
+struct MemoryPool(ObjectT, size_t ObjectsPerRegion)
+{
+    alias AllocatorT = MemoryPoolAllocator!(ObjectT, ObjectsPerRegion);
+
+    private AllocatorT _allocator;
+
+    PooledObject!ObjectT makeSingle(Args...)(Args args)
+    out(r; r.isValid)
+    {
+        return PooledObject!ObjectT(this._allocator.make!ObjectT(args));
+    }
+
+    void free(ref PooledObject!ObjectT obj)
+    {
+        this._allocator.dispose(obj.value);
+        obj.value = null;
+        assert(!obj.isValid);
+    }
 }

@@ -1,6 +1,7 @@
 module game.common.maths;
 
 public import gfm.math;
+public import std.algorithm : max;
 import erupted  : VkExtent2D;
 
 alias vec2u = Vector!(uint, 2);

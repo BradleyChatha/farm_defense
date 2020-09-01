@@ -38,7 +38,9 @@ void main_01_ensureCorrectDirectory()
 
 void main_02_loadThirdPartyDeps()
 {
-    import game.vulkan.init, game.graphics.window;
+    import game.vulkan.init, game.graphics.window, game.common;
+
+    taskInit();
 
     info("Loading SDL2 Dynamic Libraries");
 
