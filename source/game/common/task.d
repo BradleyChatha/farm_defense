@@ -145,6 +145,11 @@ private void taskFinaliseImpl(TaskFiber task)
     g_taskGroups[cast(size_t)task.group].unqueue(task);
 }
 
+void taskProcessFutures()
+{
+    g_taskGroups[cast(size_t)TaskGroupIndex.Future].process();
+}
+
 void taskProcessAll()
 {
     foreach(group; g_taskGroups)
