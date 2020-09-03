@@ -69,7 +69,6 @@ void renderBegin()
         &imageIndex
     );
     
-    auto syncInfo = g_renderGraphicsSubmitSyncInfos[imageIndex];
     do vkEmitOnFrameChangeJAST(imageIndex);
     while(g_renderGraphicsSubmitSyncInfos[imageIndex] != QueueSubmitSyncInfo.init 
       && !g_renderGraphicsSubmitSyncInfos[imageIndex].submitHasFinished
