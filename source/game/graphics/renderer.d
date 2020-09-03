@@ -44,37 +44,6 @@ void onSwapchainRecreate(uint imageCount)
     g_renderGraphicsSubmitSyncInfos.length = imageCount;
 }
 
-// START Resource getter funcs
-GpuImage* imageByIndex(uint index)
-{
-    return g_swapchain.images[index];
-}
-
-Framebuffer* framebufferByIndex(uint index)
-{
-    return g_swapchain.framebuffers[index];
-}
-
-Semaphore imageAvailableSemaphoreByIndex(uint index)
-{
-    return g_renderImageAvailableSemaphores[index];
-}
-
-Semaphore renderFinishedSemaphoreByIndex(uint index)
-{
-    return g_renderRenderFinishedSemaphores[index];
-}
-
-QueueSubmitSyncInfo graphicsSyncInfoByIndex(uint index)
-{
-    return g_renderGraphicsSubmitSyncInfos[index];
-}
-
-CommandBuffer graphicsCommandBufferByIndex(uint index)
-{
-    return g_renderGraphicsCommandBuffers[index];
-}
-
 public:
 
 // START Functions
@@ -88,7 +57,7 @@ void renderInit()
 
 void renderBegin()
 {
-    g_currentImageAvailableSemaphore = imageAvailableSemaphoreByIndex(g_imageIndex);
+    g_currentImageAvailableSemaphore = g_renderImageAvailableSemaphores[g_imageIndex];
 
     uint imageIndex;
     const imageFetchResult = vkAcquireNextImageKHR(
@@ -100,8 +69,11 @@ void renderBegin()
         &imageIndex
     );
     
+    auto syncInfo = g_renderGraphicsSubmitSyncInfos[imageIndex];
     do vkEmitOnFrameChangeJAST(imageIndex);
-    while(graphicsSyncInfoByIndex(imageIndex) != QueueSubmitSyncInfo.init && !graphicsSyncInfoByIndex(imageIndex).submitHasFinished);
+    while(g_renderGraphicsSubmitSyncInfos[imageIndex] != QueueSubmitSyncInfo.init 
+      && !g_renderGraphicsSubmitSyncInfos[imageIndex].submitHasFinished
+    );
 
     if(imageFetchResult == VK_ERROR_OUT_OF_DATE_KHR || imageFetchResult == VK_SUBOPTIMAL_KHR)
     {
@@ -115,11 +87,11 @@ void renderBegin()
 
 void renderEnd()
 {
-    auto buffer = graphicsCommandBufferByIndex(g_imageIndex);
+    auto buffer = g_renderGraphicsCommandBuffers[g_imageIndex];
     buffer.begin(ResetOnSubmit.yes);
 
     buffer.insertDebugMarker("Begin Render Pass");
-    buffer.beginRenderPass(framebufferByIndex(g_imageIndex));
+    buffer.beginRenderPass(g_swapchain.framebuffers[g_imageIndex]);
 
     {
         buffer.pushDebugRegion("Pipeline Textured Opaque");
@@ -132,7 +104,7 @@ void renderEnd()
     buffer.end();
 
     // Submit primary graphics buffer.
-    auto renderFinishedSemaphore = renderFinishedSemaphoreByIndex(g_imageIndex);
+    auto renderFinishedSemaphore = g_renderRenderFinishedSemaphores[g_imageIndex];
     auto imageAvailableSemaphore = g_currentImageAvailableSemaphore;
     g_renderGraphicsSubmitSyncInfos[g_imageIndex] = g_device.graphics.submit(
         buffer, 
