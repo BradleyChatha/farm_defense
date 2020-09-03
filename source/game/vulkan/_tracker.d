@@ -37,6 +37,8 @@ if(isType!VkType && isCallable!DestroyFunc)
             DestroyFunc(g_vkInstance, value.handle, null);
         else static if(is(Params[0] == VkDevice))
             DestroyFunc(g_device, value.handle, null);
+        else static if(is(Params[0] == VkType))
+            DestroyFunc(value);
         else static assert(false, "Don't know how to handle destroy func automatically: "~typeof(DestroyFunc).stringof);
     }
 }
@@ -114,15 +116,25 @@ template wrapperOf(alias VkType)
     mixin("alias wrapperOf = "~wrapperNameOf!VkType~";");
 }
 
-mixin GenericTracking!(ShaderModule, vkDestroyShaderModule);
-mixin GenericTracking!(Surface, vkDestroySurfaceKHR);
-mixin GenericTracking!(Fence, vkDestroyFence);
-mixin GenericWrapper !(VkDescriptorSetLayout, vkDestroyDescriptorSetLayout);
-mixin GenericWrapper !(VkPipelineLayout, vkDestroyPipelineLayout);
-mixin GenericWrapper !(VkRenderPass, vkDestroyRenderPass);
-mixin GenericWrapper !(VkDescriptorPool, vkDestroyDescriptorPool);
-mixin GenericTracking!(GpuCpuBuffer*, vkDestroyBuffer);
-mixin GenericWrapper !(VkDeviceMemory, vkFreeMemory);
-mixin SwapchainResourceTracking!(GpuImageView*, vkDestroyImageView, genericRecreate!(GpuImageView*));
-mixin SwapchainResourceTracking!(PipelineBase*, vkDestroyPipeline, genericRecreate!(PipelineBase*));
-mixin SwapchainResourceTracking!(DescriptorPool*, vkDestroyDescriptorPool, genericRecreate!(DescriptorPool*));
+void vkDestroyCommandBufferJAST(CommandBuffer buffer)
+{
+    vkFreeCommandBuffers(g_device, buffer.pool, 1, &buffer.handle);
+}
+
+mixin GenericTracking           !(ShaderModule,             vkDestroyShaderModule                                               );
+mixin GenericTracking           !(Surface,                  vkDestroySurfaceKHR                                                 );
+mixin GenericTracking           !(Fence,                    vkDestroyFence                                                      );
+mixin GenericTracking           !(Semaphore,                vkDestroySemaphore                                                  );
+mixin GenericWrapper            !(VkDescriptorSetLayout,    vkDestroyDescriptorSetLayout                                        );
+mixin GenericWrapper            !(VkPipelineLayout,         vkDestroyPipelineLayout                                             );
+mixin GenericTracking           !(RenderPass,               vkDestroyRenderPass                                                 );
+mixin GenericWrapper            !(VkDescriptorPool,         vkDestroyDescriptorPool                                             );
+mixin GenericTracking           !(GpuCpuBuffer*,            vkDestroyBuffer                                                     );
+mixin GenericTracking           !(GpuBuffer*,               vkDestroyBuffer                                                     );
+mixin GenericWrapper            !(VkDeviceMemory,           vkFreeMemory                                                        );
+mixin GenericTracking           !(CommandBuffer,            vkDestroyCommandBufferJAST                                          );
+mixin GenericTracking           !(CommandPool,              vkDestroyCommandPool                                                );
+mixin SwapchainResourceTracking !(GpuImageView*,            vkDestroyImageView,             genericRecreate!(GpuImageView*)     );
+mixin SwapchainResourceTracking !(PipelineBase*,            vkDestroyPipeline,              genericRecreate!(PipelineBase*)     );
+mixin SwapchainResourceTracking !(DescriptorPool*,          vkDestroyDescriptorPool,        genericRecreate!(DescriptorPool*)   );
+mixin SwapchainResourceTracking !(Framebuffer*,             vkDestroyFramebuffer,           genericRecreate!(Framebuffer*)      );

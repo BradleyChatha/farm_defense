@@ -17,6 +17,7 @@ VkPipelineCache             g_pipelineCache;
 TexturedQuadShader          g_shaderQuadTextured;
 TexturedQuadOpaquePipeline* g_pipelineQuadTexturedOpaque;
 GpuCpuMemoryAllocator       g_gpuCpuAllocator;
+alias g_renderPass        = RenderPass.instance;
 
 // START aliases //
 alias TexturedQuadShader          = Shader!(TexturedQuadPushConstants, TexturedQuadUniform);

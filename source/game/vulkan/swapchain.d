@@ -4,6 +4,80 @@ import std.conv : to;
 import std.experimental.logger;
 import game.vulkan, game.common.maths, game.graphics.window, game.common;
 
+// The render pass for this game is static. No customisation.
+struct RenderPass
+{
+    mixin VkWrapperJAST!VkRenderPass;
+
+    enum COLOUR_TO_PRESENT_SUBPASS_INDEX = 0;
+
+    static
+    {
+        RenderPass instance;
+
+        void create(scope Swapchain* swapchain) // This is created before the swapchain global is set.
+        {
+            VkAttachmentDescription colourAttachment;
+            VkAttachmentReference   colourAttachmentRef;
+            VkSubpassDependency     colourCanBeWrittenDependency;
+            VkSubpassDescription    colourToPresentSubpass;
+            VkRenderPassCreateInfo  renderPass;
+
+            info("Defining Render passes and attachments");
+            with(colourAttachment)
+            {
+                format          = swapchain.format.format;
+                samples         = VK_SAMPLE_COUNT_1_BIT;
+                loadOp          = VK_ATTACHMENT_LOAD_OP_CLEAR;
+                storeOp         = VK_ATTACHMENT_STORE_OP_STORE;
+                stencilLoadOp   = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+                stencilStoreOp  = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+                initialLayout   = VK_IMAGE_LAYOUT_UNDEFINED;
+                finalLayout     = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+            }
+
+            with(colourAttachmentRef)
+            {
+                attachment                  = 0; // colourAttachment
+                colourAttachmentRef.layout  = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+            }
+
+            with(colourToPresentSubpass)
+            {
+                pipelineBindPoint       = VK_PIPELINE_BIND_POINT_GRAPHICS;
+                colorAttachmentCount    = 1;
+                pColorAttachments       = &colourAttachmentRef;
+            }
+
+            with(colourCanBeWrittenDependency)
+            {
+                srcSubpass      = VK_SUBPASS_EXTERNAL;
+                dstSubpass      = 0; // colourToPresentSubpass
+                srcStageMask    = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+                srcAccessMask   = 0;
+                dstStageMask    = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+                srcAccessMask   = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+            }
+
+            auto attachments  = [colourAttachment];
+            auto subpasses    = [colourToPresentSubpass];
+            auto dependencies = [colourCanBeWrittenDependency];
+            with(renderPass)
+            {
+                attachmentCount = attachments.length.to!uint;
+                subpassCount    = subpasses.length.to!uint;
+                dependencyCount = dependencies.length.to!uint;
+                pAttachments    = attachments.ptr;
+                pSubpasses      = subpasses.ptr;
+                pDependencies   = dependencies.ptr;
+            }
+
+            CHECK_VK(vkCreateRenderPass(g_device, &renderPass, null, &RenderPass.instance.handle));
+            vkTrackJAST(RenderPass.instance);
+        }
+    }
+}
+
 struct Swapchain
 {
     mixin VkSwapchainResourceWrapperJAST!VkSwapchainKHR;
@@ -12,6 +86,7 @@ struct Swapchain
     VkSurfaceCapabilitiesKHR    capabilities;
     GpuImage*[]                 images;
     GpuImageView*[]             imageViewsColour;
+    Framebuffer*[]              framebuffers;
 
     static void create(scope ref Swapchain* ptr)
     {
@@ -29,9 +104,12 @@ struct Swapchain
         VkSwapchainCreateInfoKHR chainInfo;
         Swapchain.initChainInfo(ptr, chainInfo, areWeRecreating);
 
+        if(!areWeRecreating)
+            RenderPass.create(ptr);
+
         // Because we pass the old swapchain via chainInfo, we don't need to destroy it beforehand.
         CHECK_VK(vkCreateSwapchainKHR(g_device, &chainInfo, null, &ptr.handle));
-        Swapchain.fetchImages(ptr, areWeRecreating);
+        Swapchain.createImageResources(ptr, areWeRecreating);
     }
 
     private static void determineSettings(scope ref Swapchain* ptr)
@@ -77,7 +155,7 @@ struct Swapchain
         indexSet.insert(g_gpu.presentQueueIndex.get());
         indexSet.insert(g_gpu.transferQueueIndex.get());
         auto queueIndicies = indexSet[].array;
-        const requiresConcurrency = indexSet.length != 3;
+        const requiresConcurrency = indexSet.length > 1;
 
         with(chainInfo)
         {
@@ -105,7 +183,7 @@ struct Swapchain
         }
     }
 
-    private static void fetchImages(scope ref Swapchain* ptr, bool areWeRecreating)
+    private static void createImageResources(scope ref Swapchain* ptr, bool areWeRecreating)
     {
         auto handles = vkGetArrayJAST!(VkImage, vkGetSwapchainImagesKHR)(g_device, ptr.handle);
         foreach(i, handle; handles)
@@ -114,14 +192,19 @@ struct Swapchain
             {
                 ptr.images[i].handle = handle;
                 vkRecreateJAST(ptr.imageViewsColour[i]);
+                vkRecreateJAST(ptr.framebuffers[i]);
             }
             else
             {
-                ptr.images ~= new GpuImage(handle, ptr.format.format);
+                ptr.images           ~= new GpuImage(handle, ptr.format.format);
                 ptr.imageViewsColour ~= null;
+                ptr.framebuffers     ~= null;
                 
                 GpuImageView.create(Ref(ptr.imageViewsColour[i]), ptr.images[i], GpuImageType.colour2D);
+                Framebuffer .create(Ref(ptr.framebuffers[i]),     ptr.imageViewsColour[i]);
             }
         }
+
+        assert(ptr.images.length == handles.length, "Need to handle when we get *less* images from swapchain recreation.");
     }
 }

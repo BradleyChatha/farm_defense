@@ -13,9 +13,8 @@ struct MandatoryUniform
 struct PipelineBase
 {
     mixin VkSwapchainResourceWrapperJAST!VkPipeline;
-    VkPipelineLayout        layoutHandle;
-    VkDescriptorSetLayout   descriptorLayoutHandle;
-    VkRenderPass            renderPassHandle;
+    VkPipelineLayout       layoutHandle;
+    VkDescriptorSetLayout  descriptorLayoutHandle;
 }
 
 struct Pipeline(VertexT, PushConstantsT, UniformT_)
@@ -47,7 +46,6 @@ struct Pipeline(VertexT, PushConstantsT, UniformT_)
             vkDestroyJAST(ptr);
             vkDestroyJAST(wrapperOf!VkPipelineLayout(ptr.layoutHandle));
             vkDestroyJAST(wrapperOf!VkDescriptorSetLayout(ptr.descriptorLayoutHandle));
-            vkDestroyJAST(wrapperOf!VkRenderPass(ptr.renderPassHandle));
         }
 
         ptr.recreateFunc = (p) => create(p, vertexBinding, vertexAttributes, shader);
@@ -66,11 +64,6 @@ struct Pipeline(VertexT, PushConstantsT, UniformT_)
         VkDescriptorSetLayoutBinding            textureSamplerBinding;
         VkDescriptorSetLayoutCreateInfo         uniformLayout;
         VkPipelineLayoutCreateInfo              layout;
-        VkAttachmentDescription                 colourAttachment;
-        VkAttachmentReference                   colourAttachmentRef;
-        VkSubpassDependency                     colourCanBeWrittenDependency;
-        VkSubpassDescription                    colourToPresentSubpass;
-        VkRenderPassCreateInfo                  renderPass;
         VkGraphicsPipelineCreateInfo            pipeline;
 
         info("Defining vertex state."); 
@@ -191,65 +184,13 @@ struct Pipeline(VertexT, PushConstantsT, UniformT_)
         CHECK_VK(vkCreatePipelineLayout(g_device, &layout, null, &ptr.layoutHandle));
         vkTrackJAST(wrapperOf!VkPipelineLayout(ptr.layoutHandle));
 
-        info("Defining Render passes and attachments");
-        with(colourAttachment)
-        {
-            format          = g_swapchain.format.format;
-            samples         = VK_SAMPLE_COUNT_1_BIT;
-            loadOp          = VK_ATTACHMENT_LOAD_OP_CLEAR;
-            storeOp         = VK_ATTACHMENT_STORE_OP_STORE;
-            stencilLoadOp   = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-            stencilStoreOp  = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-            initialLayout   = VK_IMAGE_LAYOUT_UNDEFINED;
-            finalLayout     = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-        }
-
-        with(colourAttachmentRef)
-        {
-            attachment                  = 0; // colourAttachment
-            colourAttachmentRef.layout  = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        }
-
-        with(colourToPresentSubpass)
-        {
-            pipelineBindPoint       = VK_PIPELINE_BIND_POINT_GRAPHICS;
-            colorAttachmentCount    = 1;
-            pColorAttachments       = &colourAttachmentRef;
-        }
-
-        with(colourCanBeWrittenDependency)
-        {
-            srcSubpass      = VK_SUBPASS_EXTERNAL;
-            dstSubpass      = 0; // colourToPresentSubpass
-            srcStageMask    = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-            srcAccessMask   = 0;
-            dstStageMask    = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-            srcAccessMask   = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-        }
-
-        auto attachments  = [colourAttachment];
-        auto subpasses    = [colourToPresentSubpass];
-        auto dependencies = [colourCanBeWrittenDependency];
-        with(renderPass)
-        {
-            attachmentCount = attachments.length.to!uint;
-            subpassCount    = subpasses.length.to!uint;
-            dependencyCount = dependencies.length.to!uint;
-            pAttachments    = attachments.ptr;
-            pSubpasses      = subpasses.ptr;
-            pDependencies   = dependencies.ptr;
-        }
-
-        CHECK_VK(vkCreateRenderPass(g_device, &renderPass, null, &ptr.renderPassHandle));
-        vkTrackJAST(wrapperOf!VkRenderPass(ptr.renderPassHandle));
-
         info("Creating pipeline.");
         auto shaderStages = [shader.vertex.pipelineStage, shader.fragment.pipelineStage];
         with(pipeline)
         {
             pipeline.layout     = ptr.layoutHandle;
-            pipeline.renderPass = ptr.renderPassHandle;
-            subpass             = 0;
+            pipeline.renderPass = g_renderPass;
+            subpass             = RenderPass.COLOUR_TO_PRESENT_SUBPASS_INDEX;
             stageCount          = shaderStages.length.to!uint;
             pStages             = shaderStages.ptr; // TODO:
             pVertexInputState   = &vertInputState;

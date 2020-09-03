@@ -4,6 +4,13 @@ import std.conv : to;
 import std.experimental.logger;
 import game.vulkan, game.common;
 
+struct GpuBuffer
+{
+    mixin VkWrapperJAST!VkBuffer;
+    GpuMemoryRange  memoryRange;
+    GpuMemoryBlock* memoryBlock;
+}
+
 struct GpuCpuBuffer
 {
     mixin VkWrapperJAST!VkBuffer;
@@ -122,13 +129,16 @@ struct GpuCpuMemoryAllocator
         ubyte[]         mappedData;
     }
 
-    uint         memoryTypeIndex;
-    VkMemoryType memoryType;
-    BlockInfo[]  blocks;
+    DeviceMemoryType memoryType;
+    BlockInfo[]      blocks;
 
     void init()
     {
-        this.memoryType = g_gpu.getMemoryType(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, Ref(this.memoryTypeIndex));
+        this.memoryType = g_gpu.getMemoryType(
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT 
+          | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+          | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+        );
     }
 
     GpuCpuBuffer* allocate(size_t amount, VkBufferUsageFlags usage)
@@ -153,7 +163,7 @@ struct GpuCpuMemoryAllocator
             if(allocation.memoryRange.memoryHandle == VK_NULL_HANDLE)
             {
                 info("No blocks available, creating new one...");
-                this.blocks ~= BlockInfo(new GpuMemoryBlock(this.memoryTypeIndex));
+                this.blocks ~= BlockInfo(new GpuMemoryBlock(this.memoryType.index));
                 this.blocks[$-1].block.map(this.blocks[$-1].mappedData);
             }
         }
@@ -177,6 +187,67 @@ struct GpuCpuMemoryAllocator
     }
 
     void deallocate(ref GpuCpuBuffer* buffer)
+    {
+        buffer.memoryBlock.deallocate(buffer.memoryRange);
+        vkDestroyJAST(buffer);
+        buffer = null;
+    }
+}
+
+// Block allocator for non-HOST_VISIBLE memory.
+// Mostly a copy pasta of GpuCpuMemoryAllocator buuuuuuut, fuck it.
+struct GpuMemoryAllocator
+{
+    DeviceMemoryType  memoryType;
+    GpuMemoryBlock*[] blocks;
+
+    void init()
+    {
+        this.memoryType = g_gpu.getMemoryType(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    }
+
+    GpuBuffer* allocate(size_t amount, VkBufferUsageFlags usage)
+    {
+        assert(amount <= GpuMemoryBlock.BLOCK_SIZE, "Allocating too much >:(");
+
+        GpuBuffer* allocation = new GpuBuffer;
+        while(allocation.memoryBlock is null)
+        {
+            foreach(i, block; this.blocks)
+            {
+                if(block.allocate(amount, Ref(allocation.memoryRange)))
+                {
+                    allocation.memoryBlock = block;
+                    break;
+                }
+            }
+
+            if(allocation.memoryRange.memoryHandle == VK_NULL_HANDLE)
+            {
+                info("No blocks available, creating new one...");
+                this.blocks ~= new GpuMemoryBlock(this.memoryType.index);
+            }
+        }
+
+        auto index = cast(uint)g_gpu.graphicsQueueIndex.get();
+        VkBufferCreateInfo info = 
+        {                  
+            flags:                 0,
+            size:                  allocation.memoryRange.length,
+            usage:                 usage,
+            sharingMode:           VK_SHARING_MODE_EXCLUSIVE,
+            queueFamilyIndexCount: 1,
+            pQueueFamilyIndices:   &index
+        };
+
+        CHECK_VK(vkCreateBuffer(g_device, &info, null, &allocation.handle));
+        CHECK_VK(vkBindBufferMemory(g_device, allocation.handle, allocation.memoryRange.memoryHandle, allocation.memoryRange.offset));
+        vkTrackJAST(allocation);
+
+        return allocation;
+    }
+
+    void deallocate(ref GpuBuffer* buffer)
     {
         buffer.memoryBlock.deallocate(buffer.memoryRange);
         vkDestroyJAST(buffer);

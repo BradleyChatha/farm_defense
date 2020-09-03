@@ -1,9 +1,15 @@
 module game.vulkan.device;
 
 import std.conv     : to;
-import std.typecons : Nullable;
+import std.typecons : Nullable, Flag;
 import std.experimental.logger;
 import game.vulkan, erupted;
+
+struct DeviceMemoryType
+{
+    VkMemoryType type;
+    uint         index;
+}
 
 struct PhysicalDevice
 {
@@ -87,16 +93,25 @@ struct PhysicalDevice
         vkGetPhysicalDeviceSurfaceCapabilitiesKHR(this, this.surface, &this.capabilities);
     }
 
-    VkMemoryType getMemoryType(VkMemoryPropertyFlags flags, ref uint index)
+    DeviceMemoryType getMemoryType(VkMemoryPropertyFlags flags)
     {
+        DeviceMemoryType bestFit;
+
         foreach(i, type; this.memoryProperties.memoryTypes[0..this.memoryProperties.memoryTypeCount])
         {
             if((type.propertyFlags & flags) == flags)
             {
-                index = cast(uint)i;
-                return type;
+                if(bestFit == DeviceMemoryType.init
+                || type.propertyFlags == flags)
+                {
+                    bestFit.type  = type;
+                    bestFit.index = i.to!uint;
+                }
             }
         }
+
+        if(bestFit != DeviceMemoryType.init)
+            return bestFit;
 
         throw new Exception("GPU not supported.");
     }

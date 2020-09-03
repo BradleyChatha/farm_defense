@@ -29,6 +29,24 @@ struct Fence
     }
 }
 
+struct Semaphore
+{
+    mixin VkWrapperJAST!VkSemaphore;
+
+    this(Semaphore toWrap)
+    {
+        this.handle = toWrap;
+    }
+
+    this(LogicalDevice device)
+    {
+        infof("Creating Semaphore");
+        VkSemaphoreCreateInfo info;
+        CHECK_VK(vkCreateSemaphore(device, &info, null, &this.handle));
+        vkTrackJAST(this);
+    }
+}
+
 struct QueueSubmitSyncInfo
 {
     private
@@ -44,6 +62,12 @@ struct QueueSubmitSyncInfo
     bool submitHasFinished()
     {
         return *this._queueParity != this._parityWhenSubmitted;
+    }
+
+    @property
+    Fence fence()
+    {
+        return this._fence;
     }
 }
 
@@ -118,7 +142,8 @@ mixin template VkFenceManagerJAST()
             fences[i] = this.fences[fence.fenceIndex].handle;
 
         // Get status of fences, then immediately return, we're not actually blocking here.
-        CHECK_VK(vkWaitForFences(g_device, this.fencesInFlightCount, fences.ptr, VK_FALSE, 0));
+        if(this.fencesInFlightCount > 0)
+            vkWaitForFences(g_device, this.fencesInFlightCount, fences.ptr, VK_FALSE, 0);
 
         // Figure out which fences are still in flight, and which can be reset and reused.
         VkFence[MAX_FENCES_IN_FLIGHT]   canReuse;
@@ -139,7 +164,8 @@ mixin template VkFenceManagerJAST()
         }
 
         // Reset fences where we can
-        CHECK_VK(vkResetFences(g_device, resetFencesCount, canReuse.ptr));
+        if(resetFencesCount > 0)
+            CHECK_VK(vkResetFences(g_device, resetFencesCount, canReuse.ptr));
 
         // Set new values
         this.fencesInFlight      = stillInFlightInfo;
@@ -154,10 +180,8 @@ mixin template VkQueueJAST()
     // This struct probably does too much now, but meh, it's very logically coupled together.
     mixin VkWrapperJAST!VkQueue;
     mixin VkFenceManagerJAST;
-    uint                          queueIndex;
-    CommandPoolManager*           commandPools;
-    VkSubmitInfo[]                submitBuffer;
-    uint                          toSubmitCount; // Since we're reusing memory, we need to keep a seperate index instead of relying on buffer length;
+    uint                queueIndex;
+    CommandPoolManager* commandPools;
 
     this(LogicalDevice device, uint queueIndex)
     {
@@ -170,13 +194,29 @@ mixin template VkQueueJAST()
         this.setupFenceManager(device);
     }
 
-    QueueSubmitSyncInfo submit()
+    QueueSubmitSyncInfo submit(
+        CommandBuffer        buffer, 
+        Semaphore*           semaphoreToSignal,
+        Semaphore*           semaphoreToWaitFor,
+        VkPipelineStageFlags stagesToWaitIn = 0
+    )
     {
         QueueSubmitSyncInfo info;
         info._fence               = this.nextFence(Ref(info._queueParity));
         info._parityWhenSubmitted = *info._queueParity;
 
-        CHECK_VK(vkQueueSubmit(this, this.toSubmitCount, this.submitBuffer.ptr, info._fence));
+        VkSubmitInfo submitInfo = 
+        {
+            waitSemaphoreCount:   (semaphoreToWaitFor is null) ? 0 : 1,
+            signalSemaphoreCount: (semaphoreToSignal is null) ? 0 : 1,
+            commandBufferCount:   1,
+            pWaitDstStageMask:    &stagesToWaitIn,
+            pCommandBuffers:      &buffer.handle,
+            pWaitSemaphores:      &semaphoreToWaitFor.handle,
+            pSignalSemaphores:    &semaphoreToSignal.handle
+        };
+
+        CHECK_VK(vkQueueSubmit(this, 1, &submitInfo, info._fence));
         return info;
     }
 }

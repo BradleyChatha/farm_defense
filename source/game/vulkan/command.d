@@ -69,6 +69,7 @@ struct CommandPool
 
         this.queueIndex = queueIndex;
         CHECK_VK(vkCreateCommandPool(device, &info, null, &this.handle));
+        vkTrackJAST(this);
     }
 
     CommandBuffer[] allocate(uint count, IsPrimaryBuffer isPrimary = IsPrimaryBuffer.yes)
@@ -88,7 +89,10 @@ struct CommandPool
 
         auto buffers = new CommandBuffer[count];
         foreach(i, handle; handles)
-            buffers[i] = CommandBuffer(handle, this.queueIndex);
+        {
+            buffers[i] = CommandBuffer(this, handle, this.queueIndex);
+            vkTrackJAST(buffers[i]);
+        }
 
         return buffers;
     }
@@ -97,11 +101,13 @@ struct CommandPool
 struct CommandBuffer
 {
     mixin VkWrapperJAST!VkCommandBuffer;
+    CommandPool                 pool;
     VkCommandPoolCreateFlagBits flags;
     uint                        queueIndex;
 
-    this(VkCommandBuffer handle, uint queueIndex)
+    this(CommandPool pool, VkCommandBuffer handle, uint queueIndex)
     {
+        this.pool       = pool;
         this.handle     = handle;
         this.queueIndex = queueIndex;
     }
@@ -121,8 +127,11 @@ struct CommandBuffer
         vkEndCommandBuffer(this);
     }
 
-    void insertDebugMarker(string name, Color colour = Color(0, 0, 0, 0))
+    void insertDebugMarker(string name, Color colour = Color(255, 255, 255, 0))
     {
+        if(vkCmdDebugMarkerInsertEXT is null)
+            return;
+
         import std.string : toStringz;
 
         VkDebugMarkerMarkerInfoEXT info;
@@ -132,8 +141,11 @@ struct CommandBuffer
         vkCmdDebugMarkerInsertEXT(this, &info);
     }
 
-    void pushDebugRegion(string name, Color colour = Color(0, 0, 0, 0))
+    void pushDebugRegion(string name, Color colour = Color(255, 255, 255, 0))
     {
+        if(vkCmdDebugMarkerBeginEXT is null)
+            return;
+
         import std.string : toStringz;
 
         VkDebugMarkerMarkerInfoEXT info;
@@ -145,6 +157,33 @@ struct CommandBuffer
 
     void popDebugRegion()
     {
-        vkCmdDebugMarkerEndEXT(this);
+        if(vkCmdDebugMarkerEndEXT !is null)
+            vkCmdDebugMarkerEndEXT(this);
+    }
+
+    void beginRenderPass(Framebuffer* framebuffer)
+    {
+        VkClearValue clearColour = VkClearValue(VkClearColorValue([0.5f, 0.5f, 0.25f, 1.0f]));
+        VkRenderPassBeginInfo info = 
+        {
+            renderPass:      g_renderPass,
+            framebuffer:     framebuffer.handle,
+            clearValueCount: 1,
+            pClearValues:    &clearColour
+        };
+        info.renderArea.offset = VkOffset2D(0, 0);
+        info.renderArea.extent = g_swapchain.capabilities.currentExtent;
+
+        vkCmdBeginRenderPass(this, &info, VK_SUBPASS_CONTENTS_INLINE);
+    }
+
+    void endRenderPass()
+    {
+        vkCmdEndRenderPass(this);
+    }
+
+    void bindPipeline(PipelineBase* pipeline)
+    {
+        vkCmdBindPipeline(this, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.handle);
     }
 }

@@ -21,7 +21,15 @@ void main()
 
 void main_03_runGame()
 {
+    import game.graphics;
+    // Prelim loop
 
+    while(true)
+    {
+        writeln(SDL_GetTicks());
+        renderBegin();
+        renderEnd();
+    }
 }
 
 void main_01_ensureCorrectDirectory()
@@ -38,9 +46,7 @@ void main_01_ensureCorrectDirectory()
 
 void main_02_loadThirdPartyDeps()
 {
-    import game.vulkan.init, game.graphics.window, game.common;
-
-    taskInit();
+    import game.vulkan.init, game.graphics, game.common;
 
     info("Loading SDL2 Dynamic Libraries");
 
@@ -51,6 +57,7 @@ void main_02_loadThirdPartyDeps()
     Window.onInit();
 
     vkInitAllJAST();
+    renderInit();
 }
 
 void main_04_unloadThirdPartyDeps()

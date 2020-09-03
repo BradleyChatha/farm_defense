@@ -50,6 +50,8 @@ void vkUninitJAST()
     import std.file : write;
     import std.conv : to;
 
+    vkDeviceWaitIdle(g_device);
+
     if(g_pipelineCache != VkPipelineCache.init)
     {
         info("Writing pipeline cache to disk.");
@@ -60,7 +62,7 @@ void vkUninitJAST()
         vkGetPipelineCacheData(g_device, g_pipelineCache, &pipelineDataLength, data.ptr);
         write(PIPELINE_CACHE_FILE, data);
     }
-
+    
     vkDestroyAllJAST();
     vkDestroySwapchainKHR(g_device, g_swapchain.handle, null);
     vkDestroyPipelineCache(g_device, g_pipelineCache, null);
