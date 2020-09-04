@@ -16,6 +16,7 @@ struct PhysicalDevice
     mixin VkWrapperJAST!VkPhysicalDevice;
 
     VkExtensionProperties[]             extentions;
+    VkLayerProperties[]                 layers;
     VkPhysicalDeviceProperties          properties;
     VkPhysicalDeviceFeatures            features;
     VkPhysicalDeviceMemoryProperties    memoryProperties;
@@ -37,6 +38,7 @@ struct PhysicalDevice
 
         // Get misc data about the gpu.
         this.extentions = vkGetArrayJAST!(VkExtensionProperties, vkEnumerateDeviceExtensionProperties)(handle, null);
+        this.layers     = vkGetArrayJAST!(VkLayerProperties, vkEnumerateDeviceLayerProperties)(handle);
         vkGetPhysicalDeviceProperties(handle, &this.properties);
         vkGetPhysicalDeviceFeatures(handle, &this.features);
 
@@ -69,6 +71,10 @@ struct PhysicalDevice
         info("Extentions:");
         foreach(ext; this.extentions)
             infof("\t %s - v%s", ext.extensionName.ptr.asSlice, ext.specVersion);
+
+        info("Layers:");
+        foreach(lay; this.layers)
+            infof("\t %s", lay.layerName.ptr.asSlice);
 
         infof("Properties: %s",         this.properties.serializeToJsonPretty());
         infof("Features: %s",           this.features.serializeToJsonPretty());
