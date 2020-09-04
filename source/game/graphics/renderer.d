@@ -91,6 +91,8 @@ void renderBegin()
 
 void renderEnd()
 {
+    import bindbc.sdl : SDL_GetTicks;
+
     auto buffer = g_renderGraphicsCommandBuffers[g_imageIndex];
     buffer.begin(ResetOnSubmit.yes);
 
@@ -102,6 +104,7 @@ void renderEnd()
         scope(exit) buffer.popDebugRegion();
         buffer.bindPipeline(g_pipelineQuadTexturedOpaque.base);
         buffer.bindVertexBuffer(TEST_testDrawVerts);
+        buffer.pushConstants(g_pipelineQuadTexturedOpaque.base, TexturedQuadPushConstants(SDL_GetTicks()));
         buffer.drawVerts(3, 0);
     }
 

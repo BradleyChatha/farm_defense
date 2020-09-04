@@ -46,7 +46,7 @@ void main_03_runGame()
         g_device.transfer.processFences();
 
     TEST_testDrawVerts = gpuBuffer;
-    while(SDL_GetTicks() < 2_000)
+    while(SDL_GetTicks() < 20_000)
     {
         renderBegin();
         renderEnd();

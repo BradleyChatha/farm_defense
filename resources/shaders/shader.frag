@@ -13,6 +13,8 @@ layout(location = 1) in vec2 uv;
 layout(location = 0) out vec4 outColor;
 
 void main() {
-    //outColor = texture(texSampler, uv) * (fragColor / vec4(255));
-    outColor = fragColor / vec4(255);
+    vec4 finalColour = fragColor;
+         finalColour = finalColour + vec4(PushConstant.ticks % 255);
+
+    outColor = (finalColour / vec4(255));
 }

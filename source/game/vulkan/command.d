@@ -204,6 +204,18 @@ struct CommandBuffer
         {
             vkCmdDraw(this, count, 1, offset, 0);
         }
+
+        void pushConstants(PushConstantT)(PipelineBase* pipeline, PushConstantT value)
+        {
+            vkCmdPushConstants(
+                this, 
+                pipeline.layoutHandle,
+                VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+                0,
+                cast(uint)PushConstantT.sizeof,
+                &value
+            );
+        }
     }
 
     // TRANSFER

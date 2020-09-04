@@ -28,6 +28,7 @@ alias TexturedQuadPipelineBuilder = PipelineBuilder!(TexturedQuadVertex, Texture
 // START Additional data types //
 align(4) struct TexturedQuadPushConstants
 {
+    uint ticks;
 }
 
 struct TexturedQuadUniform
