@@ -134,6 +134,11 @@ mixin template VkFenceManagerJAST()
 
     private void onFrameChange(uint _)
     {
+        this.processFences();
+    }
+
+    void processFences()
+    {
         if(this.fencesInFlightCount == 0)
             return;
 

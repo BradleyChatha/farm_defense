@@ -46,6 +46,8 @@ void onSwapchainRecreate(uint imageCount)
 
 public:
 
+GpuBuffer* TEST_testDrawVerts;
+
 // START Functions
 void renderInit()
 {
@@ -69,10 +71,13 @@ void renderBegin()
         &imageIndex
     );
     
-    do vkEmitOnFrameChangeJAST(imageIndex);
+    vkEmitOnFrameChangeJAST(imageIndex);
     while(g_renderGraphicsSubmitSyncInfos[imageIndex] != QueueSubmitSyncInfo.init 
       && !g_renderGraphicsSubmitSyncInfos[imageIndex].submitHasFinished
-    );
+    )
+    {
+        g_device.graphics.processFences();
+    }
 
     if(imageFetchResult == VK_ERROR_OUT_OF_DATE_KHR || imageFetchResult == VK_SUBOPTIMAL_KHR)
     {
@@ -96,7 +101,8 @@ void renderEnd()
         buffer.pushDebugRegion("Pipeline Textured Opaque");
         scope(exit) buffer.popDebugRegion();
         buffer.bindPipeline(g_pipelineQuadTexturedOpaque.base);
-        // Draw
+        buffer.bindVertexBuffer(TEST_testDrawVerts);
+        buffer.drawVerts(3, 0);
     }
 
     buffer.endRenderPass();

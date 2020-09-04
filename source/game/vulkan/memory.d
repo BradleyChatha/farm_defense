@@ -17,6 +17,12 @@ struct GpuCpuBuffer
     ubyte[]         data;
     GpuMemoryRange  memoryRange;
     GpuMemoryBlock* memoryBlock;
+
+    T[] as(T)()
+    {
+        assert(this.data.length % T.sizeof == 0, "This buffer has a misaligned length for type: "~T.stringof);
+        return cast(T[])(cast(void[])this.data);
+    }
 }
 
 struct GpuMemoryRange

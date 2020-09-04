@@ -164,6 +164,7 @@ struct Pipeline(VertexT, PushConstantsT, UniformT_)
         }
 
         auto bindings = [textureSamplerBinding, mandatoryUniformBinding, userDefinedUniformBinding];
+        bindings.length  =0;
         with(uniformLayout)
         {
             bindingCount = bindings.length.to!uint();

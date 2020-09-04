@@ -112,78 +112,119 @@ struct CommandBuffer
         this.queueIndex = queueIndex;
     }
 
-    void begin(ResetOnSubmit resetOnSubmit)
+    // COMMON
+    public
     {
-        VkCommandBufferBeginInfo info;
-
-        if(resetOnSubmit)
-            info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-        vkBeginCommandBuffer(this, &info);
-    }
-
-    void end()
-    {
-        vkEndCommandBuffer(this);
-    }
-
-    void insertDebugMarker(string name, Color colour = Color(255, 255, 255, 0))
-    {
-        if(vkCmdDebugMarkerInsertEXT is null)
-            return;
-
-        import std.string : toStringz;
-
-        VkDebugMarkerMarkerInfoEXT info;
-        info.pMarkerName = name.toStringz;
-        info.color       = [colour.r, colour.g, colour.b, colour.a];
-
-        vkCmdDebugMarkerInsertEXT(this, &info);
-    }
-
-    void pushDebugRegion(string name, Color colour = Color(255, 255, 255, 0))
-    {
-        if(vkCmdDebugMarkerBeginEXT is null)
-            return;
-
-        import std.string : toStringz;
-
-        VkDebugMarkerMarkerInfoEXT info;
-        info.pMarkerName = name.toStringz;
-        info.color       = [colour.r, colour.g, colour.b, colour.a];
-
-        vkCmdDebugMarkerBeginEXT(this, &info);
-    }
-
-    void popDebugRegion()
-    {
-        if(vkCmdDebugMarkerEndEXT !is null)
-            vkCmdDebugMarkerEndEXT(this);
-    }
-
-    void beginRenderPass(Framebuffer* framebuffer)
-    {
-        VkClearValue clearColour = VkClearValue(VkClearColorValue([0.5f, 0.5f, 0.25f, 1.0f]));
-        VkRenderPassBeginInfo info = 
+        void begin(ResetOnSubmit resetOnSubmit)
         {
-            renderPass:      g_renderPass,
-            framebuffer:     framebuffer.handle,
-            clearValueCount: 1,
-            pClearValues:    &clearColour
-        };
-        info.renderArea.offset = VkOffset2D(0, 0);
-        info.renderArea.extent = g_swapchain.capabilities.currentExtent;
+            VkCommandBufferBeginInfo info;
 
-        vkCmdBeginRenderPass(this, &info, VK_SUBPASS_CONTENTS_INLINE);
+            if(resetOnSubmit)
+                info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+            vkBeginCommandBuffer(this, &info);
+        }
+
+        void end()
+        {
+            vkEndCommandBuffer(this);
+        }
+
+        void insertDebugMarker(string name, Color colour = Color(255, 255, 255, 0))
+        {
+            if(vkCmdDebugMarkerInsertEXT is null)
+                return;
+
+            import std.string : toStringz;
+
+            VkDebugMarkerMarkerInfoEXT info;
+            info.pMarkerName = name.toStringz;
+            info.color       = [colour.r, colour.g, colour.b, colour.a];
+
+            vkCmdDebugMarkerInsertEXT(this, &info);
+        }
+
+        void pushDebugRegion(string name, Color colour = Color(255, 255, 255, 0))
+        {
+            if(vkCmdDebugMarkerBeginEXT is null)
+                return;
+
+            import std.string : toStringz;
+
+            VkDebugMarkerMarkerInfoEXT info;
+            info.pMarkerName = name.toStringz;
+            info.color       = [colour.r, colour.g, colour.b, colour.a];
+
+            vkCmdDebugMarkerBeginEXT(this, &info);
+        }
+
+        void popDebugRegion()
+        {
+            if(vkCmdDebugMarkerEndEXT !is null)
+                vkCmdDebugMarkerEndEXT(this);
+        }
     }
 
-    void endRenderPass()
+    // GRAPHICS
+    public
     {
-        vkCmdEndRenderPass(this);
+        void beginRenderPass(Framebuffer* framebuffer)
+        {
+            VkClearValue clearColour = VkClearValue(VkClearColorValue([0.5f, 0.5f, 0.25f, 1.0f]));
+            VkRenderPassBeginInfo info = 
+            {
+                renderPass:      g_renderPass,
+                framebuffer:     framebuffer.handle,
+                clearValueCount: 1,
+                pClearValues:    &clearColour
+            };
+            info.renderArea.offset = VkOffset2D(0, 0);
+            info.renderArea.extent = g_swapchain.capabilities.currentExtent;
+
+            vkCmdBeginRenderPass(this, &info, VK_SUBPASS_CONTENTS_INLINE);
+        }
+
+        void endRenderPass()
+        {
+            vkCmdEndRenderPass(this);
+        }
+
+        void bindPipeline(PipelineBase* pipeline)
+        {
+            vkCmdBindPipeline(this, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.handle);
+        }
+
+        void bindVertexBuffer(GpuBuffer* buffer)
+        {
+            VkDeviceSize size = 0;
+            vkCmdBindVertexBuffers(this, 0, 1, &buffer.handle, &size);
+        }
+
+        void drawVerts(uint count, uint offset)
+        {
+            vkCmdDraw(this, count, 1, offset, 0);
+        }
     }
 
-    void bindPipeline(PipelineBase* pipeline)
+    // TRANSFER
+    public
     {
-        vkCmdBindPipeline(this, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.handle);
+        void copyBuffer(
+            ulong         amountInBytes,
+            GpuCpuBuffer* from,
+            ulong         fromOffset,
+            GpuBuffer*    to,
+            ulong         toOffset 
+        )
+        {
+            VkBufferCopy region = 
+            {
+                srcOffset: VkDeviceSize(fromOffset),
+                dstOffset: VkDeviceSize(toOffset),
+                size:      VkDeviceSize(amountInBytes)
+            };
+
+            vkCmdCopyBuffer(this, from.handle, to.handle, 1, &region);
+        }
     }
 }

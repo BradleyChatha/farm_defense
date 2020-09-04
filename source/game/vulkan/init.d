@@ -201,6 +201,7 @@ void vkInit_06_findSuitableGpu(ref PhysicalDevice gpu, PhysicalDevice[] devices)
 
     info("Creating allocator objects.");
     g_gpuCpuAllocator.init();
+    g_gpuAllocator.init();
 }
 
 void vkInit_07_createLogicalDevice(ref LogicalDevice device, PhysicalDevice gpu)
