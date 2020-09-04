@@ -195,7 +195,7 @@ mixin template VkWrapperJAST(T)
 
     private string _debugName;
 
-    invariant(this.handle !is null, "This "~T.stringof~" is null.");
+    //invariant(this.handle !is null, "This "~T.stringof~" is null.");
     mixin("alias DebugT = "~debugTypeOf!T~";");
 
     @property

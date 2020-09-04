@@ -7,7 +7,7 @@ import containers.hashset;
 import game.vulkan;
 
 private const SYMBOL_PREFIX = "__set_";
-private enum SymbolNameOf(alias VkType) = (isPointer!VkType) ? SYMBOL_PREFIX~VkType.stringof[0..$-1] : SYMBOL_PREFIX~VkType.stringof;
+private enum SymbolNameOf(alias VkType) = (isPointer!VkType) ? SYMBOL_PREFIX~VkType.stringof[0..$-1]~"PTR" : SYMBOL_PREFIX~VkType.stringof;
 
 private mixin template GenericTracking(alias VkType, alias DestroyFunc)
 if(isType!VkType && isCallable!DestroyFunc)
@@ -26,9 +26,10 @@ if(isType!VkType && isCallable!DestroyFunc)
         return mixin(SymbolNameOf!VkType~".remove(value)");
     }
 
-    void vkDestroyJAST(VkType value)
+    void vkDestroyJAST(string FILE = __FILE__, size_t LINE = __LINE__, string FUNC = __PRETTY_FUNCTION__)
+                      (VkType value)
     {
-        tracef("Destroying tracked %s", value.toString());
+        tracef("Destroying tracked %s from %s:%s:%s", value.toString(), FILE, LINE, FUNC);
         const untracked = vkUntrackJAST(value);
         assert(untracked, "Value was not being tracked by the tracker.");
 
@@ -121,6 +122,14 @@ void vkDestroyCommandBufferJAST(CommandBuffer buffer)
     vkFreeCommandBuffers(g_device, buffer.pool, 1, &buffer.handle);
 }
 
+void vkDestroyImageJAST(GpuImage* image)
+{
+    vkDestroyImage(g_device, image.handle, null);
+    
+    if(image.memory !is null)
+        g_gpuAllocator.deallocate(image.memory);
+}
+
 mixin GenericTracking           !(ShaderModule,             vkDestroyShaderModule                                               );
 mixin GenericTracking           !(Surface,                  vkDestroySurfaceKHR                                                 );
 mixin GenericTracking           !(Fence,                    vkDestroyFence                                                      );
@@ -129,12 +138,14 @@ mixin GenericWrapper            !(VkDescriptorSetLayout,    vkDestroyDescriptorS
 mixin GenericWrapper            !(VkPipelineLayout,         vkDestroyPipelineLayout                                             );
 mixin GenericTracking           !(RenderPass,               vkDestroyRenderPass                                                 );
 mixin GenericWrapper            !(VkDescriptorPool,         vkDestroyDescriptorPool                                             );
-mixin GenericTracking           !(GpuCpuBuffer*,            vkDestroyBuffer                                                     );
-mixin GenericTracking           !(GpuBuffer*,               vkDestroyBuffer                                                     );
-mixin GenericWrapper            !(VkDeviceMemory,           vkFreeMemory                                                        );
 mixin GenericTracking           !(CommandBuffer,            vkDestroyCommandBufferJAST                                          );
 mixin GenericTracking           !(CommandPool,              vkDestroyCommandPool                                                );
+mixin GenericTracking           !(Sampler*,                 vkDestroySampler                                                    );
 mixin SwapchainResourceTracking !(GpuImageView*,            vkDestroyImageView,             genericRecreate!(GpuImageView*)     );
+mixin GenericTracking           !(GpuImage*,                vkDestroyImageJAST                                                  );
 mixin SwapchainResourceTracking !(PipelineBase*,            vkDestroyPipeline,              genericRecreate!(PipelineBase*)     );
 mixin SwapchainResourceTracking !(DescriptorPool*,          vkDestroyDescriptorPool,        genericRecreate!(DescriptorPool*)   );
 mixin SwapchainResourceTracking !(Framebuffer*,             vkDestroyFramebuffer,           genericRecreate!(Framebuffer*)      );
+mixin GenericTracking           !(GpuCpuBuffer*,            vkDestroyBuffer                                                     );
+mixin GenericTracking           !(GpuBuffer*,               vkDestroyBuffer                                                     );
+mixin GenericWrapper            !(VkDeviceMemory,           vkFreeMemory                                                        );

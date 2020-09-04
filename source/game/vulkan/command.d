@@ -200,6 +200,18 @@ struct CommandBuffer
             vkCmdBindVertexBuffers(this, 0, 1, &buffer.handle, &size);
         }
 
+        void bindDescriptorSet(PipelineBase* pipeline, VkDescriptorSet set)
+        {
+            vkCmdBindDescriptorSets(
+                this,
+                VK_PIPELINE_BIND_POINT_GRAPHICS,
+                pipeline.layoutHandle,
+                0,
+                1, &set,
+                0, null
+            );
+        }
+
         void drawVerts(uint count, uint offset)
         {
             vkCmdDraw(this, count, 1, offset, 0);
@@ -237,6 +249,78 @@ struct CommandBuffer
             };
 
             vkCmdCopyBuffer(this, from.handle, to.handle, 1, &region);
+        }
+
+        void copyBufferToImage(
+            GpuCpuBuffer* from,
+            GpuImage*     image,
+            VkImageLayout imageLayout
+        )
+        {
+            VkImageSubresourceLayers layers = 
+            {
+                aspectMask: VK_IMAGE_ASPECT_COLOR_BIT,
+                layerCount: 1
+            };
+
+            VkBufferImageCopy info = 
+            {
+                imageExtent:      VkExtent3D(image.size.x, image.size.y, 1),
+                imageSubresource: layers
+            };
+
+            vkCmdCopyBufferToImage(this, from.handle, image.handle, imageLayout, 1, &info);
+        }
+
+        void transitionImageLayout(
+            GpuImage*     image,
+            VkImageLayout oldLayout,
+            VkImageLayout newLayout
+        )
+        {
+            VkImageMemoryBarrier barrier = 
+            {
+                oldLayout: oldLayout,
+                newLayout: newLayout,
+                srcQueueFamilyIndex: VK_QUEUE_FAMILY_IGNORED,
+                dstQueueFamilyIndex: VK_QUEUE_FAMILY_IGNORED,
+                image: image.handle
+            };
+            barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            barrier.subresourceRange.levelCount = 1;
+            barrier.subresourceRange.layerCount = 1;
+
+            VkPipelineStageFlags srcStage;
+            VkPipelineStageFlags dstStage;
+
+            if(oldLayout == VK_IMAGE_LAYOUT_UNDEFINED
+            && newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+            {
+                barrier.srcAccessMask = 0;
+                barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+
+                srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+                dstStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+            }
+            else if(oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
+                 && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+            {
+                barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+                barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+                srcStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+                dstStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+            }
+            else assert(false, "Unsupported image transition");
+
+            vkCmdPipelineBarrier(
+                this,
+                srcStage, dstStage,
+                0,
+                0, null,
+                0, null,
+                1, &barrier
+            );
         }
     }
 }

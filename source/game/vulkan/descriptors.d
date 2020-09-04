@@ -41,8 +41,8 @@ struct DescriptorPoolManager
 
 struct DescriptorPool
 {
-    enum MAX_PIPELINES               = 10;
-    enum MAX_STATE_CHANGES_PER_IMAGE = 50;
+    enum MAX_PIPELINES                  = 10;
+    enum MAX_STATE_CHANGES_PER_PIPELINE = 50;
 
     mixin VkSwapchainResourceWrapperJAST!VkDescriptorPool;
 
@@ -59,12 +59,12 @@ struct DescriptorPool
         with(sizes[0])
         {
             type            = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            descriptorCount = g_swapchain.images.length.to!uint * MAX_PIPELINES * MAX_STATE_CHANGES_PER_IMAGE;
+            descriptorCount = g_swapchain.images.length.to!uint * MAX_PIPELINES * MAX_STATE_CHANGES_PER_PIPELINE;
         }        
         with(sizes[1])
         {
             type            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-            descriptorCount = g_swapchain.images.length.to!uint * 2 * MAX_PIPELINES * MAX_STATE_CHANGES_PER_IMAGE; // Since we have two uniform buffers in each pipeline.
+            descriptorCount = g_swapchain.images.length.to!uint * 2 * MAX_PIPELINES * MAX_STATE_CHANGES_PER_PIPELINE; // Since we have two uniform buffers in each pipeline.
         }
 
         VkDescriptorPoolCreateInfo poolInfo = 
@@ -93,6 +93,7 @@ struct DescriptorPool
         };
 
         CHECK_VK(vkAllocateDescriptorSets(g_device, &allocation, &handle));
+        infof("Allocated 1 descriptor set with handle %s", handle);
 
         return typeof(return)(handle);
     }
@@ -106,4 +107,69 @@ struct DescriptorPool
 struct DescriptorSet(UniformT)
 {
     mixin VkWrapperJAST!VkDescriptorSet;
+
+    this(VkDescriptorSet toWrap)
+    {
+        this.handle = toWrap;
+    }
+    
+    void update(
+        scope GpuImageView* imageView,
+        scope Sampler*      sampler,
+        scope GpuCpuBuffer* mandatoryUniformBuffer,
+        scope GpuCpuBuffer* userUniformBuffer)
+    {
+        VkDescriptorImageInfo imageInfo = 
+        {
+            imageLayout: VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            imageView:   imageView.handle,
+            sampler:     sampler.handle
+        };
+
+        VkDescriptorBufferInfo mandatoryInfo = 
+        {
+            buffer: mandatoryUniformBuffer.handle,
+            offset: 0,
+            range:  MandatoryUniform.sizeof.to!uint
+        };
+
+        VkDescriptorBufferInfo userInfo = 
+        {
+            buffer: userUniformBuffer.handle,
+            offset: 0,
+            range:  UniformT.sizeof.to!uint
+        };
+
+        VkWriteDescriptorSet[3] writeInfo;
+
+        with(writeInfo[0])
+        {
+            dstSet          = this;
+            dstBinding      = 0;
+            dstArrayElement = 0;
+            descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            descriptorCount = 1;
+            pImageInfo      = &imageInfo;
+        }
+        with(writeInfo[1])
+        {
+            dstSet          = this;
+            dstBinding      = 1;
+            dstArrayElement = 0;
+            descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            descriptorCount = 1;
+            pBufferInfo     = &mandatoryInfo;
+        }
+        with(writeInfo[2])
+        {
+            dstSet          = this;
+            dstBinding      = 2;
+            dstArrayElement = 0;
+            descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            descriptorCount = 1;
+            pBufferInfo     = &userInfo;
+        }
+
+        vkUpdateDescriptorSets(g_device, writeInfo.length.to!uint, writeInfo.ptr, 0, null);
+    }
 }

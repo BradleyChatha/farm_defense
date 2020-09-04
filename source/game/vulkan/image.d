@@ -1,7 +1,7 @@
 module game.vulkan.image;
 
 import std.experimental.logger;
-import game.vulkan;
+import game.vulkan, game.common;
 
 enum GpuImageType
 {
@@ -11,12 +11,52 @@ enum GpuImageType
 struct GpuImage
 {
     mixin VkWrapperJAST!VkImage;
-    VkFormat format;
+    VkFormat   format;
+    GpuBuffer* memory;
+    vec2u      size;
 
     this(VkImage handle, VkFormat format)
     {
         this.handle = handle;
         this.format = format;
+    }
+
+    static void create(
+        scope ref GpuImage*            ptr,
+                  vec2u                size,
+                  VkFormat             format,
+                  VkImageUsageFlagBits usage
+    ) 
+    {
+        assert(ptr is null, "GpuImage does not support recreation.");
+        ptr = new GpuImage();
+
+        VkImageCreateInfo info = 
+        {
+            flags:          0,
+            imageType:      VK_IMAGE_TYPE_2D,
+            format:         format,
+            extent:         VkExtent3D(size.x, size.y, 1),
+            mipLevels:      1,
+            arrayLayers:    1,
+            samples:        VK_SAMPLE_COUNT_1_BIT,
+            tiling:         VK_IMAGE_TILING_OPTIMAL,
+            usage:          usage,
+            sharingMode:    VK_SHARING_MODE_EXCLUSIVE,
+            initialLayout:  VK_IMAGE_LAYOUT_UNDEFINED,
+        };
+
+        CHECK_VK(vkCreateImage(g_device, &info, null, &ptr.handle));
+        vkTrackJAST(ptr);
+
+        VkMemoryRequirements memNeeds;
+        vkGetImageMemoryRequirements(g_device, ptr.handle, &memNeeds);
+
+        ptr.memory = g_gpuAllocator.allocate(memNeeds.size, VK_BUFFER_USAGE_TRANSFER_DST_BIT, memNeeds.alignment);
+        vkBindImageMemory(g_device, ptr.handle, ptr.memory.memoryBlock.handle, ptr.memory.memoryRange.offset);
+
+        ptr.size   = size;
+        ptr.format = format;
     }
 }
 

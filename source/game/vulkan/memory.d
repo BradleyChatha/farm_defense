@@ -43,7 +43,7 @@ struct GpuMemoryRange
  + ++/
 struct GpuMemoryBlock
 {
-    enum BLOCK_SIZE      = 1024 * 1024 * 256;
+    enum BLOCK_SIZE      = 1024 * 1024 * 8;
     enum PAGE_SIZE       = 512;
     enum PAGES_PER_BLOCK = BLOCK_SIZE / PAGE_SIZE;
 
@@ -98,7 +98,7 @@ struct GpuMemoryBlock
         const lastPage  = (PAGE_SIZE * endByte * 8)   + (PAGE_SIZE * endBit);
 
         infof(
-            "Allocating %s bytes (%s pages) of byte range %s..%s (bits %s[%s]..%s[%s]) of host coherent memory.",
+            "Allocating %s bytes (%s pages) of byte range %s..%s (bits %s[%s]..%s[%s]) of memory.",
             amount, PAGE_COUNT, firstPage, lastPage, startByte, startBit, endByte, endBit
         );
         memory = GpuMemoryRange(this.handle, firstPage, amount);
@@ -212,7 +212,7 @@ struct GpuMemoryAllocator
         this.memoryType = g_gpu.getMemoryType(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     }
 
-    GpuBuffer* allocate(size_t amount, VkBufferUsageFlags usage)
+    GpuBuffer* allocate(size_t amount, VkBufferUsageFlags usage, size_t alignment = 0)
     {
         assert(amount <= GpuMemoryBlock.BLOCK_SIZE, "Allocating too much >:(");
 
@@ -221,8 +221,11 @@ struct GpuMemoryAllocator
         {
             foreach(i, block; this.blocks)
             {
-                if(block.allocate(amount, Ref(allocation.memoryRange)))
+                if(block.allocate(amount + alignment, Ref(allocation.memoryRange)))
                 {
+                    if(alignment != 0)
+                        allocation.memoryRange.offset += (alignment - (allocation.memoryRange.offset % alignment));
+
                     allocation.memoryBlock = block;
                     break;
                 }

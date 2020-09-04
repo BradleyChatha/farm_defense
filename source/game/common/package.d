@@ -1,3 +1,4 @@
 module game.common;
 
-public import game.common.maths, game.common.util, game.common.structures, game.common.stats;
+public import std.exception : enforce;
+public import game.common.maths, game.common.util, game.common.structures, game.common.stats, game.common.interfaces;

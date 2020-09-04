@@ -47,6 +47,7 @@ void onSwapchainRecreate(uint imageCount)
 public:
 
 GpuBuffer* TEST_testDrawVerts;
+DescriptorSet!TexturedQuadUniform TEST_uniforms;
 
 // START Functions
 void renderInit()
@@ -105,6 +106,7 @@ void renderEnd()
         buffer.bindPipeline(g_pipelineQuadTexturedOpaque.base);
         buffer.bindVertexBuffer(TEST_testDrawVerts);
         buffer.pushConstants(g_pipelineQuadTexturedOpaque.base, TexturedQuadPushConstants(SDL_GetTicks()));
+        buffer.bindDescriptorSet(g_pipelineQuadTexturedOpaque.base, TEST_uniforms);
         buffer.drawVerts(3, 0);
     }
 
