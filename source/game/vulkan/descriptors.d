@@ -3,6 +3,7 @@ module game.vulkan.descriptors;
 import std.experimental.logger, std.conv;
 import game.vulkan, game.common.util;
 
+// Most of the stuff in here is a crock of shit, but still useable for what I need.
 struct DescriptorPoolManager
 {
     private
