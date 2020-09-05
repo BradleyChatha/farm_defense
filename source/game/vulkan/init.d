@@ -249,6 +249,13 @@ void vkInit_11_buildPipelines()
             .initialSetup()
             .usesShader(g_shaderQuadTextured)
         .build();
+
+    g_pipelineQuadTexturedTransparent = 
+        TexturedQuadPipelineBuilder()
+            .initialSetup()
+            .usesShader(g_shaderQuadTextured)
+            .usesAlphaBlending()
+        .build();
 }
 
 void vkInit_12_createDescriptorPools(ref DescriptorPoolManager* pool)

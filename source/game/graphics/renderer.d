@@ -97,20 +97,21 @@ void renderEnd()
     auto buffer = g_renderGraphicsCommandBuffers[g_imageIndex];
     buffer.begin(ResetOnSubmit.yes);
 
-    buffer.insertDebugMarker("Begin Render Pass");
+    buffer.pushDebugRegion("Begin Render Pass");
     buffer.beginRenderPass(g_swapchain.framebuffers[g_imageIndex]);
 
     {
         buffer.pushDebugRegion("Pipeline Textured Opaque");
         scope(exit) buffer.popDebugRegion();
-        buffer.bindPipeline(g_pipelineQuadTexturedOpaque.base);
+        buffer.bindPipeline(g_pipelineQuadTexturedTransparent.base);
         buffer.bindVertexBuffer(TEST_testDrawVerts);
-        buffer.pushConstants(g_pipelineQuadTexturedOpaque.base, TexturedQuadPushConstants(SDL_GetTicks()));
-        buffer.bindDescriptorSet(g_pipelineQuadTexturedOpaque.base, TEST_uniforms);
-        buffer.drawVerts(3, 0);
+        buffer.pushConstants(g_pipelineQuadTexturedTransparent.base, TexturedQuadPushConstants(SDL_GetTicks()));
+        buffer.bindDescriptorSet(g_pipelineQuadTexturedTransparent.base, TEST_uniforms);
+        buffer.drawVerts(6, 0);
     }
 
     buffer.endRenderPass();
+    buffer.popDebugRegion();
     buffer.end();
 
     // Submit primary graphics buffer.

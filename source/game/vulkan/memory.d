@@ -43,7 +43,7 @@ struct GpuMemoryRange
  + ++/
 struct GpuMemoryBlock
 {
-    enum BLOCK_SIZE      = 1024 * 1024 * 8;
+    enum BLOCK_SIZE      = 1024 * 1024 * 32;
     enum PAGE_SIZE       = 512;
     enum PAGES_PER_BLOCK = BLOCK_SIZE / PAGE_SIZE;
 

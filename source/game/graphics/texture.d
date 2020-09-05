@@ -32,10 +32,13 @@ final class Texture : IDisposable
 
         this._transferBuffer = g_device.transfer.commandPools.get(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT).allocate(1)[0];
         this._transferBuffer.begin(ResetOnSubmit.no);
-            this._transferBuffer.insertDebugMarker("Uploading texture: "~debugName);
+        {
+            this._transferBuffer.pushDebugRegion("Uploading texture: "~debugName, Color.green.darken(0.5));
+            scope(exit) this._transferBuffer.popDebugRegion();
             this._transferBuffer.transitionImageLayout(this._image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
             this._transferBuffer.copyBufferToImage(this._pixelBuffer, this._image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
             this._transferBuffer.transitionImageLayout(this._image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+        }
         this._transferBuffer.end();
         
         this._uploadSync = g_device.transfer.submit(this._transferBuffer, null, null); 
@@ -44,16 +47,25 @@ final class Texture : IDisposable
 
     this(string file, string debugName = null)
     {
+        import std.file : fread = read;
         import std.path : baseName;
-        import imagefmt;
+        import game.bindings.lodepng;
 
         info("Loading texture from file: ", file);
+        auto bytes = cast(ubyte[])fread(file);
 
-        auto image = read_image(file, 4);
-        enforce(!image.e, IF_ERROR[image.e]);
-        scope(exit) image.free();
+        uint width;
+        uint height;
+        ubyte* pixels;
+        
+        auto result = lodepng_decode32(&pixels, &width, &height, bytes.ptr, bytes.length);
+        if(result != 0)
+        {
+            import std.string : fromStringz;
+            throw new Exception("Failed to load texture because: "~lodepng_error_text(result).fromStringz.idup);
+        }
 
-        this(image.buf8, vec2u(image.w, image.h), debugName ? debugName : file.baseName);
+        this(pixels[0..width*height*4], vec2u(width, height), debugName ? debugName : file.baseName);
     }
 
     void onDispose()

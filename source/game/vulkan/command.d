@@ -130,38 +130,43 @@ struct CommandBuffer
             vkEndCommandBuffer(this);
         }
 
+        void reset()
+        {
+            vkResetCommandBuffer(this, 0);
+        }
+
         void insertDebugMarker(string name, Color colour = Color(255, 255, 255, 0))
         {
-            if(vkCmdDebugMarkerInsertEXT is null)
+            if(vkCmdInsertDebugUtilsLabelEXT is null)
                 return;
 
             import std.string : toStringz;
 
-            VkDebugMarkerMarkerInfoEXT info;
-            info.pMarkerName = name.toStringz;
-            info.color       = [colour.r, colour.g, colour.b, colour.a];
+            VkDebugUtilsLabelEXT info;
+            info.pLabelName = name.toStringz;
+            info.color      = [colour.r, colour.g, colour.b, colour.a];
 
-            vkCmdDebugMarkerInsertEXT(this, &info);
+            vkCmdInsertDebugUtilsLabelEXT(this, &info);
         }
 
         void pushDebugRegion(string name, Color colour = Color(255, 255, 255, 0))
         {
-            if(vkCmdDebugMarkerBeginEXT is null)
+            if(vkCmdBeginDebugUtilsLabelEXT is null)
                 return;
 
             import std.string : toStringz;
 
-            VkDebugMarkerMarkerInfoEXT info;
-            info.pMarkerName = name.toStringz;
-            info.color       = [colour.r, colour.g, colour.b, colour.a];
+            VkDebugUtilsLabelEXT info;
+            info.pLabelName = name.toStringz;
+            info.color      = [colour.r, colour.g, colour.b, colour.a];
 
-            vkCmdDebugMarkerBeginEXT(this, &info);
+            vkCmdBeginDebugUtilsLabelEXT(this, &info);
         }
 
         void popDebugRegion()
         {
-            if(vkCmdDebugMarkerEndEXT !is null)
-                vkCmdDebugMarkerEndEXT(this);
+            if(vkCmdEndDebugUtilsLabelEXT !is null)
+                vkCmdEndDebugUtilsLabelEXT(this);
         }
     }
 

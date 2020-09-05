@@ -184,9 +184,9 @@ string debugTypeOf(T)()
         buffer.length -= 2;
     }
 
-    return "VK_DEBUG_REPORT_OBJECT_TYPE"~buffer~"_EXT";
+    return "VK_OBJECT_TYPE"~buffer;
 }
-static assert(debugTypeOf!VkSwapchainKHR == "VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT", debugTypeOf!VkSwapchainKHR);
+static assert(debugTypeOf!VkSwapchainKHR == "VK_OBJECT_TYPE_SWAPCHAIN_KHR", debugTypeOf!VkSwapchainKHR);
 
 mixin template VkWrapperJAST(T)
 {
@@ -204,14 +204,16 @@ mixin template VkWrapperJAST(T)
         this._debugName = name;
 
         import std.string : toStringz;
-        if(vkDebugMarkerSetObjectNameEXT !is null)
+        if(vkSetDebugUtilsObjectNameEXT !is null)
         {
-            VkDebugMarkerObjectNameInfoEXT info = 
+            VkDebugUtilsObjectNameInfoEXT info = 
             {
-                objectType:  DebugT,
-                object:      cast(ulong)this.handle,
-                pObjectName: name.toStringz
+                objectType:   DebugT,
+                objectHandle: cast(ulong)this.handle,
+                pObjectName:  name.toStringz
             };
+            // Tries to read from a null pointer, despite me not passing in any null pointers (debugged).
+            //vkSetDebugUtilsObjectNameEXT(g_device, &info);
         }
     }
 

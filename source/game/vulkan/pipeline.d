@@ -33,7 +33,8 @@ struct Pipeline(VertexT, PushConstantsT, UniformT_)
         scope ref   PipelineBase*                       ptr,
                     VkVertexInputBindingDescription     vertexBinding,
                     VkVertexInputAttributeDescription[] vertexAttributes,
-                    Shader!(PushConstantsT, UniformT)   shader
+                    Shader!(PushConstantsT, UniformT)   shader,
+                    bool                                enableAlphaBlending
     )
     {
         const areWeRecreating = ptr !is null;
@@ -48,7 +49,7 @@ struct Pipeline(VertexT, PushConstantsT, UniformT_)
             vkDestroyJAST(wrapperOf!VkDescriptorSetLayout(ptr.descriptorLayoutHandle));
         }
 
-        ptr.recreateFunc = (p) => create(p, vertexBinding, vertexAttributes, shader);
+        ptr.recreateFunc = (p) => create(p, vertexBinding, vertexAttributes, shader, enableAlphaBlending);
 
         // ALL Vulkan structs we're populating.
         VkPipelineVertexInputStateCreateInfo    vertInputState;
@@ -108,7 +109,18 @@ struct Pipeline(VertexT, PushConstantsT, UniformT_)
         with(colourBlending)
         {
             colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-            blendEnable    = VK_FALSE;
+            if(enableAlphaBlending)
+            {
+                srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+                dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+                colorBlendOp        = VK_BLEND_OP_ADD;
+                srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+                dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+                alphaBlendOp        = VK_BLEND_OP_ADD;
+                blendEnable         = VK_TRUE;
+            }
+            else
+                blendEnable = VK_FALSE;
         }
         with(blendState)
         {
@@ -215,6 +227,7 @@ struct PipelineBuilder(VertexT, PushConstantsT, UniformT)
     VkVertexInputAttributeDescription[] vertexAttributes;
     VkVertexInputBindingDescription     vertexBinding;
     ShaderT                             shader;
+    bool                                alphaBlending;
 
     PipelineBuilder initialSetup()
     {
@@ -240,6 +253,12 @@ struct PipelineBuilder(VertexT, PushConstantsT, UniformT)
         return this;
     }
 
+    PipelineBuilder usesAlphaBlending(bool value = true)
+    {
+        this.alphaBlending = value;
+        return this;
+    }
+
     Pipeline!(VertexT, PushConstantsT, UniformT)* build()
     {
         PipelineBase* ptr = null;
@@ -247,7 +266,8 @@ struct PipelineBuilder(VertexT, PushConstantsT, UniformT)
             ptr,
             this.vertexBinding,
             this.vertexAttributes,
-            this.shader
+            this.shader,
+            this.alphaBlending
         );
         
         return typeof(return).wrap(ptr);

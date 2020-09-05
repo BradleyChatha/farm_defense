@@ -22,24 +22,26 @@ void main()
 void main_03_runGame()
 {
     import game.graphics, game.vulkan, arsd.color, game.common;
-    import imagefmt;
     // Prelim loop
 
     // Don't have the renderer fully set up yet, but I need to make sure all the building blocks for it work.
     // Hence the manual vulkan calls.    
-    const VERT_COUNT       = TexturedQuadVertex.sizeof * 3;
+    const VERT_COUNT       = TexturedQuadVertex.sizeof * 6;
     auto  cpuBuffer        = g_gpuCpuAllocator.allocate(VERT_COUNT, VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
     auto  gpuBuffer        = g_gpuAllocator.allocate(VERT_COUNT, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
     auto  transferCommands = g_device.transfer.commandPools.get(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT).allocate(1)[0];
-    auto  texture          = new Texture("./resources/images/static/jcli_128x.png");
+    auto  texture          = new Texture("./resources/images/static/Transparency Test.png");
     auto  uniformBuffer1   = g_gpuCpuAllocator.allocate(MandatoryUniform.sizeof, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
     auto  uniformBuffer2   = g_gpuCpuAllocator.allocate(TexturedQuadUniform.sizeof, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
 
-    cpuBuffer.as!TexturedQuadVertex[0..3] = 
+    cpuBuffer.as!TexturedQuadVertex[0..6] = 
     [
-        TexturedQuadVertex(vec2f(-0.5, 0.5),  vec2f(0, 128), Color.red),
-        TexturedQuadVertex(vec2f(0,    -0.5), vec2f(64, 0), Color.green),
-        TexturedQuadVertex(vec2f(0.5, 0.5),   vec2f(128, 128), Color.blue)
+        TexturedQuadVertex(vec2f(-0.5, -0.5),  vec2f(0, 0), Color.red),
+        TexturedQuadVertex(vec2f(0.5, -0.5),  vec2f(128, 0), Color.green),
+        TexturedQuadVertex(vec2f(0.5, 0.5),  vec2f(128, 128), Color.blue),
+        TexturedQuadVertex(vec2f(0.5, 0.5),  vec2f(128, 128), Color.red),
+        TexturedQuadVertex(vec2f(-0.5, 0.5),  vec2f(0, 128), Color.green),
+        TexturedQuadVertex(vec2f(-0.5, -0.5),  vec2f(0, 0), Color.blue),
     ];
     transferCommands.begin(ResetOnSubmit.yes);
         transferCommands.copyBuffer(VERT_COUNT, cpuBuffer, 0, gpuBuffer, 0);
@@ -53,10 +55,10 @@ void main_03_runGame()
     }
 
     TEST_testDrawVerts = gpuBuffer;
-    while(SDL_GetTicks() < 2_000)
+    while(SDL_GetTicks() < 5_000)
     {
         renderBegin();
-        auto uniforms = g_descriptorPools.pool.allocate!TexturedQuadUniform(g_pipelineQuadTexturedOpaque.base);
+        auto uniforms = g_descriptorPools.pool.allocate!TexturedQuadUniform(g_pipelineQuadTexturedTransparent.base);
         uniforms.update(texture.imageView, texture.sampler, uniformBuffer1, uniformBuffer2);
         TEST_uniforms = uniforms;
         renderEnd();

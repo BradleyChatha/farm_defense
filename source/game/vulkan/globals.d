@@ -15,14 +15,15 @@ Swapchain*                  g_swapchain;
 DescriptorPoolManager*      g_descriptorPools;
 VkPipelineCache             g_pipelineCache;
 TexturedQuadShader          g_shaderQuadTextured;
-TexturedQuadOpaquePipeline* g_pipelineQuadTexturedOpaque;
+TexturedQuadPipeline*       g_pipelineQuadTexturedOpaque;
+TexturedQuadPipeline*       g_pipelineQuadTexturedTransparent;
 GpuCpuMemoryAllocator       g_gpuCpuAllocator;
 GpuMemoryAllocator          g_gpuAllocator;
 alias g_renderPass        = RenderPass.instance;
 
 // START aliases //
 alias TexturedQuadShader          = Shader!(TexturedQuadPushConstants, TexturedQuadUniform);
-alias TexturedQuadOpaquePipeline  = Pipeline!(TexturedQuadVertex, TexturedQuadPushConstants, TexturedQuadUniform);
+alias TexturedQuadPipeline        = Pipeline!(TexturedQuadVertex, TexturedQuadPushConstants, TexturedQuadUniform);
 alias TexturedQuadPipelineBuilder = PipelineBuilder!(TexturedQuadVertex, TexturedQuadPushConstants, TexturedQuadUniform);
 
 // START Additional data types //
