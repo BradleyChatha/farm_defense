@@ -40,14 +40,14 @@ struct TexturedQuadVertex
 {
     import arsd.color;
 
-    vec2f position;
+    vec3f position;
     vec2f uv;
     Color colour;
 
     static void defineAttributes(ref VertexAttributeBuilder builder)
     {
-        builder = builder.location(0).format(VK_FORMAT_R32G32_SFLOAT).offset(TexturedQuadVertex.position.offsetof).build()
-                         .location(1).format(VK_FORMAT_R32G32_SFLOAT).offset(TexturedQuadVertex.uv.offsetof)      .build()
-                         .location(2).format(VK_FORMAT_R8G8B8A8_UINT).offset(TexturedQuadVertex.colour.offsetof)  .build();
+        builder = builder.location(0).format(VK_FORMAT_R32G32B32_SFLOAT).offset(TexturedQuadVertex.position.offsetof).build()
+                         .location(1).format(VK_FORMAT_R32G32_SFLOAT).offset(TexturedQuadVertex.uv.offsetof)         .build()
+                         .location(2).format(VK_FORMAT_R8G8B8A8_UINT).offset(TexturedQuadVertex.colour.offsetof)     .build();
     }
 }

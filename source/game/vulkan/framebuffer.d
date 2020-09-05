@@ -16,6 +16,8 @@ struct Framebuffer
         const areWeRecreating = ptr !is null;
         if(!areWeRecreating)
             ptr = new Framebuffer();
+        else
+            vkDestroyFramebuffer(g_device, ptr.handle, null);
         infof("%s a %s.", (areWeRecreating) ? "Recreating" : "Creating", typeof(this).stringof);
 
         ptr.recreateFunc = (p) => create(ptr, colourImageView);

@@ -135,7 +135,7 @@ struct CommandBuffer
             vkResetCommandBuffer(this, 0);
         }
 
-        void insertDebugMarker(string name, Color colour = Color(255, 255, 255, 0))
+        void insertDebugMarker(lazy string name, Color colour = Color(255, 255, 255, 0))
         {
             if(vkCmdInsertDebugUtilsLabelEXT is null)
                 return;
@@ -149,7 +149,7 @@ struct CommandBuffer
             vkCmdInsertDebugUtilsLabelEXT(this, &info);
         }
 
-        void pushDebugRegion(string name, Color colour = Color(255, 255, 255, 0))
+        void pushDebugRegion(lazy string name, Color colour = Color(255, 255, 255, 0))
         {
             if(vkCmdBeginDebugUtilsLabelEXT is null)
                 return;

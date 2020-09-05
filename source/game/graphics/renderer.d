@@ -9,6 +9,69 @@ import game.common, game.graphics, game.vulkan;
 
 private:
 
+// START private Data types
+struct MemoryRange
+{
+    size_t offset;
+    size_t length;
+}
+
+struct RenderBucket
+{
+    Texture             texture;
+    MandatoryUniform    mandatoryUniforms;
+    TexturedQuadUniform quadUniforms;
+    MemoryRange         gpuRangeInVerts;
+    bool                usesTransparency;
+
+    bool rangeIsSideBySideWith(RenderBucket bucket)
+    {
+        return (bucket.gpuRangeInVerts.offset > this.gpuRangeInVerts.offset)
+               ? this.gpuRangeInVerts.offset + this.gpuRangeInVerts.length     == bucket.gpuRangeInVerts.offset
+               : bucket.gpuRangeInVerts.offset + bucket.gpuRangeInVerts.length == this.gpuRangeInVerts.offset;
+    }
+
+    // Any bucket with the same settings, and with verts who live side-by-side, are compatible.
+    bool isCompatibleWith(RenderBucket bucket)
+    {
+        return (
+            this.texture           is bucket.texture
+         && this.mandatoryUniforms == bucket.mandatoryUniforms
+         && this.quadUniforms      == bucket.quadUniforms
+         && this.usesTransparency  == bucket.usesTransparency
+         && this.rangeIsSideBySideWith(bucket)
+        );
+    }
+
+    void merge(RenderBucket bucket)
+    {
+        assert(this.isCompatibleWith(bucket));
+
+        if(bucket.gpuRangeInVerts.offset > this.gpuRangeInVerts.offset)
+            this.gpuRangeInVerts.length += bucket.gpuRangeInVerts.length;
+        else
+            this.gpuRangeInVerts.offset = bucket.gpuRangeInVerts.offset;
+    }
+}
+unittest
+{
+    RenderBucket b1;
+    RenderBucket b2;
+    
+    b2.gpuRangeInVerts.offset += 2;
+    assert(!b1.isCompatibleWith(b2));
+    assert(!b2.isCompatibleWith(b1));
+
+    b1.gpuRangeInVerts.length += 2;
+    assert(b1.isCompatibleWith(b2));
+    assert(b2.isCompatibleWith(b1));
+
+    b2.gpuRangeInVerts.length = 1;
+    b1.merge(b2);
+    assert(b1.gpuRangeInVerts.offset == 0);
+    assert(b1.gpuRangeInVerts.length == 3);
+}
+
 // START Command/Queue related variables.
 Semaphore[]                         g_renderImageAvailableSemaphores;
 Semaphore[]                         g_renderRenderFinishedSemaphores;
@@ -16,6 +79,8 @@ Semaphore                           g_currentImageAvailableSemaphore;
 CommandBuffer[]                     g_renderGraphicsCommandBuffers;
 QueueSubmitSyncInfo[]               g_renderGraphicsSubmitSyncInfos;
 DescriptorSet!TexturedQuadUniform[] g_renderDescriptorSets;
+GpuCpuBuffer*[]                     g_renderDescriptorSetBuffersMandatory;
+GpuCpuBuffer*[]                     g_renderDescriptorSetBuffersQuad;
 uint                                g_imageIndex;
 
 // START Resource related variables.
@@ -34,6 +99,14 @@ QuadAllocator       g_quadAllocator;
 GpuCpuBuffer*       g_quadCpuBuffer;
 GpuBuffer*          g_quadGpuBuffer;
 QuadCpuBookkeeper   g_quadCpuBookkeeper;
+RenderBucket[]      g_renderBuckets;
+size_t              g_renderBucketCount;
+
+// START Render state variables
+Texture             g_renderTexture;
+MandatoryUniform    g_uniformsMandatory;
+TexturedQuadUniform g_uniformsQuad;
+bool                g_renderEnableBlending;
 
 // START Vulkan Event Callbacks
 void onFrameChange(uint imageIndex)
@@ -58,9 +131,13 @@ void onSwapchainRecreate(uint imageCount)
         vkDestroyJAST(buffer);
     g_renderGraphicsCommandBuffers = g_device.graphics.commandPools.get(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT).allocate(imageCount);
 
-    g_renderDescriptorSets.length = imageCount;
+    g_renderDescriptorSetBuffersMandatory.length = imageCount;
+    g_renderDescriptorSetBuffersQuad.length      = imageCount;
     foreach(i; 0..imageCount)
-        g_renderDescriptorSets[i] = g_descriptorPools.pool.allocate!TexturedQuadUniform(g_pipelineQuadTexturedOpaque.base); // Should work fine...
+    {
+        g_renderDescriptorSetBuffersMandatory[i] = g_gpuCpuAllocator.allocate(MandatoryUniform.sizeof,    VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+        g_renderDescriptorSetBuffersQuad[i]      = g_gpuCpuAllocator.allocate(TexturedQuadUniform.sizeof, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+    }
 
     recreateSemaphores(Ref(g_renderImageAvailableSemaphores));
     recreateSemaphores(Ref(g_renderRenderFinishedSemaphores));
@@ -82,11 +159,23 @@ void renderOnQuadModification(size_t offset, TexturedQuadVertex[] verts)
     );
 }
 
+void renderAddBucket(RenderBucket bucket)
+{
+    if(g_renderBucketCount >= g_renderBuckets.length)
+        g_renderBuckets.length = (g_renderBuckets.length + 1) * 2;
+
+    if(g_renderBucketCount == 0 || !g_renderBuckets[g_renderBucketCount - 1].isCompatibleWith(bucket))
+    {
+        g_renderBuckets[g_renderBucketCount++] = bucket;
+        return;
+    }
+
+    g_renderBuckets[g_renderBucketCount - 1].merge(bucket);
+}
+
 public:
 
-DescriptorSet!TexturedQuadUniform TEST_uniforms;
-
-// START Data Types
+// START public Data Types
 struct QuadAllocation
 {
     private
@@ -167,6 +256,33 @@ void renderFreeQuads(ref QuadAllocation quads)
     quads = QuadAllocation.init;
 }
 
+void renderQuads(ref QuadAllocation quads, size_t quadCount = size_t.max, size_t quadOffset = 0)
+{
+    import std.algorithm : min;
+
+    auto startVertex = quads._offsetIntoCpuBuffer + (min(quads._verts.length / VERTS_PER_QUAD, quadOffset) * VERTS_PER_QUAD);
+    auto endVertex   = startVertex + min(quadCount, quads._verts.length - (quadCount * VERTS_PER_QUAD));
+
+    renderAddBucket(RenderBucket(
+        g_renderTexture,
+        g_uniformsMandatory,
+        g_uniformsQuad,
+        MemoryRange(startVertex, endVertex),
+        g_renderEnableBlending,
+    ));
+}
+
+void renderSetTexture(Texture texture)
+{
+    assert(texture !is null);
+    g_renderTexture = texture;
+}
+
+void renderUseBlending(bool useBlending)
+{
+    g_renderEnableBlending = useBlending;
+}
+
 // START Render Functions
 void renderInit()
 {
@@ -218,6 +334,7 @@ void renderBegin()
 
 void renderEnd()
 {
+    import std.format : format;
     import bindbc.sdl : SDL_GetTicks;
 
     auto buffer = g_renderGraphicsCommandBuffers[g_imageIndex];
@@ -225,19 +342,50 @@ void renderEnd()
     buffer.pushDebugRegion("Begin Render Pass");
     buffer.beginRenderPass(g_swapchain.framebuffers[g_imageIndex]);
 
-    {
-        buffer.pushDebugRegion("Pipeline Textured Opaque");
-        scope(exit) buffer.popDebugRegion();
-        buffer.bindPipeline(g_pipelineQuadTexturedTransparent.base);
+    // {
+    //     buffer.pushDebugRegion("Pipeline Textured Opaque");
+    //     scope(exit) buffer.popDebugRegion();
+    //     buffer.bindPipeline(g_pipelineQuadTexturedTransparent.base);
+    //     buffer.bindVertexBuffer(g_quadGpuBuffer);
+    //     buffer.pushConstants(g_pipelineQuadTexturedTransparent.base, TexturedQuadPushConstants(SDL_GetTicks()));
+    //     buffer.bindDescriptorSet(g_pipelineQuadTexturedTransparent.base, TEST_uniforms);
+    //     buffer.drawVerts(MAX_QUADS, 0);
+    // }
+
+    buffer.pushDebugRegion("Setting bucket-common data");
         buffer.bindVertexBuffer(g_quadGpuBuffer);
         buffer.pushConstants(g_pipelineQuadTexturedTransparent.base, TexturedQuadPushConstants(SDL_GetTicks()));
-        buffer.bindDescriptorSet(g_pipelineQuadTexturedTransparent.base, TEST_uniforms);
-        buffer.drawVerts(MAX_QUADS, 0);
+    buffer.popDebugRegion();
+    foreach(i, bucket; g_renderBuckets[0..g_renderBucketCount])
+    {
+        assert(bucket.texture !is null,    "There must be a texture.");
+        assert(!bucket.texture.isDisposed, "Texture has been disposed of.");
+
+        if(!bucket.texture.finalise())
+            continue;
+        
+        auto pipeline = (bucket.usesTransparency) ? g_pipelineQuadTexturedTransparent.base : g_pipelineQuadTexturedOpaque.base;
+        buffer.pushDebugRegion("Bucket %s Texture %s Blending %s".format(i, bucket.texture, bucket.usesTransparency), Color(38, 72, 102, 255));
+            buffer.bindPipeline(pipeline);
+
+            auto uniforms = g_descriptorPools.pool.allocate!TexturedQuadUniform(pipeline);
+            uniforms.update(
+                bucket.texture.imageView, 
+                bucket.texture.sampler,
+                g_renderDescriptorSetBuffersMandatory[g_imageIndex],
+                g_renderDescriptorSetBuffersQuad[g_imageIndex]
+            );
+            buffer.bindDescriptorSet(pipeline, uniforms);
+            buffer.drawVerts(cast(uint)bucket.gpuRangeInVerts.length, cast(uint)bucket.gpuRangeInVerts.offset);
+        buffer.popDebugRegion();
     }
 
     buffer.endRenderPass();
     buffer.popDebugRegion();
     buffer.end();
+
+    // Clear buckets
+    g_renderBucketCount = 0;
 
     // Submit primary graphics buffer.
     auto renderFinishedSemaphore = g_renderRenderFinishedSemaphores[g_imageIndex];

@@ -27,17 +27,9 @@ void main_03_runGame()
     // Don't have the renderer fully set up yet, but I need to make sure all the building blocks for it work.
     // Hence the manual vulkan calls.
     auto  texture          = new Texture("./resources/images/static/Transparency Test.png");
-    auto  uniformBuffer1   = g_gpuCpuAllocator.allocate(MandatoryUniform.sizeof, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
-    auto  uniformBuffer2   = g_gpuCpuAllocator.allocate(TexturedQuadUniform.sizeof, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
 
     auto quads = renderAllocateQuads(1);
     scope(exit) renderFreeQuads(quads);
-
-    while(!texture.finalise())
-    {
-        g_device.transfer.processFences();
-        g_device.graphics.processFences();
-    }
 
     while(SDL_GetTicks() < 2_000)
     {
@@ -45,18 +37,17 @@ void main_03_runGame()
         quads.beginModify();
         quads.vertsMutable[0..6] = 
         [
-            TexturedQuadVertex(vec2f(-0.5, -0.5),  vec2f(0, 0), Color.red),
-            TexturedQuadVertex(vec2f(0.5, -0.5),  vec2f(128, 0), Color.green),
-            TexturedQuadVertex(vec2f(0.5, 0.5),  vec2f(128, 128), Color.blue),
-            TexturedQuadVertex(vec2f(0.5, 0.5),  vec2f(128, 128), Color.red),
-            TexturedQuadVertex(vec2f(-0.5, 0.5),  vec2f(0, 128), Color.green),
-            TexturedQuadVertex(vec2f(-0.5, -0.5),  vec2f(0, 0), Color.blue),
+            TexturedQuadVertex(vec3f(-0.5, -0.5, 0),  vec2f(0, 0), Color.red),
+            TexturedQuadVertex(vec3f(0.5, -0.5, 0),  vec2f(128, 0), Color.green),
+            TexturedQuadVertex(vec3f(0.5, 0.5, 0),  vec2f(128, 128), Color.blue),
+            TexturedQuadVertex(vec3f(0.5, 0.5, 0),  vec2f(128, 128), Color.red),
+            TexturedQuadVertex(vec3f(-0.5, 0.5, 0),  vec2f(0, 128), Color.green),
+            TexturedQuadVertex(vec3f(-0.5, -0.5, 0),  vec2f(0, 0), Color.blue),
         ];
         quads.endModifyAndUpdate();
-
-        auto uniforms = g_descriptorPools.pool.allocate!TexturedQuadUniform(g_pipelineQuadTexturedTransparent.base);
-        uniforms.update(texture.imageView, texture.sampler, uniformBuffer1, uniformBuffer2);
-        TEST_uniforms = uniforms;
+        renderSetTexture(texture);
+        renderUseBlending(true);
+        renderQuads(quads);
         renderEnd();
     }
 

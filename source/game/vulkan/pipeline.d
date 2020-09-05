@@ -6,8 +6,8 @@ import game.common.util, game.vulkan, game.graphics.window, game.common.maths;
 
 struct MandatoryUniform
 {
-    mat4f view;
-    mat4f projection;
+    mat4f view       = mat4f.identity;
+    mat4f projection = mat4f.identity;
 }
 
 struct PipelineBase

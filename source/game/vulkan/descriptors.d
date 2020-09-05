@@ -94,7 +94,6 @@ struct DescriptorPool
         };
 
         CHECK_VK(vkAllocateDescriptorSets(g_device, &allocation, &handle));
-        infof("Allocated 1 descriptor set with handle %s", handle);
 
         return typeof(return)(handle);
     }
