@@ -10,7 +10,8 @@ struct Framebuffer
 
     static void create(
         scope ref Framebuffer*  ptr,
-        scope     GpuImageView* colourImageView
+        scope     GpuImageView* colourImageView,
+        scope     GpuImageView* depthImageView
     )
     {
         const areWeRecreating = ptr !is null;
@@ -20,9 +21,9 @@ struct Framebuffer
             vkDestroyFramebuffer(g_device, ptr.handle, null);
         infof("%s a %s.", (areWeRecreating) ? "Recreating" : "Creating", typeof(this).stringof);
 
-        ptr.recreateFunc = (p) => create(ptr, colourImageView);
+        ptr.recreateFunc = (p) => create(ptr, colourImageView, depthImageView);
 
-        auto attachments = [colourImageView.handle];
+        auto attachments = [colourImageView.handle, depthImageView.handle];
         VkFramebufferCreateInfo info = 
         {
             flags:              0,

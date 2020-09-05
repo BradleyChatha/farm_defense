@@ -256,12 +256,15 @@ void renderFreeQuads(ref QuadAllocation quads)
     quads = QuadAllocation.init;
 }
 
+// START Rendering functions.
+
 void renderQuads(ref QuadAllocation quads, size_t quadCount = size_t.max, size_t quadOffset = 0)
 {
-    import std.algorithm : min;
+    if(quadCount == size_t.max)
+        quadCount = (quads._verts.length - (quadOffset * VERTS_PER_QUAD)) / VERTS_PER_QUAD;
 
-    auto startVertex = quads._offsetIntoCpuBuffer + (min(quads._verts.length / VERTS_PER_QUAD, quadOffset) * VERTS_PER_QUAD);
-    auto endVertex   = startVertex + min(quadCount, quads._verts.length - (quadCount * VERTS_PER_QUAD));
+    auto startVertex = quads._offsetIntoCpuBuffer + (quadOffset * VERTS_PER_QUAD);
+    auto endVertex   = startVertex + (quadCount * VERTS_PER_QUAD);
 
     renderAddBucket(RenderBucket(
         g_renderTexture,
@@ -283,7 +286,7 @@ void renderUseBlending(bool useBlending)
     g_renderEnableBlending = useBlending;
 }
 
-// START Render Functions
+// START Render Frame Functions
 void renderInit()
 {
     onSwapchainRecreate(cast(uint)g_swapchain.images.length);
@@ -295,6 +298,8 @@ void renderInit()
     g_quadGpuBuffer = g_gpuAllocator.allocate(MAX_QUADS_IN_BYTES, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
     g_quadAllocator = QuadAllocator(new ubyte[MAX_QUADS_IN_BYTES]);
     g_quadCpuBookkeeper.setup();
+
+    g_uniformsMandatory.projection = mat4f.orthographic(0, Window.size.x, 0, Window.size.y, 1, 0);
 }
 
 void renderBegin()
@@ -342,16 +347,6 @@ void renderEnd()
     buffer.pushDebugRegion("Begin Render Pass");
     buffer.beginRenderPass(g_swapchain.framebuffers[g_imageIndex]);
 
-    // {
-    //     buffer.pushDebugRegion("Pipeline Textured Opaque");
-    //     scope(exit) buffer.popDebugRegion();
-    //     buffer.bindPipeline(g_pipelineQuadTexturedTransparent.base);
-    //     buffer.bindVertexBuffer(g_quadGpuBuffer);
-    //     buffer.pushConstants(g_pipelineQuadTexturedTransparent.base, TexturedQuadPushConstants(SDL_GetTicks()));
-    //     buffer.bindDescriptorSet(g_pipelineQuadTexturedTransparent.base, TEST_uniforms);
-    //     buffer.drawVerts(MAX_QUADS, 0);
-    // }
-
     buffer.pushDebugRegion("Setting bucket-common data");
         buffer.bindVertexBuffer(g_quadGpuBuffer);
         buffer.pushConstants(g_pipelineQuadTexturedTransparent.base, TexturedQuadPushConstants(SDL_GetTicks()));
@@ -365,8 +360,10 @@ void renderEnd()
             continue;
         
         auto pipeline = (bucket.usesTransparency) ? g_pipelineQuadTexturedTransparent.base : g_pipelineQuadTexturedOpaque.base;
-        buffer.pushDebugRegion("Bucket %s Texture %s Blending %s".format(i, bucket.texture, bucket.usesTransparency), Color(38, 72, 102, 255));
+        buffer.pushDebugRegion("Bucket %s Texture %s Blending %s".format(i, bucket.texture, bucket.usesTransparency), Color(38, 72, 102));
             buffer.bindPipeline(pipeline);
+
+            g_renderDescriptorSetBuffersMandatory[g_imageIndex].as!MandatoryUniform[0] = g_uniformsMandatory;
 
             auto uniforms = g_descriptorPools.pool.allocate!TexturedQuadUniform(pipeline);
             uniforms.update(

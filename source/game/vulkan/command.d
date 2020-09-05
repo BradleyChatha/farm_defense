@@ -144,7 +144,7 @@ struct CommandBuffer
 
             VkDebugUtilsLabelEXT info;
             info.pLabelName = name.toStringz;
-            info.color      = [colour.r, colour.g, colour.b, colour.a];
+            info.color      = colour.toSrgb();
 
             vkCmdInsertDebugUtilsLabelEXT(this, &info);
         }
@@ -158,7 +158,7 @@ struct CommandBuffer
 
             VkDebugUtilsLabelEXT info;
             info.pLabelName = name.toStringz;
-            info.color      = [colour.r, colour.g, colour.b, colour.a];
+            info.color      = colour.toSrgb();
 
             vkCmdBeginDebugUtilsLabelEXT(this, &info);
         }
@@ -175,13 +175,16 @@ struct CommandBuffer
     {
         void beginRenderPass(Framebuffer* framebuffer)
         {
-            VkClearValue clearColour = VkClearValue(VkClearColorValue([0.5f, 0.5f, 0.25f, 1.0f]));
+            VkClearValue[2] clearColour;
+            clearColour[0].color        = VkClearColorValue([0.5f, 0.5f, 0.25f, 1.0f]);
+            clearColour[1].depthStencil = VkClearDepthStencilValue(1.0f, 0);
+
             VkRenderPassBeginInfo info = 
             {
                 renderPass:      g_renderPass,
                 framebuffer:     framebuffer.handle,
-                clearValueCount: 1,
-                pClearValues:    &clearColour
+                clearValueCount: clearColour.length,
+                pClearValues:    clearColour.ptr
             };
             info.renderArea.offset = VkOffset2D(0, 0);
             info.renderArea.extent = g_swapchain.capabilities.currentExtent;

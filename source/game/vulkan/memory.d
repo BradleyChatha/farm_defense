@@ -110,7 +110,7 @@ struct GpuMemoryBlock
         assert(memory.memoryHandle == this.handle);
 
         // Calculate things.
-        const startPage = memory.offset / PAGE_SIZE;
+        const startPage = amountDivideMagnitudeRounded(memory.offset, PAGE_SIZE);
         const endPage   = amountDivideMagnitudeRounded(memory.offset + memory.length, PAGE_SIZE);
         const startByte = startPage / 8;
         const startBit  = startPage % 8;

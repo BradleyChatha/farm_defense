@@ -37,12 +37,12 @@ void main_03_runGame()
         quads.beginModify();
         quads.vertsMutable[0..6] = 
         [
-            TexturedQuadVertex(vec3f(-0.5, -0.5, 0),  vec2f(0, 0), Color.red),
-            TexturedQuadVertex(vec3f(0.5, -0.5, 0),  vec2f(128, 0), Color.green),
-            TexturedQuadVertex(vec3f(0.5, 0.5, 0),  vec2f(128, 128), Color.blue),
-            TexturedQuadVertex(vec3f(0.5, 0.5, 0),  vec2f(128, 128), Color.red),
-            TexturedQuadVertex(vec3f(-0.5, 0.5, 0),  vec2f(0, 128), Color.green),
-            TexturedQuadVertex(vec3f(-0.5, -0.5, 0),  vec2f(0, 0), Color.blue),
+            TexturedQuadVertex(vec3f(0, 0, 0),  vec2f(0, 0), Color.red),
+            TexturedQuadVertex(vec3f(200, 0, 0),  vec2f(128, 0), Color.green),
+            TexturedQuadVertex(vec3f(200, 200, 0),  vec2f(128, 128), Color.blue),
+            TexturedQuadVertex(vec3f(200, 200, 0),  vec2f(128, 128), Color.red),
+            TexturedQuadVertex(vec3f(0, 200, 0),  vec2f(0, 128), Color.green),
+            TexturedQuadVertex(vec3f(0, 0, 0),  vec2f(0, 0), Color.blue),
         ];
         quads.endModifyAndUpdate();
         renderSetTexture(texture);

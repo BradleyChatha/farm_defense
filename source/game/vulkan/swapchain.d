@@ -18,7 +18,9 @@ struct RenderPass
         void create(scope Swapchain* swapchain) // This is created before the swapchain global is set.
         {
             VkAttachmentDescription colourAttachment;
+            VkAttachmentDescription depthAttachment;
             VkAttachmentReference   colourAttachmentRef;
+            VkAttachmentReference   depthAttachmentRef;
             VkSubpassDependency     colourCanBeWrittenDependency;
             VkSubpassDescription    colourToPresentSubpass;
             VkRenderPassCreateInfo  renderPass;
@@ -35,11 +37,27 @@ struct RenderPass
                 initialLayout   = VK_IMAGE_LAYOUT_UNDEFINED;
                 finalLayout     = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
             }
+            with(depthAttachment)
+            {
+                format          = VK_FORMAT_D32_SFLOAT;
+                samples         = VK_SAMPLE_COUNT_1_BIT;
+                loadOp          = VK_ATTACHMENT_LOAD_OP_CLEAR;
+                storeOp         = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+                stencilLoadOp   = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+                stencilStoreOp  = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+                initialLayout   = VK_IMAGE_LAYOUT_UNDEFINED;
+                finalLayout     = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+            }
 
             with(colourAttachmentRef)
             {
                 attachment                  = 0; // colourAttachment
                 colourAttachmentRef.layout  = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+            }
+            with(depthAttachmentRef)
+            {
+                attachment                = 1; // depthAttachment
+                depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
             }
 
             with(colourToPresentSubpass)
@@ -47,6 +65,7 @@ struct RenderPass
                 pipelineBindPoint       = VK_PIPELINE_BIND_POINT_GRAPHICS;
                 colorAttachmentCount    = 1;
                 pColorAttachments       = &colourAttachmentRef;
+                pDepthStencilAttachment = &depthAttachmentRef;
             }
 
             with(colourCanBeWrittenDependency)
@@ -59,7 +78,7 @@ struct RenderPass
                 srcAccessMask   = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
             }
 
-            auto attachments  = [colourAttachment];
+            auto attachments  = [colourAttachment, depthAttachment];
             auto subpasses    = [colourToPresentSubpass];
             auto dependencies = [colourCanBeWrittenDependency];
             with(renderPass)
@@ -85,7 +104,9 @@ struct Swapchain
     VkSurfaceFormatKHR          format;
     VkSurfaceCapabilitiesKHR    capabilities;
     GpuImage*[]                 images;
+    GpuImage*[]                 depthImages;
     GpuImageView*[]             imageViewsColour;
+    GpuImageView*[]             imageViewsDepth;
     Framebuffer*[]              framebuffers;
 
     static void create(scope ref Swapchain* ptr)
@@ -191,17 +212,25 @@ struct Swapchain
             if(areWeRecreating && ptr.images.length > i)
             {
                 ptr.images[i].handle = handle;
+                vkDestroyJAST(ptr.depthImages[i]);
                 vkRecreateJAST(ptr.imageViewsColour[i]);
+                vkRecreateJAST(ptr.imageViewsDepth[i]);
                 vkRecreateJAST(ptr.framebuffers[i]);
+
+                GpuImage.create(Ref(ptr.depthImages[i]), Window.size, VK_FORMAT_D32_SFLOAT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
             }
             else
             {
                 ptr.images           ~= new GpuImage(handle, ptr.format.format);
+                ptr.depthImages      ~= null;
                 ptr.imageViewsColour ~= null;
+                ptr.imageViewsDepth  ~= null;
                 ptr.framebuffers     ~= null;
-                
-                GpuImageView.create(Ref(ptr.imageViewsColour[i]), ptr.images[i], GpuImageType.colour2D);
-                Framebuffer .create(Ref(ptr.framebuffers[i]),     ptr.imageViewsColour[i]);
+
+                GpuImage    .create(Ref(ptr.depthImages[i]),      Window.size,             VK_FORMAT_D32_SFLOAT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
+                GpuImageView.create(Ref(ptr.imageViewsDepth[i]),  ptr.depthImages[i],      GpuImageType.depth2D                                             );                
+                GpuImageView.create(Ref(ptr.imageViewsColour[i]), ptr.images[i],           GpuImageType.colour2D                                            );
+                Framebuffer .create(Ref(ptr.framebuffers[i]),     ptr.imageViewsColour[i], ptr.imageViewsDepth[i]                                           );
             }
         }
 

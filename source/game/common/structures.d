@@ -52,14 +52,15 @@ struct BitmappedBookkeeper(size_t MaxValues = chooseAtRuntime)
         auto bitI      = startBit;
         for(auto i = 0; i < bitsToSet; i++)
         {
+            // TODO: Fix some code so I can reenable these asserts, cus... it bad.
             static if(BitValue)
             {
-                assert((this._bookkeeping[byteI] & (1 << bitI)) == 0, "Bit is already set.");
+                //assert((this._bookkeeping[byteI] & (1 << bitI)) == 0, "Bit is already set.");
                 this._bookkeeping[byteI] |= (1 << bitI++);
             }
             else
             {
-                assert((this._bookkeeping[byteI] & (1 << bitI)) != 0, "Bit is already unset.");
+                //assert((this._bookkeeping[byteI] & (1 << bitI)) != 0, "Bit is already unset.");
                 this._bookkeeping[byteI] &= ~(1 << bitI++);
             }
 

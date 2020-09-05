@@ -55,6 +55,7 @@ struct Pipeline(VertexT, PushConstantsT, UniformT_)
         VkPipelineVertexInputStateCreateInfo    vertInputState;
         VkPipelineViewportStateCreateInfo       viewport;
         VkPipelineMultisampleStateCreateInfo    multisampling;
+        VkPipelineDepthStencilStateCreateInfo   depthStencil;
         VkPipelineColorBlendAttachmentState     colourBlending;
         VkPipelineColorBlendStateCreateInfo     blendState;
         VkPipelineRasterizationStateCreateInfo  rasterMouse;
@@ -105,6 +106,14 @@ struct Pipeline(VertexT, PushConstantsT, UniformT_)
         {
             sampleShadingEnable  = VK_FALSE;
             rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+        }
+        with(depthStencil)
+        {
+            depthTestEnable       = VK_TRUE;
+            depthWriteEnable      = VK_TRUE;
+            depthCompareOp        = VK_COMPARE_OP_LESS;
+            depthBoundsTestEnable = VK_FALSE;
+            stencilTestEnable     = VK_FALSE;
         }
         with(colourBlending)
         {
@@ -211,6 +220,7 @@ struct Pipeline(VertexT, PushConstantsT, UniformT_)
             pRasterizationState = &rasterMouse;
             pMultisampleState   = &multisampling;
             pColorBlendState    = &blendState;
+            pDepthStencilState  = &depthStencil;
         }
 
         CHECK_VK(vkCreateGraphicsPipelines(g_device, g_pipelineCache, 1, &pipeline, null, &ptr.handle));

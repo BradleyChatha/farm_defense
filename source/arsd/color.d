@@ -7,6 +7,18 @@ module arsd.color;
 
 // importing phobos explodes the size of this code 10x, so not doing it.
 
+float[4] toSrgb(Color col)
+{
+    float[4] srgb;
+
+    srgb[0] = cast(float)col.r / 255.0f;
+    srgb[1] = cast(float)col.g / 255.0f;
+    srgb[2] = cast(float)col.b / 255.0f;
+    srgb[3] = cast(float)col.a / 255.0f;
+
+    return srgb;
+}
+
 private {
 	double toInternal(T)(scope const(char)[] s) {
 		double accumulator = 0.0;

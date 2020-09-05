@@ -5,7 +5,8 @@ import game.vulkan, game.common;
 
 enum GpuImageType
 {
-    colour2D
+    colour2D,
+    depth2D
 }
 
 struct GpuImage
@@ -29,6 +30,7 @@ struct GpuImage
     ) 
     {
         assert(ptr is null, "GpuImage does not support recreation.");
+        infof("Creating GpuImage of size %s format %s and usage %s", size, format, usage);
         ptr = new GpuImage();
 
         VkImageCreateInfo info = 
@@ -47,7 +49,6 @@ struct GpuImage
         };
 
         CHECK_VK(vkCreateImage(g_device, &info, null, &ptr.handle));
-        vkTrackJAST(ptr);
 
         VkMemoryRequirements memNeeds;
         vkGetImageMemoryRequirements(g_device, ptr.handle, &memNeeds);
@@ -57,6 +58,7 @@ struct GpuImage
 
         ptr.size   = size;
         ptr.format = format;
+        vkTrackJAST(ptr);
     }
 }
 
@@ -87,6 +89,11 @@ struct GpuImageView
             case colour2D:
                 viewType    = VK_IMAGE_VIEW_TYPE_2D;
                 aspectMask |= VK_IMAGE_ASPECT_COLOR_BIT;
+                break;
+
+            case depth2D:
+                viewType    = VK_IMAGE_VIEW_TYPE_2D;
+                aspectMask |= VK_IMAGE_ASPECT_DEPTH_BIT;
                 break;
 
             default: assert(false, "Unsupported image view type");

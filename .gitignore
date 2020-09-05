@@ -16,3 +16,4 @@ bin/
 compile.exe
 .compile_config*
 pipeline.cache
+out.log
