@@ -1,10 +1,22 @@
 module game.common.structures;
 
-import std.experimental.allocator, std.experimental.allocator.building_blocks, std.experimental.logger;
+import stdx.allocator, stdx.allocator.building_blocks, std.experimental.logger;
 import game.common.maths;
 
-public import std.experimental.allocator : chooseAtRuntime;
+public import stdx.allocator : chooseAtRuntime;
 
+/++
+ + Generic pool allocator that works with multiple blocks of 4MB memory.
+ + ++/
+alias PoolAllocator = FreeTree!(
+    AllocatorList!(
+        n => Region!GCAllocator(1024 * 1024 * 4)
+    )
+);
+
+/++
+ + Simple struct used to help with bookkeeping.
+ + ++/
 struct BitmappedBookkeeper(size_t MaxValues = chooseAtRuntime)
 {
     static if(MaxValues != chooseAtRuntime)
@@ -52,15 +64,14 @@ struct BitmappedBookkeeper(size_t MaxValues = chooseAtRuntime)
         auto bitI      = startBit;
         for(auto i = 0; i < bitsToSet; i++)
         {
-            // TODO: Fix some code so I can reenable these asserts, cus... it bad.
             static if(BitValue)
             {
-                //assert((this._bookkeeping[byteI] & (1 << bitI)) == 0, "Bit is already set.");
+                assert((this._bookkeeping[byteI] & (1 << bitI)) == 0, "Bit is already set.");
                 this._bookkeeping[byteI] |= (1 << bitI++);
             }
             else
             {
-                //assert((this._bookkeeping[byteI] & (1 << bitI)) != 0, "Bit is already unset.");
+                assert((this._bookkeeping[byteI] & (1 << bitI)) != 0, "Bit is already unset.");
                 this._bookkeeping[byteI] &= ~(1 << bitI++);
             }
 
@@ -155,7 +166,6 @@ unittest
     assert(keeper._bookkeeping[3] == 0b11111111);
     assert(keeper._bookkeeping[4] == 0b00000001);
 }
-
 @("Cross-byte issue")
 unittest
 {
