@@ -18,7 +18,7 @@ void main() {
 
     // Apply colour calcs
     vec4 finalColour = fragColor;
-         finalColour = finalColour + (vec4(PushConstant.ticks % 255) / vec4(1, 2, 4, 1));
+         //finalColour = finalColour + (vec4(PushConstant.ticks % 255) / vec4(1, 2, 4, 1));
          finalColour = finalColour / vec4(255);
          finalColour = finalColour * texture(texSampler, finalUv);
 

@@ -26,29 +26,10 @@ void main_03_runGame()
 
     // Don't have the renderer fully set up yet, but I need to make sure all the building blocks for it work.
     // Hence the manual vulkan calls.
-    auto  texture          = new Texture("./resources/images/static/Transparency Test.png");
-
-    auto quads = renderAllocateQuads(1);
-    scope(exit) renderFreeQuads(quads);
+    auto texture = new Texture("./resources/images/static/Transparency Test.png");
 
     while(SDL_GetTicks() < 2_000)
     {
-        renderBegin();
-        quads.beginModify();
-        quads.vertsMutable[0..6] = 
-        [
-            TexturedQuadVertex(vec3f(0, 0, 0),  vec2f(0, 0), Color.red),
-            TexturedQuadVertex(vec3f(200, 0, 0),  vec2f(128, 0), Color.green),
-            TexturedQuadVertex(vec3f(200, 200, 0),  vec2f(128, 128), Color.blue),
-            TexturedQuadVertex(vec3f(200, 200, 0),  vec2f(128, 128), Color.red),
-            TexturedQuadVertex(vec3f(0, 200, 0),  vec2f(0, 128), Color.green),
-            TexturedQuadVertex(vec3f(0, 0, 0),  vec2f(0, 0), Color.blue),
-        ];
-        quads.endModifyAndUpdate();
-        renderSetTexture(texture);
-        renderUseBlending(true);
-        renderQuads(quads);
-        renderEnd();
     }
 
     g_device.graphics.debugPrintFences();
@@ -80,7 +61,6 @@ void main_02_loadThirdPartyDeps()
     Window.onInit();
 
     vkInitAllJAST();
-    renderInit();
 }
 
 void main_04_unloadThirdPartyDeps()
