@@ -88,9 +88,9 @@ struct GpuMemoryBlock
         mapped = cast(ubyte[])ptr[0..BLOCK_SIZE];
     }
 
-    bool allocate(size_t amount, ref GpuMemoryRange memory)
+    bool allocate(size_t amount, ref GpuMemoryRange memory, size_t alignment = 0)
     {
-        const PAGE_COUNT = amountDivideMagnitudeRounded(amount, PAGE_SIZE);
+        const PAGE_COUNT = amountDivideMagnitudeRounded(amount + alignment, PAGE_SIZE);
         assert(PAGE_COUNT != 0);
 
         size_t bitIndex;
@@ -115,7 +115,7 @@ struct GpuMemoryBlock
         );
         memory = GpuMemoryRange(
             this.handle, 
-            firstPage, 
+            (alignment == 0) ? firstPage : firstPage + (alignment - (firstPage % alignment)), 
             amount,
             startByte,
             startBit,
@@ -238,11 +238,8 @@ struct GpuMemoryAllocator
         {
             foreach(i, block; this.blocks)
             {
-                if(block.allocate(amount + alignment, Ref(allocation.memoryRange)))
+                if(block.allocate(amount, Ref(allocation.memoryRange), alignment))
                 {
-                    if(alignment != 0)
-                        allocation.memoryRange.offset += (alignment - (allocation.memoryRange.offset % alignment));
-
                     allocation.memoryBlock = block;
                     break;
                 }
