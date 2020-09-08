@@ -30,6 +30,18 @@ struct GpuMemoryRange
     VkDeviceMemory memoryHandle;
     size_t         offset;
     size_t         length;
+
+    // Bookkeeping info from allocation.
+    private
+    {
+        size_t startByte;
+        size_t startBit;
+        size_t endByte;
+        size_t endBit;
+        size_t startPageInBytes;
+        size_t endPageInBytes;
+        size_t pageCountInPages;
+    }
 }
 
 /++
@@ -101,7 +113,18 @@ struct GpuMemoryBlock
             "Allocating %s bytes (%s pages) of byte range %s..%s (bits %s[%s]..%s[%s]) of memory.",
             amount, PAGE_COUNT, firstPage, lastPage, startByte, startBit, endByte, endBit
         );
-        memory = GpuMemoryRange(this.handle, firstPage, amount);
+        memory = GpuMemoryRange(
+            this.handle, 
+            firstPage, 
+            amount,
+            startByte,
+            startBit,
+            endByte,
+            endBit,
+            firstPage,
+            lastPage,
+            PAGE_COUNT
+        );
         return true;
     }
 
@@ -109,19 +132,13 @@ struct GpuMemoryBlock
     {
         assert(memory.memoryHandle == this.handle);
 
-        // Calculate things.
-        const startPage = amountDivideMagnitudeRounded(memory.offset, PAGE_SIZE);
-        const endPage   = amountDivideMagnitudeRounded(memory.offset + memory.length, PAGE_SIZE);
-        const startByte = startPage / 8;
-        const startBit  = startPage % 8;
-        const endByte   = endPage   / 8;
-        const endBit    = endPage   % 8;
         infof(
-            "Deallocating %s bytes (%s pages) of page range %s..%s (bits %s[%s]..%s[%s]) of host coherent memory.",
-            memory.length, (endPage - startPage), startPage, endPage, startByte, startBit, endByte, endBit
+            "Deallocating %s bytes (%s pages) of byte range %s..%s (bits %s[%s]..%s[%s]) of host coherent memory.",
+            memory.length, memory.pageCountInPages, memory.startPageInBytes, 
+            memory.endPageInBytes, memory.startByte, memory.startBit, memory.endByte, memory.endBit
         );
 
-        this.bookkeeper.setBitRange!false(startPage, endPage - startPage);
+        this.bookkeeper.setBitRange!false(memory.startByte * 8 + memory.startBit, memory.pageCountInPages);
         memory = GpuMemoryRange.init;
     }
 }

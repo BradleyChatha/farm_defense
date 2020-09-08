@@ -180,3 +180,19 @@ unittest
     assert(keeper.markNextNBits(startBit, 1));
     assert(startBit == 9, "%s".format(startBit));
 }
+@("Numbers Numbers Numbers!")
+unittest
+{
+    auto keeper = BitmappedBookkeeper!65_536();
+    keeper.setup();
+
+    size_t startBit;
+    assert(keeper.markNextNBits(startBit, 7361));
+    assert(startBit == 0);
+
+    assert(keeper.markNextNBits(startBit, 7361));
+    assert(startBit == 7361);
+
+    keeper.setBitRange!false(0, 7361);
+    keeper.setBitRange!false(7361, 7361);
+}

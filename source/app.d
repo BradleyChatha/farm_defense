@@ -14,26 +14,9 @@ void main()
 
     main_01_ensureCorrectDirectory();
     main_02_loadThirdPartyDeps();
-    main_03_runGame();
-    main_04_unloadThirdPartyDeps();
-}
-
-
-void main_03_runGame()
-{
-    import game.graphics, game.vulkan, arsd.color, game.common;
-    // Prelim loop
-
-    // Don't have the renderer fully set up yet, but I need to make sure all the building blocks for it work.
-    // Hence the manual vulkan calls.
-    auto texture = new Texture("./resources/images/static/Transparency Test.png");
-
-    while(SDL_GetTicks() < 2_000)
-    {
-    }
-
-    g_device.graphics.debugPrintFences();
-    g_device.transfer.debugPrintFences();
+    main_03_loadSystems();
+    main_04_runGame();
+    main_05_unloadThirdPartyDeps();
 }
 
 void main_01_ensureCorrectDirectory()
@@ -63,7 +46,21 @@ void main_02_loadThirdPartyDeps()
     vkInitAllJAST();
 }
 
-void main_04_unloadThirdPartyDeps()
+void main_03_loadSystems()
+{
+    import game.core.loop;
+    
+    loopInit();
+}
+
+void main_04_runGame()
+{
+    import game.core.loop;
+
+    loopRun();
+}
+
+void main_05_unloadThirdPartyDeps()
 {
     import game.vulkan.init;
     

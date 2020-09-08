@@ -1,7 +1,7 @@
 module game.core.messagebus;
 
+import stdx.allocator;
 import game.common;
-import std.traits : getSymbolsByUDA, Parameters, isInstanceOf;
 
 private:
 
@@ -17,7 +17,8 @@ struct Subscribe;
 enum MessageType
 {
     ERROR,
-    Unittest
+    Unittest,
+    WindowEvent
 }
 
 interface IMessageHandler
@@ -59,8 +60,7 @@ class Message(MessageType MessageType_) : MessageBase
     }
 }
 
-class MessageWithData(MessageType ThisMessageType, alias DataT) : Message!MessageType
-if(is(DataT == class) || is(DataT == struct))
+class MessageWithData(MessageType ThisMessageType, alias DataT) : Message!ThisMessageType
 {
     DataT data;
 
@@ -91,7 +91,7 @@ void messageBusUnsubscribe(IMessageHandler handler)
 
 void messageBusSubmit(MailT : MessageBase, CtorArgs...)(CtorArgs args)
 {
-    auto message = g_messageAllocator.allocate!MailT(args);
+    auto message = g_messageAllocator.make!MailT(args);
     scope(exit) g_messageAllocator.dispose(message);
 
     foreach(handler; g_messageHandlers)
@@ -101,6 +101,8 @@ void messageBusSubmit(MailT : MessageBase, CtorArgs...)(CtorArgs args)
 // START mixins
 mixin template messageHandlerBoilerplate()
 {
+    import std.traits : getSymbolsByUDA, isInstanceOf, Parameters;
+
     alias ThisType = typeof(this);
 
     void handleMessage(scope MessageBase message)
@@ -117,7 +119,7 @@ mixin template messageHandlerBoilerplate()
                 alias FuncParams = Parameters!FuncType;
 
                 static assert(
-                    FuncParams.length == 1 && isInstanceOf!(Message, FuncParams[0]),
+                    FuncParams.length == 1 && (isInstanceOf!(Message, FuncParams[0]) || isInstanceOf!(MessageWithData, FuncParams[0])),
                     "Function "~FuncIdent~" must have only ONE parameter of type `Message`"
                 );
 

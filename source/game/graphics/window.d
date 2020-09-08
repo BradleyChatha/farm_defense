@@ -2,7 +2,9 @@ module game.graphics.window;
 
 import std.experimental.logger;
 import bindbc.sdl;
-import game.common.maths, game.vulkan;
+import game.core, game.common, game.vulkan;
+
+alias WindowEventMessage = MessageWithData!(MessageType.WindowEvent, SDL_Event);
 
 // Reasons for singleton here:
 //  1. We're only ever going to have a single window for this game.
