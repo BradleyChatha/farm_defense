@@ -42,6 +42,12 @@ final class Window
         {
             return cast(bool)SDL_PollEvent(event);
         }
+        
+        bool isMinimised()
+        {
+            uint flags = SDL_GetWindowFlags(this.handle);
+            return (flags & SDL_WINDOW_MINIMIZED) > 0;
+        }
 
         Surface createSurface()
         {

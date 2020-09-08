@@ -147,6 +147,7 @@ struct Swapchain
         ptr.format = formatFilter.front;
 
         scope extent    = &ptr.capabilities.currentExtent;
+        scope minExtent = &ptr.capabilities.minImageExtent;
         scope maxExtent = &ptr.capabilities.maxImageExtent;
         if(extent.width == uint.max || extent.height == uint.max)
             *extent = Window.size.toExtent;
@@ -155,6 +156,11 @@ struct Swapchain
             extent.width = maxExtent.width;
         if(extent.height > maxExtent.height)
             extent.height = maxExtent.height;
+
+        if(extent.width < minExtent.width)
+            extent.width = minExtent.width;
+        if(extent.height < minExtent.height)
+            extent.height = minExtent.height;
 
         info("Swapchain Settings:");
         infof("\tPresent Mode: %s", ptr.presentMode);
@@ -212,12 +218,7 @@ struct Swapchain
             if(areWeRecreating && ptr.images.length > i)
             {
                 ptr.images[i].handle = handle;
-                vkDestroyJAST(ptr.depthImages[i]);
-                vkRecreateJAST(ptr.imageViewsColour[i]);
-                vkRecreateJAST(ptr.imageViewsDepth[i]);
-                vkRecreateJAST(ptr.framebuffers[i]);
-
-                GpuImage.create(Ref(ptr.depthImages[i]), Window.size, VK_FORMAT_D32_SFLOAT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
+                GpuImage.create(Ref(ptr.depthImages[i]), Window.size, VK_FORMAT_D32_SFLOAT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, true);
             }
             else
             {

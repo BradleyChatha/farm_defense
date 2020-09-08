@@ -117,6 +117,10 @@ template wrapperOf(alias VkType)
     mixin("alias wrapperOf = "~wrapperNameOf!VkType~";");
 }
 
+void vkInitTrackerJAST()
+{
+}
+
 void vkDestroyCommandBufferJAST(CommandBuffer buffer)
 {
     vkFreeCommandBuffers(g_device, buffer.pool, 1, &buffer.handle);

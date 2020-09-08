@@ -109,11 +109,16 @@ struct Pipeline(VertexT, PushConstantsT, UniformT_)
         }
         with(depthStencil)
         {
-            depthTestEnable       = VK_TRUE;
-            depthWriteEnable      = VK_TRUE;
-            depthCompareOp        = VK_COMPARE_OP_LESS;
-            depthBoundsTestEnable = VK_FALSE;
-            stencilTestEnable     = VK_FALSE;
+            if(!enableAlphaBlending)
+            {
+                depthTestEnable       = VK_TRUE;
+                depthWriteEnable      = VK_TRUE;
+                depthCompareOp        = VK_COMPARE_OP_LESS;
+                depthBoundsTestEnable = VK_FALSE;
+                stencilTestEnable     = VK_FALSE;
+            }
+            else
+                depthTestEnable       = VK_FALSE;
         }
         with(colourBlending)
         {

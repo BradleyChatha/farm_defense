@@ -26,12 +26,20 @@ struct GpuImage
         scope ref GpuImage*            ptr,
                   vec2u                size,
                   VkFormat             format,
-                  VkImageUsageFlagBits usage
+                  VkImageUsageFlagBits usage,
+                  bool                 isSwapchainImage = false
     ) 
     {
-        assert(ptr is null, "GpuImage does not support recreation.");
+        assert(ptr is null || isSwapchainImage, "GpuImage does not support recreation unless the image is for the swapchain.");
         infof("Creating GpuImage of size %s format %s and usage %s", size, format, usage);
-        ptr = new GpuImage();
+
+        if(ptr !is null)
+        {
+            vkDestroyImage(g_device, ptr.handle, null);
+            g_gpuAllocator.deallocate(ptr.memory);
+        }
+        else
+            ptr = new GpuImage();
 
         VkImageCreateInfo info = 
         {

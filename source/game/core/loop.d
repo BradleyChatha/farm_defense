@@ -42,9 +42,13 @@ void loopRun()
 
 void loopStep()
 {
+    renderFrameBegin();
+
     SDL_Event event;
     while(Window.nextEvent(&event))
         messageBusSubmit!WindowEventMessage(event);
+
+    renderFrameEnd();
 }
 
 void loopStop()

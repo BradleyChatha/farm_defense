@@ -25,6 +25,7 @@ void vkInitCoreJAST()
     VkStringArrayJAST instanceLayers;
 
     vkInitEventsJAST();
+    vkInitTrackerJAST();
 
     info("00. Initialising Vulkan");
     vkInit_01_loadFunctions();

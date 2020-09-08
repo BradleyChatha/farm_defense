@@ -22,12 +22,12 @@ GpuMemoryAllocator          g_gpuAllocator;
 alias g_renderPass        = RenderPass.instance;
 
 // START aliases //
-alias TexturedQuadShader          = Shader!(TexturedQuadPushConstants, TexturedQuadUniform);
-alias TexturedQuadPipeline        = Pipeline!(TexturedQuadVertex, TexturedQuadPushConstants, TexturedQuadUniform);
-alias TexturedQuadPipelineBuilder = PipelineBuilder!(TexturedQuadVertex, TexturedQuadPushConstants, TexturedQuadUniform);
+alias TexturedQuadShader          = Shader!(PushConstants, TexturedQuadUniform);
+alias TexturedQuadPipeline        = Pipeline!(TexturedVertex, PushConstants, TexturedQuadUniform);
+alias TexturedQuadPipelineBuilder = PipelineBuilder!(TexturedVertex, PushConstants, TexturedQuadUniform);
 
 // START Additional data types //
-align(4) struct TexturedQuadPushConstants
+align(4) struct PushConstants
 {
     uint ticks;
 }
@@ -36,7 +36,7 @@ struct TexturedQuadUniform
 {
 }
 
-struct TexturedQuadVertex
+struct TexturedVertex
 {
     import arsd.color;
 
@@ -46,8 +46,8 @@ struct TexturedQuadVertex
 
     static void defineAttributes(ref VertexAttributeBuilder builder)
     {
-        builder = builder.location(0).format(VK_FORMAT_R32G32B32_SFLOAT).offset(TexturedQuadVertex.position.offsetof).build()
-                         .location(1).format(VK_FORMAT_R32G32_SFLOAT).offset(TexturedQuadVertex.uv.offsetof)         .build()
-                         .location(2).format(VK_FORMAT_R8G8B8A8_UINT).offset(TexturedQuadVertex.colour.offsetof)     .build();
+        builder = builder.location(0).format(VK_FORMAT_R32G32B32_SFLOAT).offset(TexturedVertex.position.offsetof).build()
+                         .location(1).format(VK_FORMAT_R32G32_SFLOAT).offset(TexturedVertex.uv.offsetof)         .build()
+                         .location(2).format(VK_FORMAT_R8G8B8A8_UINT).offset(TexturedVertex.colour.offsetof)     .build();
     }
 }

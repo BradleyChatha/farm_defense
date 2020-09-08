@@ -42,15 +42,16 @@ void main_02_loadThirdPartyDeps()
 
     SDL_Init(SDL_INIT_EVERYTHING);
     Window.onInit();
-
+    
     vkInitAllJAST();
 }
 
 void main_03_loadSystems()
 {
-    import game.core.loop;
-    
+    import game.core.loop, game.graphics.renderer;
+
     loopInit();
+    renderInit();
 }
 
 void main_04_runGame()
