@@ -2,12 +2,24 @@ module game.vulkan.sampler;
 
 import game.common, game.vulkan;
 
+struct SamplerConfig
+{
+    enum DEFAULT = SamplerConfig(VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT);
+
+    VkFilter             minFilter;
+    VkFilter             magFilter;
+    VkSamplerAddressMode modeU;
+    VkSamplerAddressMode modeV;
+    VkSamplerAddressMode modeW;
+}
+
 struct Sampler
 {
     mixin VkWrapperJAST!VkSampler;
 
     static void create(
-        scope ref Sampler* ptr
+        scope ref Sampler* ptr,
+                  SamplerConfig config = SamplerConfig.DEFAULT
     )
     {
         assert(ptr is null, "Sampler does not support recreation.");
@@ -15,11 +27,11 @@ struct Sampler
 
         VkSamplerCreateInfo info = 
         {
-            magFilter:                  VK_FILTER_NEAREST,
-            minFilter:                  VK_FILTER_NEAREST,
-            addressModeU:               VK_SAMPLER_ADDRESS_MODE_REPEAT,
-            addressModeV:               VK_SAMPLER_ADDRESS_MODE_REPEAT,
-            addressModeW:               VK_SAMPLER_ADDRESS_MODE_REPEAT,
+            magFilter:                  config.magFilter,
+            minFilter:                  config.minFilter,
+            addressModeU:               config.modeU,
+            addressModeV:               config.modeV,
+            addressModeW:               config.modeW,
             anisotropyEnable:           VK_FALSE,
             borderColor:                VK_BORDER_COLOR_INT_OPAQUE_BLACK,
             unnormalizedCoordinates:    VK_FALSE,

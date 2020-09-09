@@ -64,6 +64,12 @@ struct DefaultCommand
             copy(pair.sourceFile, pair.destinationFile);
         });
 
+        this.iterateFilePairs("resources/fonts/", null, conf, (pair)
+        {
+            UserIO.logInfof("[FONT        ] %s", pair);
+            copy(pair.sourceFile, pair.destinationFile);
+        });
+
         this.iterateFilePairs("resources/shaders/", "spv", conf, (pair)
         {
             if(pair.sourceFile.extension == ".h" || pair.sourceFile.canFind("varying.def.sc"))

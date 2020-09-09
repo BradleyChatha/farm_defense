@@ -18,7 +18,8 @@ enum MessageType
 {
     ERROR,
     Unittest,
-    WindowEvent
+    windowEvent,
+    submitDrawCommands
 }
 
 interface IMessageHandler
@@ -92,6 +93,7 @@ void messageBusUnsubscribe(IMessageHandler handler)
 void messageBusSubmit(MailT : MessageBase, CtorArgs...)(CtorArgs args)
 {
     auto message = g_messageAllocator.make!MailT(args);
+    assert(message !is null, "Could not allocate message.");
     scope(exit) g_messageAllocator.dispose(message);
 
     foreach(handler; g_messageHandlers)

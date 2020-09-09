@@ -2,6 +2,7 @@
 	"fileVersion": 1,
 	"versions": {
 		"asdf": "0.5.7",
+		"bindbc-freetype": "0.9.1",
 		"bindbc-loader": "0.3.2",
 		"bindbc-sdl": "0.19.1",
 		"emsi_containers": "0.7.0",
@@ -12,7 +13,7 @@
 		"sdlang-d": "0.10.6",
 		"silly": "1.0.2",
 		"stdx-allocator": "2.77.5",
-		"taggedalgebraic": "0.11.17",
+		"taggedalgebraic": "0.11.18",
 		"unit-threaded": "0.7.55"
 	}
 }

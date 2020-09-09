@@ -1,5 +1,5 @@
 import std.stdio, std.experimental.logger, std.exception;
-import bindbc.sdl, erupted;
+import bindbc.sdl, bindbc.freetype, erupted, game.vulkan;
 
 private bool goBack = false;
 
@@ -33,12 +33,16 @@ void main_01_ensureCorrectDirectory()
 
 void main_02_loadThirdPartyDeps()
 {
+    import std.string;
     import game.vulkan.init, game.graphics, game.common;
 
     info("Loading SDL2 Dynamic Libraries");
 
     const support = loadSDL();
     enforce(support == sdlSupport, "Unable to load SDL2");
+
+    auto error = FT_Init_FreeType(&g_freeType);
+    enforce(error == 0, "Error loading FT");
 
     SDL_Init(SDL_INIT_EVERYTHING);
     Window.onInit();
@@ -68,5 +72,6 @@ void main_05_unloadThirdPartyDeps()
     info("Unload SDL");
     SDL_Quit();
 
+    FT_Done_FreeType(g_freeType);
     vkUninitJAST();
 }

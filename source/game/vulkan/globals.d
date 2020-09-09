@@ -1,7 +1,7 @@
 /// Since our Vulkan wrapper stuff takes on a more C-like API, we need to keep track of globals somewhere, which'll be this module.
 module game.vulkan.globals;
 
-import erupted;
+import bindbc.freetype, erupted;
 import game.vulkan, game.common.maths;
 
 // Most globals will be created during `init.d`, and from that point on won't be modified outside of being passed to Vulkan functions.
@@ -20,6 +20,9 @@ TexturedQuadPipeline*       g_pipelineQuadTexturedTransparent;
 GpuCpuMemoryAllocator       g_gpuCpuAllocator;
 GpuMemoryAllocator          g_gpuAllocator;
 alias g_renderPass        = RenderPass.instance;
+
+// START globals for third party rendering libs //
+FT_Library g_freeType;
 
 // START aliases //
 alias TexturedQuadShader          = Shader!(PushConstants, TexturedQuadUniform);

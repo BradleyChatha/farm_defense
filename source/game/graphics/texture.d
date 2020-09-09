@@ -22,7 +22,7 @@ final class Texture : IDisposable
     {
         enforce(pixels.length == size.x * size.y * 4, "Pixel buffer is too small. Did you load it in RGBA format?");
         
-        GpuImage.create(Ref(this._image), vec2u(128, 128), VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+        GpuImage.create(Ref(this._image), size, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
         this._image.debugName = debugName;
         this._image.memory.debugName = debugName ~ " - GPU BUFFER";
 
@@ -120,5 +120,58 @@ final class Texture : IDisposable
     vec2u size()
     {
         return this._size;
+    }
+}
+
+struct AtlasSprite
+{
+    private Texture _texture;
+
+    box2f uvRect;
+    this(box2f uvRect)
+    {
+        this.uvRect = uvRect;
+    }
+
+    @property
+    Texture texture()
+    {
+        return this._texture;
+    }
+}
+
+final class TextureAtlas
+{
+    private
+    {
+        Texture             _texture;
+        AtlasSprite[string] _sprites;
+    }
+
+    this(Texture texture)
+    {
+        assert(texture !is null,    "Texture is null.");
+        assert(!texture.isDisposed, "Texture is disposed of.");
+        this._texture = texture;
+    }
+
+    void define(string name, AtlasSprite sprite)
+    {
+        sprite._texture = this._texture;
+        this._sprites[name] = sprite;
+    }
+
+    AtlasSprite get(string name)
+    {
+        auto ptr = (name in this._sprites);
+        enforce(ptr !is null, "Sprite called '"~name~"' was not found.");
+
+        return *ptr;
+    }
+
+    @property
+    Texture texture()
+    {
+        return this._texture;
     }
 }

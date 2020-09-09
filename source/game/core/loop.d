@@ -25,10 +25,15 @@ final class LoopMessageHandler : IMessageHandler
 
 public:
 
+// TEST vars
+Font font;
+
 // START functions
 void loopInit()
 {
     messageBusSubscribe(new LoopMessageHandler());
+
+    font = new Font("./resources/fonts/arial.ttf");
 }
 
 void loopRun()

@@ -2,6 +2,8 @@ module game.graphics.renderer;
 
 import game.common, game.core, game.graphics, game.vulkan;
 
+alias SubmitDrawCommandsMessage = MessageWithData!(MessageType.submitDrawCommands, DrawCommand[]);
+
 private:
 
 // START Command/Queue related variables.
@@ -56,6 +58,18 @@ void onSwapchainRecreate(uint imageCount)
     g_renderGraphicsSubmitSyncInfos.length = imageCount;
 }
 
+// START Renderer System
+final class RendererMessageHandler : IMessageHandler
+{
+    mixin messageHandlerBoilerplate;
+
+    @Subscribe
+    void onSubmitDrawCommands(SubmitDrawCommandsMessage message)
+    {
+        g_drawCommands ~= message.data;
+    }
+}
+
 public:
 
 // START Data Types
@@ -79,6 +93,8 @@ void renderInit()
     vkListenOnSwapchainRecreateJAST((v) => onSwapchainRecreate(v));
 
     g_uniformsMandatory.projection = mat4f.orthographic(0, Window.size.x, 0, Window.size.y, 1, 0);
+
+    messageBusSubscribe(new RendererMessageHandler());
 }
 
 void renderFrameBegin()
