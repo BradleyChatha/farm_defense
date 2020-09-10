@@ -155,7 +155,7 @@ final class Font : IDisposable
         void topAlignLine(size_t bufferStartIndex, size_t bufferEndIndex, float baselineY, float lowestY)
         {
             const difference = (lowestY - baselineY);
-            infof("Top Aligning Verts %s..%s to baseline %s with lowest Y of %s (difference of %s)", bufferStartIndex, bufferEndIndex, baselineY, lowestY, difference);
+            debug infof("Top Aligning Verts %s..%s to baseline %s with lowest Y of %s (difference of %s)", bufferStartIndex, bufferEndIndex, baselineY, lowestY, difference);
             if(difference < 0)
                 return;
 
@@ -164,6 +164,7 @@ final class Font : IDisposable
 
             // Also need to fix the bounding box, since it'll still be using the old highest Y.
             boundingBox.max.y -= difference;
+            debug infof("Bounding box is now: %s", boundingBox);
         }
    
              boundingBox        = box2f(0, 0, 0, 0);
@@ -187,7 +188,7 @@ final class Font : IDisposable
             const x = bearedCursor.x;
             const y = ((h - glyph.bearing.y) + (fontSize.ascender - h)) + cursor.y; // Since we're down undah, we need to know how far *down* the baseline to go, instead of up.
 
-            infof("'%s' c:%s b:%s bc:%s x:%s y:%s w:%s h:%s a:%s bb:%s", ch, cursor, glyph.bearing, bearedCursor, x, y, w, h, fontSize.ascender, boundingBox);
+            //infof("'%s' c:%s b:%s bc:%s x:%s y:%s w:%s h:%s a:%s bb:%s", ch, cursor, glyph.bearing, bearedCursor, x, y, w, h, fontSize.ascender, boundingBox);
 
             // Check if we need to go onto the next line.
             const MAX_WIDTH = float.max; // Here for when we support letter wrapping/occlusion.
