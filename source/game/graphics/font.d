@@ -145,17 +145,33 @@ final class Font : IDisposable
               uint             sizeInPixels,
               vec2f            initialCursor = vec2f(0),
               Color            colour        = Color.white,
-              float            lineSpacing   = 0
+              float            lineSpacing   = 14.0f
     )
     {
         import std.utf : byUTF;
 
         assert(buffer.length >= this.calculateVertCount(text), "Buffer is too small for the given text.");
 
-             boundingBox = box2f(0, 0, 0, 0);
-        auto fontSize    = this.getFontSize(sizeInPixels);
-        auto cursor      = initialCursor;
-        auto bufferIndex = 0;
+        void topAlignLine(size_t bufferStartIndex, size_t bufferEndIndex, float baselineY, float lowestY)
+        {
+            const difference = (lowestY - baselineY);
+            infof("Top Aligning Verts %s..%s to baseline %s with lowest Y of %s (difference of %s)", bufferStartIndex, bufferEndIndex, baselineY, lowestY, difference);
+            if(difference < 0)
+                return;
+
+            foreach(ref vert; buffer[bufferStartIndex..bufferEndIndex])
+                vert.position.y -= difference;
+
+            // Also need to fix the bounding box, since it'll still be using the old highest Y.
+            boundingBox.max.y -= difference;
+        }
+   
+             boundingBox        = box2f(0, 0, 0, 0);
+        auto fontSize           = this.getFontSize(sizeInPixels);
+        auto cursor             = initialCursor;
+        auto bufferIndex        = 0;
+        auto lowestYThisLine    = float.max; // Due to multiple factors, not all lines will be top-aligned to the initialCursor position, so we need to keep track of this for extra calcs.
+        auto startIndexThisLine = 0; // So we know which verts to modify per line.
         foreach(ch; text.byUTF!dchar)
         {
             // Get the glyph.
@@ -177,8 +193,11 @@ final class Font : IDisposable
             const MAX_WIDTH = float.max; // Here for when we support letter wrapping/occlusion.
             if(w + h > MAX_WIDTH || ch == '\n')
             {
-                cursor.x  = initialCursor.x;
-                cursor.y  = lineSpacing + boundingBox.max.y;
+                topAlignLine(startIndexThisLine, bufferIndex, cursor.y, lowestYThisLine);
+                cursor.x           = initialCursor.x;
+                cursor.y           = lineSpacing + boundingBox.max.y;
+                startIndexThisLine = bufferIndex;
+                lowestYThisLine    = float.max;
                 continue;
             }
 
@@ -203,10 +222,14 @@ final class Font : IDisposable
             if(y + h > boundingBox.max.y) boundingBox.max.y = y + h;
             if(x < boundingBox.min.x)     boundingBox.min.x = x;
             if(x + w > boundingBox.max.x) boundingBox.max.x = x + w;
+            if(y < lowestYThisLine)       lowestYThisLine   = y;
 
             // Advance cursor.
             cursor.x += glyph.advance.x;
         }
+
+        // Last line won't have been top aligned, so make sure we catch it.
+        topAlignLine(startIndexThisLine, bufferIndex, cursor.y, lowestYThisLine);
     }
 
     size_t calculateVertCount(const char[] text)
