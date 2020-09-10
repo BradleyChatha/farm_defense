@@ -131,8 +131,7 @@ void renderFrameBegin()
         while(Window.isMinimised)
         {
             // (Really should do this better, but as long as it works for now, then its fine)
-            import core.thread, core.time, bindbc.sdl;
-            Thread.sleep(500.msecs);
+            import bindbc.sdl;
 
             SDL_Event e;
             while(Window.nextEvent(&e)){}
@@ -140,6 +139,8 @@ void renderFrameBegin()
 
         Swapchain.create(g_swapchain);
         vkRecreateAllJAST();
+        vkEmitOnSwapchainRecreateJAST(cast(uint)g_swapchain.images.length);
+        renderFrameBegin();
         return;
     }
 }

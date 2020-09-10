@@ -26,7 +26,8 @@ final class LoopMessageHandler : IMessageHandler
 public:
 
 // TEST vars
-Font font;
+VertexBuffer verts;
+Font         font;
 
 // START functions
 void loopInit()
@@ -34,6 +35,15 @@ void loopInit()
     messageBusSubscribe(new LoopMessageHandler());
 
     font = new Font("./resources/fonts/arial.ttf");
+
+    const TEXT = "abcdefghijklmnopqrstuvwxyz";
+    box2f size;
+    verts.resize(font.calculateVertCount(TEXT));
+    verts.lock();
+        auto slice = verts.verts[0..$];
+        font.textToVerts(Ref(slice), Ref(size), TEXT, 64);
+        verts.upload(0, verts.length);
+    verts.unlock();
 }
 
 void loopRun()
@@ -47,12 +57,12 @@ void loopRun()
 
 void loopStep()
 {
-    renderFrameBegin();
-
     SDL_Event event;
     while(Window.nextEvent(&event))
         messageBusSubmit!WindowEventMessage(event);
 
+    renderFrameBegin();
+    messageBusSubmit!SubmitDrawCommandsMessage([DrawCommand(&verts, 0, verts.length, font.getFontSize(64).texture, true, 0, 0)]);
     renderFrameEnd();
 }
 

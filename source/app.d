@@ -4,13 +4,18 @@ import bindbc.sdl, bindbc.freetype, erupted, game.vulkan;
 private bool goBack = false;
 
 void main()
-{   
+{
     scope(exit)
     {
         import std.file : chdir;
         if(goBack)
             chdir("..");
     }
+
+    auto logger = new MultiLogger();
+    logger.insertLogger("console", new FileLogger(stdout));
+    logger.insertLogger("file", new FileLogger("log.log"));
+    sharedLog = logger;
 
     main_01_ensureCorrectDirectory();
     main_02_loadThirdPartyDeps();

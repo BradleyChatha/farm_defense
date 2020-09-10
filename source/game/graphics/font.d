@@ -16,6 +16,7 @@ struct FontSize
 {
     Texture      texture;
     Glyph[dchar] glyphs;
+    int          ascender;
 }
 
 private void CHECK_FT(int error, string context = "")
@@ -68,13 +69,14 @@ final class Font : IDisposable
         CHECK_FT(FT_Set_Pixel_Sizes(this._face, 0, sizeInPixels));
 
         FontSize size;
+        size.ascender = this._face.size.metrics.ascender >> 6;
 
         // Misc Constants
         const GUTTER_BETWEEN_GLYPHS_X = 1; // To account for floating point inprecision: don't accidentally bleed pixels between glyphs when rendering.
         const GUTTER_BETWEEN_GLYPHS_Y = 1;
 
         // Calculations.
-        const CHARS_TO_LOAD           = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-=+!\"£$%^&*()\\/.,<>?|";
+        const CHARS_TO_LOAD           = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-=+!\"£$%^&*()\\/.,<>?| ";
         const CHARS_PER_LINE_ESTIMATE = 10;
         const MARGIN_OF_ERROR         = 2;
         const atlasWidth              = sizeInPixels * (CHARS_PER_LINE_ESTIMATE + MARGIN_OF_ERROR);
@@ -96,9 +98,10 @@ final class Font : IDisposable
                 CHECK_FT(FT_Render_Glyph(this._face.glyph, FT_RENDER_MODE_NORMAL));
 
             // Magical things.
-            auto glyphInfo = this._face.glyph;
-            glyph.bearing  = vec2i(glyphInfo.bitmap_left,    -glyphInfo.bitmap_top);
-            glyph.advance  = vec2i(glyphInfo.advance.x >> 6,  glyphInfo.advance.y >> 6);
+            auto glyphInfo        = this._face.glyph;
+            glyph.bearing         = vec2i(glyphInfo.bitmap_left,    glyphInfo.bitmap_top);
+            glyph.advance         = vec2i(glyphInfo.advance.x >> 6, glyphInfo.advance.y >> 6);
+            glyph.textureRect.min = cursor;
 
             // Move the cursor down a line if we need to
             if(cursor.x + glyphInfo.bitmap.width >= pixels.size.x)
@@ -125,12 +128,75 @@ final class Font : IDisposable
                     pixels.set(offsetIntoBuffer, Color(255, 255, 255, alpha));
                 }
             }
-            cursor += vec2u(glyphInfo.bitmap.width + GUTTER_BETWEEN_GLYPHS_X, 0);
-            size.glyphs[ch] = glyph;
+            glyph.textureRect.max = vec2u(cursor.x + glyphInfo.bitmap.width, cursor.y + glyphInfo.bitmap.rows);
+            cursor               += vec2u(glyphInfo.bitmap.width + GUTTER_BETWEEN_GLYPHS_X, 0);
+            size.glyphs[ch]       = glyph;
         }
 
         size.texture = new Texture(pixels.pixelsAsBytes, pixels.size, "Font Size %s".format(sizeInPixels));
         this._sizes[sizeInPixels] = size;
         return size;
+    }
+
+    void textToVerts(
+        ref   TexturedVertex[] buffer, // Can be null/empty.
+        ref   box2f            boundingBox,
+        const char[]           text,
+              uint             sizeInPixels,
+              vec2f            initialCursor = vec2f(0),
+              Color            colour        = Color.white
+    )
+    {
+        import std.utf : byUTF;
+
+        assert(buffer.length >= this.calculateVertCount(text), "Buffer is too small for the given text. NOTE: Invisible characters are factored into this check.");
+
+             boundingBox = box2f(0, 0, 0, 0);
+        auto fontSize    = this.getFontSize(sizeInPixels);
+        auto cursor      = initialCursor;
+        auto bufferIndex = 0;
+        foreach(ch; text.byUTF!dchar)
+        {
+            auto ptr = (ch in fontSize.glyphs);
+            enforce(ptr !is null, "No glyph for character '%s'(%s)".format(ch, cast(uint)ch));
+
+            auto glyph = *ptr;
+
+            const bearedCursor = cursor + glyph.bearing;
+            const w = glyph.textureRect.width;
+            const h = glyph.textureRect.height;
+            const x = bearedCursor.x;
+            const y = (h - bearedCursor.y) + (fontSize.ascender - h); // Since we're down undah, we need to know how far *down* the baseline to go, instead of up.
+
+            //infof("'%s' c:%s b:%s bc:%s x:%s y:%s w:%s h:%s a:%s", ch, cursor, glyph.bearing, bearedCursor, x, y, w, h, fontSize.ascender);
+
+            TexturedVertex[4] verts = 
+            [
+                TexturedVertex(vec3f(x,     y,     0), vec2f(glyph.textureRect.min.x, glyph.textureRect.min.y), colour),
+                TexturedVertex(vec3f(x + w, y,     0), vec2f(glyph.textureRect.max.x, glyph.textureRect.min.y), colour),
+                TexturedVertex(vec3f(x + w, y + h, 0), vec2f(glyph.textureRect.max.x, glyph.textureRect.max.y), colour),
+                TexturedVertex(vec3f(x,     y + h, 0), vec2f(glyph.textureRect.min.x, glyph.textureRect.max.y), colour),
+            ];
+
+            buffer[bufferIndex++] = verts[0];
+            buffer[bufferIndex++] = verts[1];
+            buffer[bufferIndex++] = verts[2];
+            buffer[bufferIndex++] = verts[2];
+            buffer[bufferIndex++] = verts[3];
+            buffer[bufferIndex++] = verts[0];
+
+            // Keep track of the largest/smallest posisions, so we can also provide a size box.
+            if(y < boundingBox.min.y)     boundingBox.min.y = y;
+            if(y + h > boundingBox.max.y) boundingBox.max.y = y + h;
+            if(x < boundingBox.min.x)     boundingBox.min.x = x;
+            if(x + w > boundingBox.max.x) boundingBox.max.x = x + w;
+
+            cursor.x += glyph.advance.x;
+        }
+    }
+
+    size_t calculateVertCount(const char[] text)
+    {
+        return text.length * 6; // 6 Verts to a quad.
     }
 }
