@@ -36,7 +36,7 @@ void loopInit()
 
     font = new Font("./resources/fonts/arial.ttf");
 
-    const TEXT = "abcdefghijklmnopqrstuvwxyz";
+    const TEXT = "abcdefghijklmnopqrstuvwxyz\nABCDEFGHIJKLMNOPQRSTUVWXYZ";
     box2f size;
     verts.resize(font.calculateVertCount(TEXT));
     verts.lock();

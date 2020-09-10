@@ -76,7 +76,7 @@ final class Font : IDisposable
         const GUTTER_BETWEEN_GLYPHS_Y = 1;
 
         // Calculations.
-        const CHARS_TO_LOAD           = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-=+!\"£$%^&*()\\/.,<>?| ";
+        const CHARS_TO_LOAD           = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-=+!\"£$%^&*()\\/.,<>?| \n";
         const CHARS_PER_LINE_ESTIMATE = 10;
         const MARGIN_OF_ERROR         = 2;
         const atlasWidth              = sizeInPixels * (CHARS_PER_LINE_ESTIMATE + MARGIN_OF_ERROR);
@@ -144,12 +144,13 @@ final class Font : IDisposable
         const char[]           text,
               uint             sizeInPixels,
               vec2f            initialCursor = vec2f(0),
-              Color            colour        = Color.white
+              Color            colour        = Color.white,
+              float            lineSpacing   = 0
     )
     {
         import std.utf : byUTF;
 
-        assert(buffer.length >= this.calculateVertCount(text), "Buffer is too small for the given text. NOTE: Invisible characters are factored into this check.");
+        assert(buffer.length >= this.calculateVertCount(text), "Buffer is too small for the given text.");
 
              boundingBox = box2f(0, 0, 0, 0);
         auto fontSize    = this.getFontSize(sizeInPixels);
@@ -157,19 +158,31 @@ final class Font : IDisposable
         auto bufferIndex = 0;
         foreach(ch; text.byUTF!dchar)
         {
+            // Get the glyph.
             auto ptr = (ch in fontSize.glyphs);
             enforce(ptr !is null, "No glyph for character '%s'(%s)".format(ch, cast(uint)ch));
 
             auto glyph = *ptr;
 
+            // Calculate things.
             const bearedCursor = cursor + glyph.bearing;
             const w = glyph.textureRect.width;
             const h = glyph.textureRect.height;
             const x = bearedCursor.x;
-            const y = (h - bearedCursor.y) + (fontSize.ascender - h); // Since we're down undah, we need to know how far *down* the baseline to go, instead of up.
+            const y = ((h - glyph.bearing.y) + (fontSize.ascender - h)) + cursor.y; // Since we're down undah, we need to know how far *down* the baseline to go, instead of up.
 
-            //infof("'%s' c:%s b:%s bc:%s x:%s y:%s w:%s h:%s a:%s", ch, cursor, glyph.bearing, bearedCursor, x, y, w, h, fontSize.ascender);
+            infof("'%s' c:%s b:%s bc:%s x:%s y:%s w:%s h:%s a:%s bb:%s", ch, cursor, glyph.bearing, bearedCursor, x, y, w, h, fontSize.ascender, boundingBox);
 
+            // Check if we need to go onto the next line.
+            const MAX_WIDTH = float.max; // Here for when we support letter wrapping/occlusion.
+            if(w + h > MAX_WIDTH || ch == '\n')
+            {
+                cursor.x  = initialCursor.x;
+                cursor.y  = lineSpacing + boundingBox.max.y;
+                continue;
+            }
+
+            // Generate verts.
             TexturedVertex[4] verts = 
             [
                 TexturedVertex(vec3f(x,     y,     0), vec2f(glyph.textureRect.min.x, glyph.textureRect.min.y), colour),
@@ -191,6 +204,7 @@ final class Font : IDisposable
             if(x < boundingBox.min.x)     boundingBox.min.x = x;
             if(x + w > boundingBox.max.x) boundingBox.max.x = x + w;
 
+            // Advance cursor.
             cursor.x += glyph.advance.x;
         }
     }
