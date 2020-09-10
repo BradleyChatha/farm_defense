@@ -235,6 +235,9 @@ final class Font : IDisposable
 
     size_t calculateVertCount(const char[] text)
     {
-        return text.length * 6; // 6 Verts to a quad.
+        import std.algorithm : count;
+
+        size_t letterCount = text.count!(ch => ch != '\n');
+        return letterCount * 6; // 6 Verts to a quad.
     }
 }
