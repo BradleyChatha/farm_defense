@@ -98,10 +98,9 @@ final class Font : IDisposable
                 CHECK_FT(FT_Render_Glyph(this._face.glyph, FT_RENDER_MODE_NORMAL));
 
             // Magical things.
-            auto glyphInfo        = this._face.glyph;
-            glyph.bearing         = vec2i(glyphInfo.bitmap_left,    glyphInfo.bitmap_top);
-            glyph.advance         = vec2i(glyphInfo.advance.x >> 6, glyphInfo.advance.y >> 6);
-            glyph.textureRect.min = cursor;
+            auto glyphInfo = this._face.glyph;
+            glyph.bearing  = vec2i(glyphInfo.bitmap_left,    glyphInfo.bitmap_top);
+            glyph.advance  = vec2i(glyphInfo.advance.x >> 6, glyphInfo.advance.y >> 6);
 
             // Move the cursor down a line if we need to
             if(cursor.x + glyphInfo.bitmap.width >= pixels.size.x)
@@ -111,6 +110,7 @@ final class Font : IDisposable
                 cursor.y += maxHeightThisLine + GUTTER_BETWEEN_GLYPHS_Y;
                 maxHeightThisLine = 0;
             }
+            glyph.textureRect.min = cursor;
 
             if(glyphInfo.bitmap.rows > maxHeightThisLine)
                 maxHeightThisLine = glyphInfo.bitmap.rows;
