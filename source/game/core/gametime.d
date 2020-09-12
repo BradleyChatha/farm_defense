@@ -20,6 +20,12 @@ uint gametimeMillisecs() nothrow
 }
 
 @safe @nogc
+float gametimeSecs() nothrow
+{
+    return cast(float)g_timespan / 1000.0f;
+}
+
+@safe @nogc
 uint gametimeFps() nothrow
 {
     return g_fps;

@@ -2,8 +2,9 @@ module game.graphics.text;
 
 import game.core, game.common, game.graphics;
 
-final class Text : IDisposable
+final class Text : IDisposable, ITransformable
 {
+    mixin ITransformableBoilerplate;
     mixin IDisposableBoilerplate;
 
     private
@@ -33,33 +34,19 @@ final class Text : IDisposable
     }
 
     @property
+    vec2f size()
+    {
+        return this._bounds.size;
+    }
+
+    @property
     void text(const char[] value)
     {
         this._text = value;
         if(value.length == 0)
             return;
 
-        const vertCount = this._font.calculateVertCount(value);
-        if(vertCount > this._verts.length)
-        {
-            this._verts.resize(vertCount);
-            this._vertsToRender = cast(uint)vertCount;
-        }
-
-        this._verts.lock();
-            auto vertsLValue = this._verts.verts;
-            this._font.textToVerts(
-                vertsLValue,
-                this._bounds,
-                value,
-                this._fontSize,
-                vec2f(0),
-                this._colour,
-                this._lineSpacing
-            );
-            this._verts.vertsToUpload[0..$] = this._verts.verts[0..$];
-            this._verts.upload(0, this._verts.length);
-        this._verts.unlock();
+        this.recalcVerts();
     }
     
     @property
@@ -79,5 +66,37 @@ final class Text : IDisposable
             true,
             0
         );
+    }
+
+    private void recalcVerts()
+    {
+        const vertCount = this._font.calculateVertCount(this._text);
+        if(vertCount > this._verts.length)
+        {
+            this._verts.resize(vertCount);
+            this._vertsToRender = cast(uint)vertCount;
+        }
+
+        this._verts.lock();
+            auto vertsLValue = this._verts.verts;
+            this._font.textToVerts(
+                vertsLValue,
+                this._bounds,
+                this._text,
+                this._fontSize,
+                vec2f(0),
+                this._colour,
+                this._lineSpacing
+            );
+
+            auto matrix = this.transform.matrix;
+            foreach(i, vert; this._verts.verts)
+            {
+                vert.position                = (matrix * vec4f(vert.position, 1)).xyz;
+                this._verts.vertsToUpload[i] = vert;
+            }
+
+            this._verts.upload(0, this._verts.length);
+        this._verts.unlock();
     }
 }

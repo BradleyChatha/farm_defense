@@ -41,5 +41,29 @@ final class DebugUIService : Service
             msBufferIndex = 0;
         
         this.fpsText.text = sformat(fpsBuffer, "%sms %s fps", msBuffer.reduce!((a, b) => a + b) / msBuffer.length, gametimeFps());
+
+        // Just a bit of fun, stressed out today.
+        static bool bounceRight = true;
+        static bool bounceDown  = true;
+        const float bounceSpeed = 200 * gametimeSecs();
+        if(bounceRight)
+            this.fpsText.move(bounceSpeed, 0);
+        else
+            this.fpsText.move(-bounceSpeed, 0);
+
+        if(bounceDown)
+            this.fpsText.move(0, bounceSpeed / 2);
+        else
+            this.fpsText.move(0, -bounceSpeed / 2);
+
+        if(this.fpsText.position.x + this.fpsText.size.x > Window.size.x)
+            bounceRight = false;
+        else if(this.fpsText.position.x < 0)
+            bounceRight = true;
+
+        if(this.fpsText.position.y + this.fpsText.size.y > Window.size.y)
+            bounceDown = false;
+        else if(this.fpsText.position.y < 0)
+            bounceDown = true;
     }
 }
