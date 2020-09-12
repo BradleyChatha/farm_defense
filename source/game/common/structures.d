@@ -6,13 +6,16 @@ import game.common.maths;
 public import stdx.allocator : chooseAtRuntime;
 
 /++
- + Generic pool allocator that works with multiple blocks of 4MB memory.
+ + Generic pool allocator that works with multiple blocks of 4MB(default) memory.
  + ++/
-alias PoolAllocator = FreeTree!(
+alias PoolAllocatorBase(size_t RegionSize) = FreeTree!(
     AllocatorList!(
-        n => Region!GCAllocator(1024 * 1024 * 4)
+        n => Region!GCAllocator(RegionSize)
     )
 );
+
+/// ditto
+alias PoolAllocator = PoolAllocatorBase!(1024 * 1024 * 4);
 
 /++
  + Simple struct used to help with bookkeeping.

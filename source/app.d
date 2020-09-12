@@ -17,6 +17,8 @@ void main()
     logger.insertLogger("file", new FileLogger("log.log"));
     sharedLog = logger;
 
+    globalLogLevel = LogLevel.info;
+
     main_01_ensureCorrectDirectory();
     main_02_loadThirdPartyDeps();
     main_03_loadSystems();

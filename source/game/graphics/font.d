@@ -155,7 +155,7 @@ final class Font : IDisposable
         void topAlignLine(size_t bufferStartIndex, size_t bufferEndIndex, float baselineY, float lowestY)
         {
             const difference = (lowestY - baselineY);
-            debug infof("Top Aligning Verts %s..%s to baseline %s with lowest Y of %s (difference of %s)", bufferStartIndex, bufferEndIndex, baselineY, lowestY, difference);
+            debug tracef("Top Aligning Verts %s..%s to baseline %s with lowest Y of %s (difference of %s)", bufferStartIndex, bufferEndIndex, baselineY, lowestY, difference);
             if(difference < 0)
                 return;
 
@@ -164,7 +164,7 @@ final class Font : IDisposable
 
             // Also need to fix the bounding box, since it'll still be using the old highest Y.
             boundingBox.max.y -= difference;
-            debug infof("Bounding box is now: %s", boundingBox);
+            debug tracef("Bounding box is now: %s", boundingBox);
         }
    
              boundingBox        = box2f(0, 0, 0, 0);

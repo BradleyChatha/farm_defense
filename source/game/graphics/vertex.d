@@ -1,16 +1,29 @@
 module game.graphics.vertex;
 
-import game.graphics, game.vulkan;
+import game.common, game.graphics, game.vulkan;
+
+private PoolAllocatorBase!(TexturedVertex.sizeof * 100_000) g_localVertexAllocator;
+
+package struct VertexUploadInfo
+{
+    uint start;
+    uint end;
+
+    bool requiresUpload()
+    {
+        return this.start != uint.max && this.end != 0;
+    }
+}
 
 struct VertexBuffer
 {
     private
     {
-        GpuCpuBuffer*       _cpuBuffer;
-        GpuBuffer*          _gpuBuffer;
-        bool                _locked;
-        CommandBuffer       _transferCommands; // Only valid between lockVerts() and unlockVerts() intervals.
-        QueueSubmitSyncInfo _transferSync;
+        VertexUploadInfo _uploadInfo;
+        TexturedVertex[] _localVerts; // _localVerts = Untrasnformed verts; _cpuBuffer = Verts ready to upload; _gpuBuffer = Verts on the GPU.
+        GpuCpuBuffer*    _cpuBuffer;
+        GpuBuffer*       _gpuBuffer;
+        bool             _locked;
     }
 
     @disable
@@ -18,13 +31,14 @@ struct VertexBuffer
 
     void resize(size_t length)
     {
+        import std.algorithm : min;
         assert(!this._locked, "Cannot resize while locked.");
 
         TexturedVertex[] oldVerts;
         if(this._cpuBuffer !is null)
         {
             // The allocator will still have this memory mapped and alive, so we can just keep the range and copy shit over.
-            oldVerts = this._cpuBuffer.as!TexturedVertex;
+            oldVerts = this._cpuBuffer.as!TexturedVertex.dup;
 
             // TODO: Make a realloc function in the allocators... and probably DRY them before doing that.
             g_gpuCpuAllocator.deallocate(this._cpuBuffer);
@@ -34,52 +48,55 @@ struct VertexBuffer
         this._cpuBuffer = g_gpuCpuAllocator.allocate(length * TexturedVertex.sizeof, VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
         this._gpuBuffer = g_gpuAllocator.allocate(length * TexturedVertex.sizeof, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
 
-        this._cpuBuffer.as!TexturedVertex[0..oldVerts.length] = oldVerts[0..$];
+        auto vertsToCopy = min(this._cpuBuffer.as!TexturedVertex.length, oldVerts.length);
+        this._cpuBuffer.as!TexturedVertex[0..vertsToCopy] = oldVerts[0..vertsToCopy];
+
+        // Copy local verts over.
+        if(this._localVerts !is null)
+        {
+            oldVerts[0..$] = this._localVerts[0..$];
+            g_localVertexAllocator.dispose(this._localVerts);
+            this._localVerts = g_localVertexAllocator.makeArray!TexturedVertex(length);
+            this._localVerts[0..oldVerts.length] = oldVerts[0..$];
+        }
+        else
+            this._localVerts = g_localVertexAllocator.makeArray!TexturedVertex(length);
     }
 
     void lock()
     {
         assert(!this._locked);
-        assert(this.finalise(), "We've not finalised the previous transfers yet. Are you calling this multiple times per frame?");
         this._locked = true;
-        this._transferCommands = g_device.transfer.commandPools.get(VK_COMMAND_POOL_CREATE_TRANSIENT_BIT).allocate(1)[0];
-        this._transferCommands.begin(ResetOnSubmit.yes);
     }
 
     void unlock()
     {
         assert(this._locked);
         this._locked = false;
-        this._transferCommands.end();
-        this._transferSync = g_device.transfer.submit(this._transferCommands, null, null);
     }
 
     void upload(size_t offset, size_t amount)
     {
         assert(this._locked, "This command must be performed while locked.");
-        this._transferCommands.insertDebugMarker("VertexBuffer::upload");
 
-        amount *= TexturedVertex.sizeof;
-        offset *= TexturedVertex.sizeof;
-        this._transferCommands.copyBuffer(amount, this._cpuBuffer, offset, this._gpuBuffer, offset);
-    }
+        const start = offset;
+        const end   = offset + amount;
 
-    // Finalise any transfers, returns whether transfers are finished yet.
-    bool finalise()
-    {
-        if(this._transferSync == QueueSubmitSyncInfo.init)
-            return true;
-
-        if(!this._transferSync.submitHasFinished)
-            return false;
-
-        this._transferSync = QueueSubmitSyncInfo.init;
-        vkDestroyJAST(this._transferCommands);
-        return true;
+        if(start < this._uploadInfo.start)
+            this._uploadInfo.start = cast(uint)start;
+        if(end > this._uploadInfo.end)
+            this._uploadInfo.end = cast(uint)end;
     }
 
     @property
     TexturedVertex[] verts()
+    {
+        assert(this._locked, "Please use .lock() first.");
+        return this._localVerts;
+    }
+
+    @property
+    TexturedVertex[] vertsToUpload()
     {
         assert(this._locked, "Please use .lock() first.");
         return this._cpuBuffer.as!TexturedVertex;
@@ -88,12 +105,27 @@ struct VertexBuffer
     @property
     size_t length()
     {
-        return this._cpuBuffer.as!TexturedVertex.length;
+        return (this._cpuBuffer is null) ? 0 : this._cpuBuffer.as!TexturedVertex.length;
+    }
+
+    @property
+    package GpuCpuBuffer* cpuHandle()
+    {
+        return this._cpuBuffer;
     }
 
     @property
     package GpuBuffer* gpuHandle()
     {
         return this._gpuBuffer;
+    }
+
+    @property
+    package VertexUploadInfo uploadInfo()
+    {
+        auto info              = this._uploadInfo;
+        this._uploadInfo       = VertexUploadInfo.init;
+        this._uploadInfo.start = uint.max;
+        return info;
     }
 }

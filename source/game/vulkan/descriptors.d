@@ -24,7 +24,7 @@ struct DescriptorPoolManager
 
         ptr._pools.length = g_swapchain.images.length;
         foreach(i; 0..g_swapchain.images.length)
-            DescriptorPool.create(Ref(ptr._pools[i]));
+            DescriptorPool.create(ptr._pools[i]);
     }
 
     void onFrameChange(uint swapchainImageIndex)

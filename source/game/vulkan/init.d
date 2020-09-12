@@ -29,21 +29,21 @@ void vkInitCoreJAST()
 
     info("00. Initialising Vulkan");
     vkInit_01_loadFunctions();
-    vkInit_02_loadInstanceExtentions(Ref(instanceExtensions));
-    vkInit_03_loadInstanceLayers(Ref(instanceLayers));
-    vkInit_04_createInstance(Ref(g_vkInstance), instanceLayers, instanceExtensions);
-    vkInit_05_loadPhysicalDevices(Ref(g_physicalDevices));
-    vkInit_06_findSuitableGpu(Ref(g_gpu), g_physicalDevices);
-    vkInit_07_createLogicalDevice(Ref(g_device), g_gpu);
+    vkInit_02_loadInstanceExtentions(instanceExtensions);
+    vkInit_03_loadInstanceLayers(instanceLayers);
+    vkInit_04_createInstance(g_vkInstance, instanceLayers, instanceExtensions);
+    vkInit_05_loadPhysicalDevices(g_physicalDevices);
+    vkInit_06_findSuitableGpu(g_gpu, g_physicalDevices);
+    vkInit_07_createLogicalDevice(g_device, g_gpu);
 }
 
 void vkInitGraphicsJAST()
 {
-    vkInit_08_createSwapchain(Ref(g_swapchain));
-    vkInit_09_loadPipelineCache(Ref(g_pipelineCache));
+    vkInit_08_createSwapchain(g_swapchain);
+    vkInit_09_loadPipelineCache(g_pipelineCache);
     vkInit_10_loadShaders();
     vkInit_11_buildPipelines();
-    vkInit_12_createDescriptorPools(Ref(g_descriptorPools));
+    vkInit_12_createDescriptorPools(g_descriptorPools);
 }
 
 void vkUninitJAST()
@@ -262,5 +262,5 @@ void vkInit_11_buildPipelines()
 void vkInit_12_createDescriptorPools(ref DescriptorPoolManager* pool)
 {
     info("12. Create descriptor pools.");
-    DescriptorPoolManager.create(Ref(pool));
+    DescriptorPoolManager.create(pool);
 }

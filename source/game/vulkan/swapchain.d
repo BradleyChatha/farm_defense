@@ -218,7 +218,7 @@ struct Swapchain
             if(areWeRecreating && ptr.images.length > i)
             {
                 ptr.images[i].handle = handle;
-                GpuImage.create(Ref(ptr.depthImages[i]), Window.size, VK_FORMAT_D32_SFLOAT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, true);
+                GpuImage.create(ptr.depthImages[i], Window.size, VK_FORMAT_D32_SFLOAT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, true);
             }
             else
             {
@@ -228,10 +228,10 @@ struct Swapchain
                 ptr.imageViewsDepth  ~= null;
                 ptr.framebuffers     ~= null;
 
-                GpuImage    .create(Ref(ptr.depthImages[i]),      Window.size,             VK_FORMAT_D32_SFLOAT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
-                GpuImageView.create(Ref(ptr.imageViewsDepth[i]),  ptr.depthImages[i],      GpuImageType.depth2D                                             );                
-                GpuImageView.create(Ref(ptr.imageViewsColour[i]), ptr.images[i],           GpuImageType.colour2D                                            );
-                Framebuffer .create(Ref(ptr.framebuffers[i]),     ptr.imageViewsColour[i], ptr.imageViewsDepth[i]                                           );
+                GpuImage    .create(ptr.depthImages[i],      Window.size,             VK_FORMAT_D32_SFLOAT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
+                GpuImageView.create(ptr.imageViewsDepth[i],  ptr.depthImages[i],      GpuImageType.depth2D                                             );                
+                GpuImageView.create(ptr.imageViewsColour[i], ptr.images[i],           GpuImageType.colour2D                                            );
+                Framebuffer .create(ptr.framebuffers[i],     ptr.imageViewsColour[i], ptr.imageViewsDepth[i]                                           );
             }
         }
 

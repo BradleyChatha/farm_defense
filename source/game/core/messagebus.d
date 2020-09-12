@@ -19,7 +19,8 @@ enum MessageType
     ERROR,
     Unittest,
     windowEvent,
-    submitDrawCommands
+    submitDrawCommands,
+    displayDebugUI
 }
 
 interface IMessageHandler

@@ -71,6 +71,23 @@ struct QueueSubmitSyncInfo
     }
 }
 
+struct OneTimeSubmit
+{
+    CommandBuffer       buffer;
+    QueueSubmitSyncInfo syncInfo;
+
+    bool finalise()
+    {
+        auto hasFinished = this.syncInfo == QueueSubmitSyncInfo.init || this.syncInfo.submitHasFinished;
+        if(!hasFinished)
+            return false;
+
+        this.syncInfo = QueueSubmitSyncInfo.init;
+        vkDestroyJAST(this.buffer);
+        return true;
+    }
+}
+
 mixin template VkFenceManagerJAST()
 {    
     enum MAX_FENCES_IN_FLIGHT = 10;
@@ -207,7 +224,7 @@ mixin template VkQueueJAST()
     )
     {
         QueueSubmitSyncInfo info;
-        info._fence               = this.nextFence(Ref(info._queueParity));
+        info._fence               = this.nextFence(info._queueParity);
         info._parityWhenSubmitted = *info._queueParity;
 
         VkSubmitInfo submitInfo = 
@@ -223,6 +240,16 @@ mixin template VkQueueJAST()
 
         CHECK_VK(vkQueueSubmit(this, 1, &submitInfo, info._fence));
         return info;
+    }
+
+    void submit(ref OneTimeSubmit info)
+    {
+        info.syncInfo = this.submit(info.buffer, null, null);
+    }
+
+    OneTimeSubmit getOneTimeBuffer()
+    {
+        return OneTimeSubmit(this.commandPools.get(VK_COMMAND_POOL_CREATE_TRANSIENT_BIT).allocate(1)[0]);
     }
 }
 

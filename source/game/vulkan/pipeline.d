@@ -250,7 +250,7 @@ struct PipelineBuilder(VertexT, PushConstantsT, UniformT)
 
         infof("Allowing Vertex Type %s to define its attributes.", VertexT.stringof);
         VertexAttributeBuilder vertexAttributeBuilder;
-        VertexT.defineAttributes(Ref(vertexAttributeBuilder));
+        VertexT.defineAttributes(vertexAttributeBuilder);
         this.vertexAttributes = vertexAttributeBuilder.build();
 
         info("Defining Vertex binding.");

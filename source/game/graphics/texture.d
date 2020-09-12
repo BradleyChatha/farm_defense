@@ -22,7 +22,7 @@ final class Texture : IDisposable
     {
         enforce(pixels.length == size.x * size.y * 4, "Pixel buffer is too small. Did you load it in RGBA format?");
         
-        GpuImage.create(Ref(this._image), size, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+        GpuImage.create(this._image, size, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
         this._image.debugName = debugName;
         this._image.memory.debugName = debugName ~ " - GPU BUFFER";
 
@@ -71,7 +71,7 @@ final class Texture : IDisposable
     void onDispose()
     {
         if(this._pixelBuffer !is null)
-            g_gpuCpuAllocator.deallocate(Ref(this._pixelBuffer));
+            g_gpuCpuAllocator.deallocate(this._pixelBuffer);
         if(this._image !is null)
             vkDestroyJAST(this._image);
         if(this._imageView !is null)
@@ -95,11 +95,11 @@ final class Texture : IDisposable
             return false;
 
         // Can finalise now.
-        g_gpuCpuAllocator.deallocate(Ref(this._pixelBuffer));
+        g_gpuCpuAllocator.deallocate(this._pixelBuffer);
         vkDestroyJAST(this._transferBuffer);
 
-        GpuImageView.create(Ref(this._imageView), this._image, GpuImageType.colour2D);
-        Sampler.create(Ref(this._sampler));
+        GpuImageView.create(this._imageView, this._image, GpuImageType.colour2D);
+        Sampler.create(this._sampler);
 
         return true;
     }

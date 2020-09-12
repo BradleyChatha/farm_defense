@@ -33,3 +33,8 @@ unittest
     assert(amountDivideMagnitudeRounded(32, 32) == 1);
     assert(amountDivideMagnitudeRounded(33, 32) == 2);
 }
+
+struct Transform
+{
+    
+}

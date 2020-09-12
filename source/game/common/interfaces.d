@@ -21,3 +21,8 @@ mixin template IDisposableBoilerplate()
         return this._isDisposed;
     }
 }
+
+interface ITransformable
+{
+    
+}

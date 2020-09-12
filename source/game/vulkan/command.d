@@ -74,7 +74,7 @@ struct CommandPool
 
     CommandBuffer[] allocate(uint count, IsPrimaryBuffer isPrimary = IsPrimaryBuffer.yes)
     {
-        infof("Allocating %s %s command buffers with flags %s.", count, (isPrimary) ? "primary" : "secondary", this.flags);
+        tracef("Allocating %s %s command buffers with flags %s.", count, (isPrimary) ? "primary" : "secondary", this.flags);
 
         VkCommandBufferAllocateInfo info = 
         {

@@ -52,8 +52,8 @@ void onSwapchainRecreate(uint imageCount)
         g_renderDescriptorSetBuffersQuad[i]      = g_gpuCpuAllocator.allocate(TexturedQuadUniform.sizeof, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
     }
 
-    recreateSemaphores(Ref(g_renderImageAvailableSemaphores));
-    recreateSemaphores(Ref(g_renderRenderFinishedSemaphores));
+    recreateSemaphores(g_renderImageAvailableSemaphores);
+    recreateSemaphores(g_renderRenderFinishedSemaphores);
 
     g_renderGraphicsSubmitSyncInfos.length = imageCount;
 }
@@ -66,6 +66,27 @@ final class RendererMessageHandler : IMessageHandler
     @Subscribe
     void onSubmitDrawCommands(SubmitDrawCommandsMessage message)
     {
+        auto drawOrder = g_drawCommands.length;
+        foreach(ref command; message.data)
+        {
+            command.drawOrder = cast(uint)drawOrder++;
+
+            auto uploadInfo = command.buffer.uploadInfo;
+            if(!uploadInfo.requiresUpload)
+                continue;
+
+            command.vertexUpload = g_device.transfer.getOneTimeBuffer();
+            command.vertexUpload.buffer.begin(ResetOnSubmit.no);
+                command.vertexUpload.buffer.insertDebugMarker("Upload verts for TODO");
+                command.vertexUpload.buffer.copyBuffer(
+                    (uploadInfo.end - uploadInfo.start) * TexturedVertex.sizeof, 
+                    command.buffer.cpuHandle, uploadInfo.start,
+                    command.buffer.gpuHandle, uploadInfo.start
+                );
+            command.vertexUpload.buffer.end();
+            g_device.transfer.submit(command.vertexUpload);
+        }
+
         g_drawCommands ~= message.data;
     }
 }
@@ -81,8 +102,9 @@ struct DrawCommand
     size_t        count;
     Texture       texture;
     bool          enableBlending;
-    int           sortOrder; // User-specified sort order, e.g. 0 = Background, 1 = player, etc.
-    uint          drawOrder; // Submission order. So if this was the 2nd command this frame, then this'd be 2. Used to preserve a bit of command ordering.
+    int           sortOrder;    // User-specified sort order, e.g. 0 = Background, 1 = player, etc.
+    uint          drawOrder;    // Submission order. So if this was the 2nd command this frame, then this'd be 2. Used to preserve a bit of command ordering.
+    OneTimeSubmit vertexUpload; // Submit Sync info about uploading the buffer's verts.
 }
 
 void renderInit()
@@ -170,13 +192,16 @@ void renderFrameEnd()
     {
         assert(command.texture !is null,    "There must be a texture.");
         assert(!command.texture.isDisposed, "Texture has been disposed of.");
+        
+        if(command.buffer.gpuHandle is null)
+            continue;
 
         // Don't care if textures aren't loaded yet, so just skip this frame.
         if(!command.texture.finalise())
             continue;
 
         // However, verts we *do* care about, so we'll wait for those.
-        while(!command.buffer.finalise())
+        while(!command.vertexUpload.finalise())
             g_device.transfer.processFences();
 
         auto pipeline = (command.enableBlending) ? g_pipelineQuadTexturedTransparent.base : g_pipelineQuadTexturedOpaque.base;

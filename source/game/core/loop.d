@@ -1,7 +1,8 @@
 module game.core.loop;
 
+import std.experimental.logger;
 import bindbc.sdl;
-import game.common, game.core, game.graphics;
+import game.common, game.core, game.graphics, game.debug_;
 
 private:
 
@@ -25,45 +26,42 @@ final class LoopMessageHandler : IMessageHandler
 
 public:
 
-// TEST vars
-VertexBuffer verts;
-Font         font;
-
 // START functions
 void loopInit()
 {
     messageBusSubscribe(new LoopMessageHandler());
-
-    font = new Font("./resources/fonts/arial.ttf");
-
-    const TEXT = "abcdefghijklmnopqrstuvwxyz\nABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    box2f size;
-    verts.resize(font.calculateVertCount(TEXT));
-    verts.lock();
-        auto slice = verts.verts[0..$];
-        font.textToVerts(Ref(slice), Ref(size), TEXT, 64);
-        verts.upload(0, verts.length);
-    verts.unlock();
+    servicesRegister(ServiceType.debugUI, new DebugUIService());
+    servicesStart(ServiceType.debugUI);
 }
 
 void loopRun()
 {
     g_loopRun = true;
+
+    uint ticksLastFrame = SDL_GetTicks();
     while(g_loopRun)
     {
+        gametimeSet(SDL_GetTicks() - ticksLastFrame);
+        ticksLastFrame = SDL_GetTicks();
+
         loopStep();
     }
 }
 
 void loopStep()
 {
+    import game.vulkan;
+
     SDL_Event event;
     while(Window.nextEvent(&event))
         messageBusSubmit!WindowEventMessage(event);
 
     renderFrameBegin();
-    messageBusSubmit!SubmitDrawCommandsMessage([DrawCommand(&verts, 0, verts.length, font.getFontSize(64).texture, true, 0, 0)]);
+        servicesOnFrame();
     renderFrameEnd();
+    g_device.graphics.processFences();
+    g_device.transfer.processFences();
+    g_device.present.processFences();
 }
 
 void loopStop()

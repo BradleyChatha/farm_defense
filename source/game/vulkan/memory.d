@@ -66,7 +66,7 @@ struct GpuMemoryBlock
 
     this(uint memoryTypeIndex)
     {
-        infof("Creating new memory block for memory type %s", memoryTypeIndex);
+        tracef("Creating new memory block for memory type %s", memoryTypeIndex);
         VkMemoryAllocateInfo info = 
         {
             allocationSize:  BLOCK_SIZE,
@@ -81,7 +81,7 @@ struct GpuMemoryBlock
 
     void map(ref ubyte[] mapped)
     {
-        info("Mapping memory");
+        trace("Mapping memory");
 
         void* ptr;
         CHECK_VK(vkMapMemory(g_device, this.handle, 0, BLOCK_SIZE, 0, &ptr));
@@ -94,10 +94,10 @@ struct GpuMemoryBlock
         assert(PAGE_COUNT != 0);
 
         size_t bitIndex;
-        auto couldAllocate = this.bookkeeper.markNextNBits(Ref(bitIndex), PAGE_COUNT);
+        auto couldAllocate = this.bookkeeper.markNextNBits(bitIndex, PAGE_COUNT);
         if(!couldAllocate)
         {
-            info("Failed");
+            trace("Failed");
             return false;
         }
 
@@ -109,7 +109,7 @@ struct GpuMemoryBlock
         const firstPage = (PAGE_SIZE * startByte * 8) + (PAGE_SIZE * startBit);
         const lastPage  = (PAGE_SIZE * endByte * 8)   + (PAGE_SIZE * endBit);
 
-        infof(
+        tracef(
             "Allocating %s bytes (%s pages) of byte range %s..%s (bits %s[%s]..%s[%s]) of memory.",
             amount, PAGE_COUNT, firstPage, lastPage, startByte, startBit, endByte, endBit
         );
@@ -132,7 +132,7 @@ struct GpuMemoryBlock
     {
         assert(memory.memoryHandle == this.handle);
 
-        infof(
+        tracef(
             "Deallocating %s bytes (%s pages) of byte range %s..%s (bits %s[%s]..%s[%s]) of host coherent memory.",
             memory.length, memory.pageCountInPages, memory.startPageInBytes, 
             memory.endPageInBytes, memory.startByte, memory.startBit, memory.endByte, memory.endBit
@@ -173,7 +173,7 @@ struct GpuCpuMemoryAllocator
         {
             foreach(i, info; this.blocks)
             {
-                if(info.block.allocate(amount, Ref(allocation.memoryRange)))
+                if(info.block.allocate(amount, allocation.memoryRange))
                 {
                     allocation.data        = info.mappedData[allocation.memoryRange.offset..allocation.memoryRange.offset + allocation.memoryRange.length];
                     allocation.memoryBlock = info.block;
@@ -185,7 +185,7 @@ struct GpuCpuMemoryAllocator
 
             if(allocation.memoryRange.memoryHandle == VK_NULL_HANDLE)
             {
-                info("No blocks available, creating new one...");
+                trace("No blocks available, creating new one...");
                 this.blocks ~= BlockInfo(new GpuMemoryBlock(this.memoryType.index));
                 this.blocks[$-1].block.map(this.blocks[$-1].mappedData);
             }
@@ -238,7 +238,7 @@ struct GpuMemoryAllocator
         {
             foreach(i, block; this.blocks)
             {
-                if(block.allocate(amount, Ref(allocation.memoryRange), alignment))
+                if(block.allocate(amount, allocation.memoryRange, alignment))
                 {
                     allocation.memoryBlock = block;
                     break;
@@ -247,7 +247,7 @@ struct GpuMemoryAllocator
 
             if(allocation.memoryRange.memoryHandle == VK_NULL_HANDLE)
             {
-                info("No blocks available, creating new one...");
+                trace("No blocks available, creating new one...");
                 this.blocks ~= new GpuMemoryBlock(this.memoryType.index);
             }
         }
