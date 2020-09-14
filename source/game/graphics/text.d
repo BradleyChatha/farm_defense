@@ -31,12 +31,29 @@ final class Text : IDisposable, ITransformable
 
     void onDispose()
     {
+        this._verts.dispose();
     }
 
     @property
     vec2f size()
     {
         return this._bounds.size;
+    }
+
+    @property
+    void colour(Color col)
+    {
+        if(this._colour != col)
+        {
+            this._colour = col;
+            this.modifyVerts!((ref vert) => vert.colour = col);
+        }
+    }
+
+    @property
+    Color colour()
+    {
+        return this._colour;
     }
 
     @property
@@ -58,6 +75,9 @@ final class Text : IDisposable, ITransformable
     @property
     DrawCommand drawCommand()
     {
+        if(this.transform.isDirty)
+            this.recalcVerts();
+
         return DrawCommand(
             &this._verts,
             0,
@@ -96,6 +116,17 @@ final class Text : IDisposable, ITransformable
                 this._verts.vertsToUpload[i] = vert;
             }
 
+            this._verts.upload(0, this._verts.length);
+        this._verts.unlock();
+    }
+
+    private void modifyVerts(alias Func)()
+    {
+        this._verts.lock();
+            foreach(ref vert; this._verts.verts)
+                Func(vert);
+            foreach(ref vert; this._verts.vertsToUpload)
+                Func(vert);
             this._verts.upload(0, this._verts.length);
         this._verts.unlock();
     }

@@ -22,6 +22,13 @@ final class LoopMessageHandler : IMessageHandler
         if(event.type == SDL_QUIT)
             loopStop();
     }
+
+    @Subscribe
+    void onKeyEvent(KeyButtonMessage message)
+    {
+        if(message.data.scancode == SDL_SCANCODE_ESCAPE)
+            loopStop();
+    }
 }
 
 public:
@@ -31,6 +38,8 @@ void loopInit()
 {
     messageBusSubscribe(new LoopMessageHandler());
     servicesRegister(ServiceType.debugUI, new DebugUIService());
+
+    // Order of message evaluation is determined by order of being started.
     servicesStart(ServiceType.debugUI);
 }
 

@@ -29,6 +29,16 @@ struct VertexBuffer
     @disable
     this(this){}
 
+    void dispose()
+    {
+        if(this._localVerts !is null)
+            g_localVertexAllocator.dispose(this._localVerts);
+        if(this._cpuBuffer !is null)
+            g_gpuCpuAllocator.deallocate(this._cpuBuffer);
+        if(this._gpuBuffer !is null)
+            g_gpuAllocator.deallocate(this._gpuBuffer);
+    }
+
     void resize(size_t length)
     {
         import std.algorithm : min;

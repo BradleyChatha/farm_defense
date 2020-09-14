@@ -57,9 +57,15 @@ final class DebugUIService : Service
             this.fpsText.move(0, -bounceSpeed / 2);
 
         if(this.fpsText.position.x + this.fpsText.size.x > Window.size.x)
+        {
             bounceRight = false;
+            this.fpsText.colour = Color.red;
+        }
         else if(this.fpsText.position.x < 0)
+        {
             bounceRight = true;
+            this.fpsText.colour = Color.white;
+        }
 
         if(this.fpsText.position.y + this.fpsText.size.y > Window.size.y)
             bounceDown = false;

@@ -59,8 +59,9 @@ void main_02_loadThirdPartyDeps()
 
 void main_03_loadSystems()
 {
-    import game.core.loop, game.graphics.renderer;
+    import game.core, game.graphics.renderer;
 
+    inputInit();
     loopInit();
     renderInit();
 }

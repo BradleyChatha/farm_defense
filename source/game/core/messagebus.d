@@ -20,7 +20,10 @@ enum MessageType
     Unittest,
     windowEvent,
     submitDrawCommands,
-    displayDebugUI
+    displayDebugUI,
+    mouseMotion,
+    mouseButton,
+    keyButton
 }
 
 interface IMessageHandler
@@ -116,20 +119,20 @@ mixin template messageHandlerBoilerplate()
             case MessageType.ERROR: assert(false, "Message with type ERROR was received.");
 
             static foreach(func; getSymbolsByUDA!(ThisType, Subscribe))
-            {
+            {{
                 enum  FuncIdent  = __traits(identifier, func);
                 alias FuncType   = typeof(func);
                 alias FuncParams = Parameters!FuncType;
 
                 static assert(
-                    FuncParams.length == 1 && (isInstanceOf!(Message, FuncParams[0]) || isInstanceOf!(MessageWithData, FuncParams[0])),
+                    FuncParams.length == 1 && (isInstanceOf!(Message, FuncParams[0]) || isInstanceOf!(MessageWithData, FuncParams[0]) || isInstanceOf!(InputMessage, FuncParams[0])),
                     "Function "~FuncIdent~" must have only ONE parameter of type `Message`"
                 );
 
                 case mixin("FuncParams[0].ThisMessageType"):
                     func(message.as!(FuncParams[0]));
                     break SwitchLabel;
-            }
+            }}
 
             default: break;
         }

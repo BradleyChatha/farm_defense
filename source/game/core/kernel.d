@@ -11,6 +11,7 @@ public:
 
 enum ServiceType
 {
+    // Update order depends on order within this enum.
     ERROR,
     debugUI
 }

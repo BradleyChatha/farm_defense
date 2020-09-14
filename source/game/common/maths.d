@@ -49,6 +49,12 @@ struct Transform
         this._dirty = true;
     }
 
+    @property
+    bool isDirty()
+    {
+        return this._dirty;
+    }
+
     @property @safe @nogc
     transformMat4f matrix() nothrow pure
     {
