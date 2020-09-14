@@ -26,8 +26,11 @@ final class LoopMessageHandler : IMessageHandler
     @Subscribe
     void onKeyEvent(KeyButtonMessage message)
     {
-        if(message.data.scancode == SDL_SCANCODE_ESCAPE)
+        if(message.data.scancode == SDL_SCANCODE_ESCAPE && !message.handled)
+        {
             loopStop();
+            message.handle = true;
+        }
     }
 }
 

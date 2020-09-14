@@ -51,8 +51,6 @@ struct InfoPair(InfoT)
 InfoPair!ButtonState[MouseButton.max]  g_mouseButtons;
 InfoPair!ButtonState[SDL_Scancode.max] g_keyButtons;
 
-public:
-
 final class InputHandler : IMessageHandler
 {
     mixin messageHandlerBoilerplate;
@@ -119,6 +117,8 @@ final class InputHandler : IMessageHandler
         prevFrame = thisFrame;
     }
 }
+
+private:
 
 void inputInit()
 {
