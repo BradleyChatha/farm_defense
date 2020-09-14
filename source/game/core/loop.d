@@ -29,7 +29,7 @@ final class LoopMessageHandler : IMessageHandler
         if(message.data.scancode == SDL_SCANCODE_ESCAPE && !message.handled)
         {
             loopStop();
-            message.handle = true;
+            message.handled = true;
         }
     }
 }
