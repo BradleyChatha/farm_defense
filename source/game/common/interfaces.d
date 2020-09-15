@@ -1,6 +1,9 @@
 module game.common.interfaces;
 
+import std.typecons : Flag;
 import game.common;
+
+alias AddHooks = Flag!"addHooks";
 
 interface IDisposable
 {
@@ -24,15 +27,20 @@ mixin template IDisposableBoilerplate()
     }
 }
 
-interface ITransformable
+interface ITransformable(AddHooks ShouldAddHooks)
 {
     @property @nogc
     ref Transform transform() nothrow;
+
+    static if(ShouldAddHooks)
+    void onTransformChanged();
 
     final void move(vec2f amount)
     {
         this.transform.translation += amount;
         this.transform.markDirty();
+
+        static if(ShouldAddHooks) this.onTransformChanged();
     }
     final void move(float x, float y){ this.move(vec2f(x, y)); }
 
@@ -41,6 +49,8 @@ interface ITransformable
     {
         this.transform.translation = pos;
         this.transform.markDirty();
+
+        static if(ShouldAddHooks) this.onTransformChanged();
     }
 
     @property

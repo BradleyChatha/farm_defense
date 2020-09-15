@@ -2,7 +2,7 @@ module game.graphics.text;
 
 import game.core, game.common, game.graphics;
 
-final class Text : IDisposable, ITransformable
+final class Text : IDisposable, ITransformable!(AddHooks.no)
 {
     mixin ITransformableBoilerplate;
     mixin IDisposableBoilerplate;

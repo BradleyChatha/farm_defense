@@ -16,13 +16,15 @@ final class InputMessage(MessageType type, ValueT) : MessageWithData!(type, Valu
     }
 }
 
-struct MouseMotionEvent { vec2i currentPos;         vec2i delta;                                                    }
-struct MouseButtonEvent { vec2i position;           ubyte clicks;           ButtonState state;  MouseButton button; }
-struct KeyButtonEvent   { SDL_Scancode scancode;    SDL_Keycode keycode;    ButtonState state;                      }
+struct MouseMotionEvent { vec2i currentPos;         vec2i delta;                                                            }
+struct MouseButtonEvent { vec2i position;           ubyte clicks;           ButtonState state;  MouseButton button;         }
+struct KeyButtonEvent   { SDL_Scancode scancode;    SDL_Keycode keycode;    ButtonState state;  bool isTextInputEnabled;    }
 
-alias MouseMotionMessage = InputMessage!(MessageType.mouseMotion, MouseMotionEvent);
-alias MouseButtonMessage = InputMessage!(MessageType.mouseButton, MouseButtonEvent);
-alias KeyButtonMessage   = InputMessage!(MessageType.keyButton,   KeyButtonEvent  );
+alias MouseMotionMessage    = InputMessage!(MessageType.mouseMotion, MouseMotionEvent);
+alias MouseButtonMessage    = InputMessage!(MessageType.mouseButton, MouseButtonEvent);
+alias KeyButtonMessage      = InputMessage!(MessageType.keyButton, KeyButtonEvent);
+alias TextInputMessage      = InputMessage!(MessageType.textInput, const(char)[]);
+alias AllowTextInputMessage = MessageWithData!(MessageType.allowTextInput, bool);
 
 enum ButtonState
 {
@@ -53,7 +55,7 @@ InfoPair!ButtonState[SDL_Scancode.max] g_keyButtons;
 
 final class InputHandler : IMessageHandler
 {
-    mixin messageHandlerBoilerplate;
+    mixin IMessageHandlerBoilerplate;
 
     @Subscribe
     void onWindowEvent(WindowEventMessage message)
@@ -68,8 +70,32 @@ final class InputHandler : IMessageHandler
             case SDL_KEYUP:   this.onKeyInput(message.data.key, false); break;
             case SDL_KEYDOWN: this.onKeyInput(message.data.key, true);  break;
 
+            case SDL_TEXTINPUT: this.onTextInput(message.data.text); break;
+
             default: break;
         }
+    }
+
+    @Subscribe
+    void onSetTextInputState(AllowTextInputMessage message)
+    {
+        if(message.data)
+            SDL_StartTextInput();
+        else
+            SDL_StopTextInput();
+    }
+
+    void onTextInput(SDL_TextInputEvent event)
+    {
+        // .text is static, so find '\0'. Can't use strlen as I don't know guarentees about the last character always being \0 or not.
+        size_t length;
+        for(length = 0; length < event.text.length; length++)
+        {
+            if(event.text[length] == '\0')
+                break;
+        }
+
+        messageBusSubmit!TextInputMessage(event.text[0..length]);
     }
 
     void onMouseMotionInput(SDL_MouseMotionEvent event)
@@ -104,7 +130,8 @@ final class InputHandler : IMessageHandler
         messageBusSubmit!KeyButtonMessage(KeyButtonEvent(
             event.keysym.scancode,
             event.keysym.sym,
-            infoPair.thisFrame
+            infoPair.thisFrame,
+            cast(bool)SDL_IsTextInputActive()
         ));
     }
 
@@ -118,7 +145,7 @@ final class InputHandler : IMessageHandler
     }
 }
 
-private:
+public:
 
 void inputInit()
 {

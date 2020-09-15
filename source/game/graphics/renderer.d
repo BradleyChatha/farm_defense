@@ -61,7 +61,7 @@ void onSwapchainRecreate(uint imageCount)
 // START Renderer System
 final class RendererMessageHandler : IMessageHandler
 {
-    mixin messageHandlerBoilerplate;
+    mixin IMessageHandlerBoilerplate;
 
     @Subscribe
     void onSubmitDrawCommands(SubmitDrawCommandsMessage message)
@@ -70,6 +70,8 @@ final class RendererMessageHandler : IMessageHandler
         foreach(ref command; message.data)
         {
             command.drawOrder = cast(uint)drawOrder++;
+
+            assert(command.buffer !is null, "Vertex buffer is null: %s".format(message.data));
 
             auto uploadInfo = command.buffer.uploadInfo;
             if(!uploadInfo.requiresUpload)
@@ -93,6 +95,9 @@ final class RendererMessageHandler : IMessageHandler
 
 public:
 
+// Essentially a 1x1 white dot. Useful for shapes, which don't have textures generally.
+Texture g_blankTexture;
+
 // START Data Types
 
 struct DrawCommand
@@ -103,6 +108,7 @@ struct DrawCommand
     Texture       texture;
     bool          enableBlending;
     int           sortOrder;    // User-specified sort order, e.g. 0 = Background, 1 = player, etc.
+    mat4f         camera = mat4f.identity;
     uint          drawOrder;    // Submission order. So if this was the 2nd command this frame, then this'd be 2. Used to preserve a bit of command ordering.
     OneTimeSubmit vertexUpload; // Submit Sync info about uploading the buffer's verts.
 }
@@ -117,6 +123,8 @@ void renderInit()
     g_uniformsMandatory.projection = mat4f.orthographic(0, Window.size.x, 0, Window.size.y, 1, 0);
 
     messageBusSubscribe(new RendererMessageHandler());
+
+    g_blankTexture = new Texture([255, 255, 255, 255], vec2u(1, 1));
 }
 
 void renderFrameBegin()
@@ -177,7 +185,8 @@ void renderFrameEnd()
         "a.sortOrder       < b.sortOrder",
         "a.enableBlending != b.enableBlending",
         "a.drawOrder       < b.drawOrder",
-        "a.texture        != b.texture"
+        "a.texture        != b.texture",
+        "a.camera         != b.camera"
     )(g_drawCommands);
 
     auto buffer = g_renderGraphicsCommandBuffers[g_imageIndex];
@@ -212,6 +221,7 @@ void renderFrameEnd()
         );
             buffer.bindPipeline(pipeline);
 
+            g_uniformsMandatory.view = command.camera;
             g_renderDescriptorSetBuffersMandatory[g_imageIndex].as!MandatoryUniform[0] = g_uniformsMandatory;
 
             auto uniforms = g_descriptorPools.pool.allocate!TexturedQuadUniform(pipeline);

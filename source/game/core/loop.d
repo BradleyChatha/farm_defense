@@ -12,7 +12,7 @@ bool g_loopRun;
 // START Message Handler
 final class LoopMessageHandler : IMessageHandler
 {
-    mixin messageHandlerBoilerplate;
+    mixin IMessageHandlerBoilerplate;
 
     @Subscribe
     void onWindowEvent(WindowEventMessage message)

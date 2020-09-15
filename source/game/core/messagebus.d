@@ -23,7 +23,9 @@ enum MessageType
     displayDebugUI,
     mouseMotion,
     mouseButton,
-    keyButton
+    keyButton,
+    allowTextInput,
+    textInput
 }
 
 interface IMessageHandler
@@ -105,7 +107,7 @@ void messageBusSubmit(MailT : MessageBase, CtorArgs...)(CtorArgs args)
 }
 
 // START mixins
-mixin template messageHandlerBoilerplate()
+mixin template IMessageHandlerBoilerplate()
 {
     import std.traits : getSymbolsByUDA, isInstanceOf, Parameters;
 
@@ -143,7 +145,7 @@ unittest
 {
     static class C : IMessageHandler
     {
-        mixin messageHandlerBoilerplate;
+        mixin IMessageHandlerBoilerplate;
 
         @Subscribe
         void f(Message!(MessageType.Unittest))
