@@ -24,11 +24,11 @@ final class Image : Control
         void onLayoutChanged()
         {
             this._verts.lock();
-                auto quadVerts = this._verts.verts.getQuadVerts();
+                auto quadVerts = this._verts.verts[0..6].getQuadVerts();
                 quadVerts[1].position.x = this.size.x;
                 quadVerts[2].position   = vec3f(this.size, 0);
                 quadVerts[3].position.y = this.size.y;
-                this._verts.verts.setQuadVerts(quadVerts);
+                this._verts.verts[0..6].setQuadVerts(quadVerts);
             this._verts.unlock();
             this.transform.markDirty();
         }
