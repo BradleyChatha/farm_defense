@@ -132,6 +132,7 @@ abstract class Control : IDisposable, ITransformable!(AddHooks.yes)
         void onDispose(){}
         void onTransformChanged(){}
         void onLayoutChanged(){}
+        void onModifySize(ref vec2f size){}
 
         // Events should go down to the "lowest" children first, and *then* bubble upwards.
 
@@ -173,7 +174,9 @@ abstract class Control : IDisposable, ITransformable!(AddHooks.yes)
     final void size(vec2f siz)
     {
         auto oldSize = this._size;
-        this._size   = siz;
+
+        this.onModifySize(siz);
+        this._size = siz;
 
         if(oldSize != siz)
             this.onLayoutChangedImpl();

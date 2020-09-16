@@ -310,7 +310,7 @@ struct Matrix(T, size_t Columns_, size_t Rows_)
         }
         else static if(Columns == 4)
         {
-            pragma(inline, true) @safe @nogc
+            @safe @nogc
             static ThisType translation(T x, T y, T z) nothrow pure
             {
                 ThisType data = ThisType.identity;
