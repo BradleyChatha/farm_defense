@@ -52,6 +52,7 @@ struct InfoPair(InfoT)
 
 InfoPair!ButtonState[MouseButton.max+1]  g_mouseButtons;
 InfoPair!ButtonState[SDL_Scancode.max+1] g_keyButtons;
+int                                      g_inputEnableCount;
 
 final class InputHandler : IMessageHandler
 {
@@ -80,9 +81,17 @@ final class InputHandler : IMessageHandler
     void onSetTextInputState(AllowTextInputMessage message)
     {
         if(message.data)
-            SDL_StartTextInput();
+        {
+            g_inputEnableCount++;
+            if(g_inputEnableCount > 0)
+                SDL_StartTextInput();
+        }
         else
-            SDL_StopTextInput();
+        {
+            g_inputEnableCount--;
+            if(g_inputEnableCount <= 0)
+                SDL_StopTextInput();
+        }
     }
 
     void onTextInput(SDL_TextInputEvent event)
@@ -95,6 +104,8 @@ final class InputHandler : IMessageHandler
                 break;
         }
 
+        // Note: Text will only be valid until the end of this function call.
+        //       There should never be an instance where a handler doesn't do a copy of this data though, so it should be fine.
         messageBusSubmit!TextInputMessage(event.text[0..length]);
     }
 

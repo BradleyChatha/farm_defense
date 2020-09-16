@@ -44,11 +44,7 @@ class RectangleShape : Control
 
         void onModifySize(ref vec2f size)
         {
-            import std.stdio;
-
-            writeln("BEFORE: ", size);
             size += vec2f(this._borderSize * 2);
-            writeln("AFTER: ", size);
         }
 
         void onDispose()

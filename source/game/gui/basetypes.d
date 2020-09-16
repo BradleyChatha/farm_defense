@@ -28,6 +28,7 @@ final class Gui : IDisposable, IMessageHandler
         alias ControlAllocator = PoolAllocatorBase!(1024 * 16); // Since we're going with the "Gui.make" thing, may as well add a little data locality here.
 
         ControlAllocator _allocator;
+        IFocusable       _currentlyFocusedControl;
         Container        _root;
         DrawCommand[]    _commands;
         size_t           _commandCount;
@@ -71,8 +72,14 @@ final class Gui : IDisposable, IMessageHandler
     {
         auto control = this._allocator.make!ControlT(args);
         (cast(Control)control)._gui = this; // Bypass strange accessability quirk.
+        control.onInit();
 
         return control;
+    }
+
+    bool isFocusedControl(IFocusable control)
+    {
+        return this._currentlyFocusedControl is control;
     }
 
     @Subscribe
@@ -91,6 +98,25 @@ final class Gui : IDisposable, IMessageHandler
     void onKeyButton(KeyButtonMessage message)
     {
         this._root.onKeyButton(message);
+    }
+
+    @Subscribe
+    void onTextInput(TextInputMessage message)
+    {
+        if(this._currentlyFocusedControl !is null)
+            this._currentlyFocusedControl.onTextInput(message);
+    }
+
+    @property
+    void focusedControl(IFocusable control)
+    {
+        if(this._currentlyFocusedControl !is null)
+            this._currentlyFocusedControl.onLoseFocus();
+
+        if(control !is null)
+            control.onGainFocus();
+            
+        this._currentlyFocusedControl = control;
     }
 
     @property
@@ -118,15 +144,17 @@ abstract class Control : IDisposable, ITransformable!(AddHooks.yes)
     {
         Gui            _gui;
         Control        _parent;
-        vec2f          _size;
+        vec2f          _size = vec2f(0);
         HorizAlignment _horizAlignment;
         VertAlignment  _vertAlignment;
+        bool           _visible = true;
     }
 
 
     // Override as needed.
     public
     {
+        void onInit(){} // Called *after* being registered into a GUI, so it covers a few bases where a ctor is too early for construction.
         void onUpdate(){}
         void onDraw(AddDrawCommandsFunc addCommands){}
         void onDispose(){}
@@ -197,6 +225,12 @@ abstract class Control : IDisposable, ITransformable!(AddHooks.yes)
     }
 
     @property
+    final void isVisible(bool visible)
+    {
+        this._visible = visible;
+    }
+
+    @property
     final vec2f size()
     {
         return this._size;
@@ -225,6 +259,12 @@ abstract class Control : IDisposable, ITransformable!(AddHooks.yes)
     {
         return this._gui;
     }
+
+    @property
+    final bool isVisible()
+    {
+        return this._visible;
+    }
 }
 
 abstract class Container : Control
@@ -252,7 +292,8 @@ abstract class Container : Control
                     continue;
                 }
 
-                child.onUpdate();
+                if(child.isVisible)
+                    child.onUpdate();
             }
         }
 
@@ -269,13 +310,17 @@ abstract class Container : Control
                     child.dispose();
             }
         }
+
+        void onMouseMotion(MouseMotionMessage message){ this.dispatchEvent!((c){ c.onMouseMotion(message); return message.handled; }); }
+        void onMouseButton(MouseButtonMessage message){ this.dispatchEvent!((c){ c.onMouseButton(message); return message.handled; }); }
+        void onKeyButton(KeyButtonMessage message)    { this.dispatchEvent!((c){ c.onKeyButton(message); return message.handled; });   }
     }
 
-    protected final void dispatchEvent(alias Func)()
+    protected void dispatchEvent(alias Func)()
     {
         foreach(child; this._children)
         {
-            if(!child.isDisposed)
+            if(!child.isDisposed && child.isVisible)
             {
                 const cancelEarly = Func(child);
                 if(cancelEarly)
@@ -315,3 +360,10 @@ abstract class Container : Control
 
 /// Most basic container, children are in complete control of their positioning and layout.
 final class FreeFormContainer : Container {}
+
+interface IFocusable
+{
+    void onGainFocus();
+    void onLoseFocus();
+    void onTextInput(TextInputMessage message);
+}

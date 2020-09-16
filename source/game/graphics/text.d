@@ -61,7 +61,10 @@ final class Text : IDisposable, ITransformable!(AddHooks.no)
     {
         this._text = value;
         if(value.length == 0)
+        {
+            this._vertsToRender = 0;
             return;
+        }
 
         this.recalcVerts();
     }
@@ -90,13 +93,10 @@ final class Text : IDisposable, ITransformable!(AddHooks.no)
 
     private void recalcVerts()
     {
-        const vertCount = this._font.calculateVertCount(this._text);
-        if(vertCount > this._verts.length)
-        {
-            this._verts.resize(vertCount);
-            this._vertsToRender = cast(uint)vertCount;
-        }
-
+        this._vertsToRender = cast(uint)this._font.calculateVertCount(this._text);
+        if(this._vertsToRender > this._verts.length)
+            this._verts.resize(this._vertsToRender);
+        
         this._verts.lock();
             auto vertsLValue = this._verts.verts;
             this._font.textToVerts(
@@ -109,7 +109,7 @@ final class Text : IDisposable, ITransformable!(AddHooks.no)
                 this._lineSpacing
             );
 
-            this._verts.transformAndUpload(0, this._verts.length, this.transform);
+            this._verts.transformAndUpload(0, this._vertsToRender, this.transform);
         this._verts.unlock();
     }
 
@@ -120,7 +120,7 @@ final class Text : IDisposable, ITransformable!(AddHooks.no)
                 Func(vert);
             foreach(ref vert; this._verts.vertsToUpload)
                 Func(vert);
-            this._verts.upload(0, this._verts.length);
+            this._verts.upload(0, this._vertsToRender);
         this._verts.unlock();
     }
 }

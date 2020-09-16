@@ -54,14 +54,27 @@ struct QueueSubmitSyncInfo
         ulong* _queueParity; // This pointer is GC allocated, so we're safe with using it.
         ulong  _parityWhenSubmitted;
         Fence  _fence;
+        bool   _hasObservedFinishing;
     }
 
     invariant(_queueParity !is null);
 
+    void delegate() onSubmitFinished;
+
     @property
     bool submitHasFinished()
     {
-        return *this._queueParity != this._parityWhenSubmitted;
+        if(this._hasObservedFinishing)
+            return true;
+
+        auto finished = *this._queueParity != this._parityWhenSubmitted;
+        if(!finished)
+            return false;
+
+        this._hasObservedFinishing = true;
+        if(this.onSubmitFinished !is null)
+            this.onSubmitFinished();
+        return true;
     }
 
     @property

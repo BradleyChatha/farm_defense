@@ -223,7 +223,6 @@ struct GpuMemoryAllocator
 {
     DeviceMemoryType  memoryType;
     GpuMemoryBlock*[] blocks;
-
     void init()
     {
         this.memoryType = g_gpu.getMemoryType(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
@@ -273,7 +272,8 @@ struct GpuMemoryAllocator
     void deallocate(ref GpuBuffer* buffer)
     {
         buffer.memoryBlock.deallocate(buffer.memoryRange);
-        vkDestroyJAST(buffer);
+        //vkDestroyJAST(buffer); TODO: I need to stagger this call by 1 frame, as the buffer may still be in flight.
+        //                             Buffers are just fancy Vulkan ranges, so it's not too important to get this done soon.
         buffer = null;
     }
 }

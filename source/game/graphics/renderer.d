@@ -189,7 +189,8 @@ void renderFrameEnd()
         "a.camera         != b.camera"
     )(g_drawCommands);
 
-    auto buffer = g_renderGraphicsCommandBuffers[g_imageIndex];
+    auto buffer         = g_renderGraphicsCommandBuffers[g_imageIndex];
+    size_t commandIndex = 0;
 
     buffer.pushDebugRegion("Begin Render Pass");
     buffer.beginRenderPass(g_swapchain.framebuffers[g_imageIndex]);
@@ -197,8 +198,9 @@ void renderFrameEnd()
     buffer.pushDebugRegion("Setting common data");
         buffer.pushConstants(g_pipelineQuadTexturedTransparent.base, PushConstants(SDL_GetTicks()));
     buffer.popDebugRegion();
-    foreach(i, command; g_drawCommands)
+    for(commandIndex = 0; commandIndex < g_drawCommands.length; commandIndex++)
     {
+        auto command = g_drawCommands[commandIndex];
         assert(command.texture !is null,    "There must be a texture.");
         assert(!command.texture.isDisposed, "Texture has been disposed of.");
         
@@ -216,7 +218,7 @@ void renderFrameEnd()
         auto pipeline = (command.enableBlending) ? g_pipelineQuadTexturedTransparent.base : g_pipelineQuadTexturedOpaque.base;
         buffer.pushDebugRegion(
             "Command %s Texture %s Blending %s Sort %s Draw %s"
-            .format(i, command.texture, command.enableBlending, command.sortOrder, command.drawOrder),
+            .format(commandIndex, command.texture, command.enableBlending, command.sortOrder, command.drawOrder),
             Color(38, 72, 102)
         );
             buffer.bindPipeline(pipeline);

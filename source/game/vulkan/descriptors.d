@@ -42,8 +42,7 @@ struct DescriptorPoolManager
 
 struct DescriptorPool
 {
-    enum MAX_PIPELINES                  = 10;
-    enum MAX_STATE_CHANGES_PER_PIPELINE = 50;
+    enum MAX_SETS = 10_000;
 
     mixin VkSwapchainResourceWrapperJAST!VkDescriptorPool;
 
@@ -60,17 +59,17 @@ struct DescriptorPool
         with(sizes[0])
         {
             type            = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            descriptorCount = g_swapchain.images.length.to!uint * MAX_PIPELINES * MAX_STATE_CHANGES_PER_PIPELINE;
+            descriptorCount = g_swapchain.images.length.to!uint * MAX_SETS;
         }        
         with(sizes[1])
         {
             type            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-            descriptorCount = g_swapchain.images.length.to!uint * 2 * MAX_PIPELINES * MAX_STATE_CHANGES_PER_PIPELINE; // Since we have two uniform buffers in each pipeline.
+            descriptorCount = g_swapchain.images.length.to!uint * 2 * MAX_SETS; // Since we have two uniform buffers in each pipeline.
         }
 
         VkDescriptorPoolCreateInfo poolInfo = 
         {
-            maxSets:       g_swapchain.images.length.to!uint,
+            maxSets:       MAX_SETS,
             poolSizeCount: sizes.length,
             pPoolSizes:    sizes.ptr
         };
