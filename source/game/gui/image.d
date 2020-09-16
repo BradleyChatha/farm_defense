@@ -11,10 +11,12 @@ final class Image : Control
         VertexBuffer _verts;
     }
 
-    this(Texture texture)
+    this(Texture texture, vec2f size = vec2f(float.nan), Color colour = Color.white)
     {
         this._texture = texture;
-        VertexBuffer.quad(this._verts, vec2f(texture.size));
+        auto sizef = (size == vec2f(float.nan)) ? vec2f(texture.size) : size;
+        VertexBuffer.quad(this._verts, sizef, vec2f(texture.size), colour);
+        this.size = sizef;
     }
 
     override
@@ -29,13 +31,7 @@ final class Image : Control
             if(this.transform.isDirty)
             {
                 this._verts.lock();
-                    auto matrix = this.transform.matrix;
-                    foreach(i, vert; this._verts.verts)
-                    {
-                        vert.position                = (matrix * vec4f(vert.position, 1)).xyz;
-                        this._verts.vertsToUpload[i] = vert;
-                    }
-                    this._verts.upload(0, this._verts.length);
+                    this._verts.transformAndUpload(0, this._verts.length, this.transform);
                 this._verts.unlock();
             }
 

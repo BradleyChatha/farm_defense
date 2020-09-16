@@ -32,6 +32,13 @@ final class Label : Control
     }
 
     @property
+    void text(const char[] newText)
+    {
+        this._text.text = newText;
+        this.size = this._text.size;
+    }
+
+    @property
     Text obj()
     {
         return this._text;

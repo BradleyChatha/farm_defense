@@ -1,6 +1,7 @@
 module game.common.maths;
 
 public import gfm.math;
+public import std.math;
 public import std.algorithm : max;
 import erupted  : VkExtent2D;
 

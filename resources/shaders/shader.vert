@@ -16,7 +16,7 @@ layout(location = 1) out vec2 uv;
 
 void main()
 {
-    gl_Position = vec4((MandatoryUniforms.projection * MandatoryUniforms.view * vec4(inPosition, 1.0)).xyz, 1.0) - vec4(1, 1, 0, 0);
+    gl_Position = vec4((MandatoryUniforms.projection * MandatoryUniforms.view * vec4(floor(inPosition), 1.0)).xyz, 1.0) - vec4(1, 1, 0, 0);
     fragColour  = inColour;
     uv          = inUv;
 }

@@ -61,9 +61,9 @@ void main_03_loadSystems()
 {
     import game.core, game.graphics.renderer;
 
+    renderInit();
     inputInit();
     loopInit();
-    renderInit();
 }
 
 void main_04_runGame()

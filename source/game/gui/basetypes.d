@@ -4,6 +4,20 @@ import game.core, game.common, game.graphics;
 
 alias AddDrawCommandsFunc = void delegate(DrawCommand[] commands);
 
+enum HorizAlignment
+{
+    left,
+    center,
+    right
+}
+
+enum VertAlignment
+{
+    top,
+    center,
+    bottom
+}
+
 final class Gui : IDisposable, IMessageHandler
 {
     mixin IDisposableBoilerplate;
@@ -102,8 +116,11 @@ abstract class Control : IDisposable, ITransformable!(AddHooks.yes)
 
     private
     {
-        Gui     _gui;
-        Control _parent;
+        Gui            _gui;
+        Control        _parent;
+        vec2f          _size;
+        HorizAlignment _horizAlignment;
+        VertAlignment  _vertAlignment;
     }
 
 
@@ -114,12 +131,63 @@ abstract class Control : IDisposable, ITransformable!(AddHooks.yes)
         void onDraw(AddDrawCommandsFunc addCommands){}
         void onDispose(){}
         void onTransformChanged(){}
+        void onLayoutChanged(){}
 
         // Events should go down to the "lowest" children first, and *then* bubble upwards.
 
         void onMouseMotion(MouseMotionMessage message){}
         void onMouseButton(MouseButtonMessage message){}
         void onKeyButton(KeyButtonMessage message){}
+    }
+
+    private void onLayoutChangedImpl()
+    {
+        this.onLayoutChanged();
+
+        if(this.parent !is null)
+            this.parent.onLayoutChangedImpl();
+    }
+
+    @property
+    final void size(vec2f siz)
+    {
+        auto oldSize = this._size;
+        this._size   = siz;
+
+        if(oldSize != siz)
+            this.onLayoutChangedImpl();
+    }
+
+    @property
+    final void horizAlignment(HorizAlignment alignment)
+    {
+        this._horizAlignment = alignment;
+        this.onLayoutChangedImpl();
+    }
+
+    @property
+    final void vertAlignment(VertAlignment alignment)
+    {
+        this._vertAlignment = alignment;
+        this.onLayoutChangedImpl();
+    }
+
+    @property
+    final vec2f size()
+    {
+        return this._size;
+    }
+
+    @property
+    final HorizAlignment horizAlignment()
+    {
+        return this._horizAlignment;
+    }
+
+    @property
+    final VertAlignment vertAlignment()
+    {
+        return this._vertAlignment;
     }
 
     @property
@@ -140,6 +208,10 @@ abstract class Container : Control
     private
     {
         Control[] _children;
+    }
+
+    abstract
+    {
     }
 
     override
@@ -199,6 +271,7 @@ abstract class Container : Control
 
         control._parent = this;
         this._children ~= control;
+        this.onLayoutChanged();
     }
 
     final void removeChild(Control control)
@@ -206,6 +279,7 @@ abstract class Container : Control
         import std.algorithm : remove, countUntil;
         this._children.remove(this._children.countUntil(control));
         this._children.length -= 1;
+        this.onLayoutChanged();
     }
 
     @property
@@ -215,4 +289,5 @@ abstract class Container : Control
     }
 }
 
+/// Most basic container, children are in complete control of their positioning and layout.
 final class FreeFormContainer : Container {}

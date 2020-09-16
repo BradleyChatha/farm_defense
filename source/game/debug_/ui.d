@@ -18,8 +18,11 @@ final class DebugUIService : Service
         this.font = new Font(DEBUG_FONT_BYTES);
         this.gui  = new Gui();
 
-        this.gui.root = this.gui.make!FreeFormContainer();
+        this.gui.root = this.gui.make!AlignmentContainer(vec2f(Window.size));
+
         this.fpsLabel = this.gui.make!Label(this.font);
+        this.fpsLabel.horizAlignment = HorizAlignment.center;
+        this.fpsLabel.vertAlignment  = VertAlignment.top;
         this.gui.root.addChild(this.fpsLabel);
     }
 
@@ -48,5 +51,10 @@ final class DebugUIService : Service
             msBufferIndex = 0;
         
         this.fpsLabel.text = sformat(fpsBuffer, "%sms %s fps", msBuffer.reduce!((a, b) => a + b) / msBuffer.length, gametimeFps());
+    }
+
+    @Subscribe
+    void onKeyButton(KeyButtonMessage message)
+    {
     }
 }

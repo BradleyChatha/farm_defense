@@ -109,14 +109,7 @@ final class Text : IDisposable, ITransformable!(AddHooks.no)
                 this._lineSpacing
             );
 
-            auto matrix = this.transform.matrix;
-            foreach(i, vert; this._verts.verts)
-            {
-                vert.position                = (matrix * vec4f(vert.position, 1)).xyz;
-                this._verts.vertsToUpload[i] = vert;
-            }
-
-            this._verts.upload(0, this._verts.length);
+            this._verts.transformAndUpload(0, this._verts.length, this.transform);
         this._verts.unlock();
     }
 
