@@ -50,8 +50,8 @@ struct InfoPair(InfoT)
     InfoT thisFrame;
 }
 
-InfoPair!ButtonState[MouseButton.max]  g_mouseButtons;
-InfoPair!ButtonState[SDL_Scancode.max] g_keyButtons;
+InfoPair!ButtonState[MouseButton.max+1]  g_mouseButtons;
+InfoPair!ButtonState[SDL_Scancode.max+1] g_keyButtons;
 
 final class InputHandler : IMessageHandler
 {

@@ -2,7 +2,6 @@ module game.gui.image;
 
 import game.core, game.common, game.graphics, game.gui;
 
-
 final class Image : Control
 {
     private

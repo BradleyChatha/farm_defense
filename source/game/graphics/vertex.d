@@ -16,15 +16,21 @@ package struct VertexUploadInfo
 }
 
 /++
- + Always 6 verts to a quad, since indexing is less useful in a 2D-only environment.
+ + Model and Upload verts:
+ +  .verts() are the local/model verts, they define the *shape* of what you want to draw.
+ + 
+ +  .vertsToUpload() are the transformed verts, which are the model verts that have been transformed into what will be displayed on screen.
  +
- + Face direction is clockwise, thus vertex ordering is:
- +  [0] = top left
- +  [1] = top right
- +  [2] = bot right
- +  [3] = bot right
- +  [4] = bot left
- +  [5] = top left
+ + Quads:
+ +  Always 6 verts to a quad, since indexing is less useful in a 2D-only environment.
+ +
+ +  Face direction is clockwise, thus vertex ordering is -
+ +      [0] = top left
+ +      [1] = top right
+ +      [2] = bot right
+ +      [3] = bot right
+ +      [4] = bot left
+ +      [5] = top left
  + ++/
 struct VertexBuffer
 {
@@ -134,16 +140,7 @@ struct VertexBuffer
 
         buffer.resize(6);
         buffer.lock();
-            buffer.verts[0..6] = 
-            [
-                topLeft,
-                topRight,
-                botRight,
-
-                botRight,
-                botLeft,
-                topLeft
-            ];
+            buffer.verts[0..6].setQuadVerts([topLeft, topRight, botRight, botLeft]);
         buffer.unlock();
     }
 
@@ -213,4 +210,80 @@ void setQuadVerts(TexturedVertex[] dest, TexturedVertex[4] quad)
         quad[3],
         quad[0]
     ];
+}
+
+void createBorderVertsAroundBox(TexturedVertex[] dest, box2f box, uint borderSize, Color colour)
+{
+    assert(dest.length >= 6 * 4, "Need at least 24 verts inside of `dest` to create a border.");
+
+    struct Corner
+    {
+        TexturedVertex topLeft;
+        TexturedVertex topRight;
+        TexturedVertex botRight;
+        TexturedVertex botLeft;
+    }
+
+    alias v   = TexturedVertex;
+    alias pos = vec3f;
+    alias uv  = vec2f;
+    
+    const boxP = box.min;
+    const boxS = box.size;
+
+    Corner[4] corners = 
+    [
+        Corner(
+            v(pos(boxP.x - borderSize, boxP.y - borderSize, 0), uv(0), colour),
+            v(pos(boxP.x,              boxP.y - borderSize, 0), uv(0), colour),
+            v(pos(boxP.x,              boxP.y,              0), uv(0), colour),
+            v(pos(boxP.x - borderSize, boxP.y,              0), uv(0), colour),
+        ),
+        Corner(
+            v(pos(boxP.x + boxS.x,              boxP.y - borderSize, 0), uv(0), colour),
+            v(pos(boxP.x + boxS.x + borderSize, boxP.y - borderSize, 0), uv(0), colour),
+            v(pos(boxP.x + boxS.x + borderSize, boxP.y,              0), uv(0), colour),
+            v(pos(boxP.x + boxS.x,              boxP.y,              0), uv(0), colour),
+        ),
+        Corner(
+            v(pos(boxP.x + boxS.x,              boxP.y + boxS.y,              0), uv(0), colour),
+            v(pos(boxP.x + boxS.x + borderSize, boxP.y + boxS.y,              0), uv(0), colour),
+            v(pos(boxP.x + boxS.x + borderSize, boxP.y + boxS.y + borderSize, 0), uv(0), colour),
+            v(pos(boxP.x + boxS.x,              boxP.y + boxS.y + borderSize, 0), uv(0), colour),
+        ),
+        Corner(
+            v(pos(boxP.x - borderSize, boxP.y + boxS.y,              0), uv(0), colour),
+            v(pos(boxP.x,              boxP.y + boxS.y,              0), uv(0), colour),
+            v(pos(boxP.x,              boxP.y + boxS.y + borderSize, 0), uv(0), colour),
+            v(pos(boxP.x - borderSize, boxP.y + boxS.y + borderSize, 0), uv(0), colour),
+        ),
+    ];
+
+    dest[0..6].setQuadVerts([
+        corners[0].topLeft,
+        corners[1].topRight,
+        corners[1].botRight,
+        corners[0].botLeft
+    ]);
+
+    dest[6..12].setQuadVerts([
+        corners[1].botLeft,
+        corners[1].botRight,
+        corners[2].botRight,
+        corners[2].botLeft
+    ]);
+
+    dest[12..18].setQuadVerts([
+        corners[3].topLeft,
+        corners[2].topLeft,
+        corners[2].botLeft,
+        corners[3].botLeft
+    ]);
+
+    dest[18..24].setQuadVerts([
+        corners[0].botLeft,
+        corners[0].botRight,
+        corners[3].topRight,
+        corners[3].topLeft
+    ]);
 }
