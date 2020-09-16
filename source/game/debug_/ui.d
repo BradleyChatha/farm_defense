@@ -9,9 +9,9 @@ final class DebugUIService : Service
 {
     mixin IMessageHandlerBoilerplate;
 
-    Font   font;
-    Gui    gui;
-    Label  fpsLabel;
+    Font  font;
+    Gui   gui;
+    Label fpsLabel;
 
     this()
     {

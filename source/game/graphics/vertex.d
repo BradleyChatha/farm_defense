@@ -98,6 +98,33 @@ struct VertexBuffer
             this._uploadInfo.end = cast(uint)end;
     }
 
+    /// Initialises the given `buffer` to contain a quad of a specified `size`.
+    ///
+    /// In general prefer the usage/creation of types that can use a single VertexBuffer for multiple quads (like a sprite batch), but of course
+    /// this isn't always feasable.
+    static void quad(ref VertexBuffer buffer, vec2f size)
+    {
+        assert(buffer == VertexBuffer.init, "This is a ctor function, so can only be used in buffers that are in their initial state.");
+        auto  topLeft  = TexturedVertex(vec3f(0,      0,      0), vec2f(0,      0),      Color.white);
+        auto  topRight = TexturedVertex(vec3f(size.x, 0,      0), vec2f(size.x, 0),      Color.white);
+        auto  botRight = TexturedVertex(vec3f(size.x, size.y, 0), vec2f(size.x, size.y), Color.white);
+        auto  botLeft  = TexturedVertex(vec3f(0,      size.y, 0), vec2f(0,      size.y), Color.white);
+
+        buffer.resize(6);
+        buffer.lock();
+            buffer.verts[0..6] = 
+            [
+                topLeft,
+                topRight,
+                botRight,
+
+                botRight,
+                botLeft,
+                topLeft
+            ];
+        buffer.unlock();
+    }
+
     @property
     TexturedVertex[] verts()
     {

@@ -83,7 +83,8 @@ struct OneTimeSubmit
             return false;
 
         this.syncInfo = QueueSubmitSyncInfo.init;
-        vkDestroyJAST(this.buffer);
+        if(this.buffer.handle !is null)
+            vkDestroyJAST(this.buffer);
         return true;
     }
 }
