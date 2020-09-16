@@ -21,6 +21,18 @@ final class Image : Control
 
     override
     {
+        void onLayoutChanged()
+        {
+            this._verts.lock();
+                auto quadVerts = this._verts.verts.getQuadVerts();
+                quadVerts[1].position.x = this.size.x;
+                quadVerts[2].position   = vec3f(this.size, 0);
+                quadVerts[3].position.y = this.size.y;
+                this._verts.verts.setQuadVerts(quadVerts);
+            this._verts.unlock();
+            this.transform.markDirty();
+        }
+
         void onDispose()
         {
             this._verts.dispose();

@@ -20,9 +20,12 @@ final class DebugUIService : Service
 
         this.gui.root = this.gui.make!AlignmentContainer(vec2f(Window.size));
 
+        auto debugStatTray = this.gui.make!Image(g_blankTexture, vec2f(85, 20), Color(0, 0, 0, 200));
+        debugStatTray.vertAlignment = VertAlignment.bottom;
+        this.gui.root.addChild(debugStatTray);
+
         this.fpsLabel = this.gui.make!Label(this.font);
-        this.fpsLabel.horizAlignment = HorizAlignment.center;
-        this.fpsLabel.vertAlignment  = VertAlignment.top;
+        this.fpsLabel.vertAlignment = VertAlignment.bottom;
         this.gui.root.addChild(this.fpsLabel);
     }
 

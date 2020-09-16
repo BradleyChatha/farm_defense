@@ -15,6 +15,17 @@ package struct VertexUploadInfo
     }
 }
 
+/++
+ + Always 6 verts to a quad, since indexing is less useful in a 2D-only environment.
+ +
+ + Face direction is clockwise, thus vertex ordering is:
+ +  [0] = top left
+ +  [1] = top right
+ +  [2] = bot right
+ +  [3] = bot right
+ +  [4] = bot left
+ +  [5] = top left
+ + ++/
 struct VertexBuffer
 {
     private
@@ -176,4 +187,30 @@ struct VertexBuffer
         this._uploadInfo.start = uint.max;
         return info;
     }
+}
+
+TexturedVertex[4] getQuadVerts(TexturedVertex[] verts)
+{
+    assert(verts.length >= 6);
+    return 
+    [
+        verts[0],
+        verts[1],
+        verts[2],
+        verts[4]
+    ];
+}
+
+void setQuadVerts(TexturedVertex[] dest, TexturedVertex[4] quad)
+{
+    assert(dest.length >= 6);
+    dest[0..6] = 
+    [
+        quad[0],
+        quad[1],
+        quad[2],
+        quad[2],
+        quad[3],
+        quad[0]
+    ];
 }
