@@ -148,6 +148,27 @@ abstract class Control : IDisposable, ITransformable!(AddHooks.yes)
             this.parent.onLayoutChangedImpl();
     }
 
+    final void alignWithinBox(box2f box)
+    {
+        vec2f position = vec2f(0);
+
+        final switch(this.horizAlignment) with(HorizAlignment)
+        {
+            case left:   position.x = box.min.x;                                    break;
+            case center: position.x = box.min.x + ((box.size.x - this.size.x) / 2); break;
+            case right:  position.x = (box.min.x + box.size.x) - this.size.x;       break;
+        }
+
+        final switch(this.vertAlignment) with(VertAlignment)
+        {
+            case top:    position.y = box.min.y;                                    break;
+            case center: position.y = box.min.y + ((box.size.y - this.size.y) / 2); break;
+            case bottom: position.y = (box.min.y + box.size.y) - this.size.y;       break;
+        }
+
+        this.position = position;
+    }
+
     @property
     final void size(vec2f siz)
     {
