@@ -25,7 +25,9 @@ enum MessageType
     mouseButton,
     keyButton,
     allowTextInput,
-    textInput
+    textInput,
+    debugCommand,
+    debugLog
 }
 
 interface IMessageHandler

@@ -51,6 +51,9 @@ final class Gui : IDisposable, IMessageHandler
 
     void onUpdate()
     {
+        if(this._currentlyFocusedControl !is null && !(cast(Control)this._currentlyFocusedControl).isVisible)
+            this.focusedControl = null;
+
         this._root.onUpdate();
     }
 

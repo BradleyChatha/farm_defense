@@ -6,6 +6,9 @@ import game.common, game.core, game.graphics, game.gui;
 private ubyte[] DEBUG_FONT_BYTES = cast(ubyte[])import("Roboto-Black.ttf");
 private Font g_debugFont;
 
+alias DebugCommandMessage = MessageWithData!(MessageType.debugCommand, const char[]);
+alias DebugLogMessage     = MessageWithData!(MessageType.debugLog, const char[]);
+
 private final class DebugConsole : Container, IFocusable
 {
     RectangleShape log;
@@ -78,6 +81,19 @@ private final class DebugConsole : Container, IFocusable
                     this.text.text = this.textBuffer;
                 }
             }
+
+            if(message.data.scancode == SDL_SCANCODE_RETURN && message.data.state & ButtonState.down)
+            {
+                message.handled = true;
+
+                if(this.textBuffer.length > 0)
+                {
+                    this.addLogMessage(this.textBuffer);
+                    messageBusSubmit!DebugCommandMessage(this.textBuffer);
+                }
+                this.textBuffer.length = 0;
+                this.text.text = this.textBuffer;
+            }
         }
     }
 
@@ -126,6 +142,7 @@ final class DebugUIService : Service
         this.gui.root.addChild(this.fpsLabel);
 
         this.console = this.gui.make!DebugConsole();
+        this.console.isVisible = false;
         this.gui.root.addChild(this.console);
     }
 
@@ -157,7 +174,18 @@ final class DebugUIService : Service
     }
 
     @Subscribe
+    void onDebugLog(DebugLogMessage message)
+    {
+        this.console.addLogMessage(message.data);
+    }
+
+    @Subscribe
     void onKeyButton(KeyButtonMessage message)
     {
+        if(message.data.scancode == SDL_SCANCODE_GRAVE && message.data.state & ButtonState.down)
+        {
+            message.handled = true;
+            this.console.isVisible = !this.console.isVisible;
+        }
     }
 }

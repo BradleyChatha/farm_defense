@@ -76,7 +76,7 @@ final class Font : IDisposable
         const GUTTER_BETWEEN_GLYPHS_Y = 1;
 
         // Calculations.
-        const CHARS_TO_LOAD           = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-=+!\"£$%^&*()\\/.,<>?| []{}#';_\n";
+        const CHARS_TO_LOAD           = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-=+!\"£$%^&*()\\/.,<>?| []{}#';_\n`";
         const CHARS_PER_LINE_ESTIMATE = 10;
         const MARGIN_OF_ERROR         = 2;
         const atlasWidth              = sizeInPixels * (CHARS_PER_LINE_ESTIMATE + MARGIN_OF_ERROR);
