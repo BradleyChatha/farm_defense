@@ -4,10 +4,11 @@
     dependency "jcli" version="0.7.0"
     dependency "jioc" version="0.2.0"
     dependency "asdf" version="0.5.7"
+    dependency "sdlang-d" version="0.10.6"
 +/
 module compile;
 
-import std;
+import std, sdlang;
 import jaster.cli, jaster.ioc;
 
 int main(string[] args)
@@ -38,43 +39,17 @@ struct DefaultCommand
 
     void onExecute()
     {
-        auto conf = this.config.value;
+        auto conf   = this.config.value;
+        auto assets = parseFile("./resources/assets.sdl");
         scope(exit)
         {
             this.config.value = conf;
             this.config.save();
         }
 
-        this.iterateFilePairs("resources/images/static/", null, conf, (pair)
-        {
-            UserIO.logInfof("[STATIC IMAGE] %s", pair);
-            import std.file : fcopy = copy;
-            copy(pair.sourceFile, pair.destinationFile);
-        });
-
-        this.iterateFilePairs("resources/images/dynamic/", null, conf, (pair)
-        {
-            UserIO.logInfof("[DYNAMC IMAGE] %s", pair);
-            copy(pair.sourceFile, pair.destinationFile);
-        });
-
-        this.iterateFilePairs("resources/levels/", null, conf, (pair)
-        {
-            UserIO.logInfof("[LEVEL       ] %s", pair);
-            copy(pair.sourceFile, pair.destinationFile);
-        });
-
-        this.iterateFilePairs("resources/fonts/", null, conf, (pair)
-        {
-            UserIO.logInfof("[FONT        ] %s", pair);
-            copy(pair.sourceFile, pair.destinationFile);
-        });
-
+        // Shaders are specially handled since their usage is always hard coded into the game.
         this.iterateFilePairs("resources/shaders/", "spv", conf, (pair)
         {
-            if(pair.sourceFile.extension == ".h" || pair.sourceFile.canFind("varying.def.sc"))
-                return;
-
             pair.destinationFile ~= pair.sourceFile.extension;
 
             UserIO.logInfof("[SHADER      ] %s", pair);
@@ -85,6 +60,39 @@ struct DefaultCommand
                 )
             );
         });
+
+        this.copyFile("./resources/assets.sdl", "ASSET LIST", conf);
+        foreach(tag; assets.tags)
+        {
+            switch(tag.name)
+            {
+                case "font":
+                case "texture": this.copyFile(tag.values[1].get!string, tag.name, conf); break;
+
+                default: throw new Exception("Don't know how to handle tag: "~tag.name);
+            }
+        }
+    }
+
+    void copyFile(string source, string typeName, ref Config conf)
+    {
+        this.handleFilePair(this.createPair(source, null), conf, (pair)
+        {
+            UserIO.logInfof("[%s] %s", typeName, pair);
+            copy(pair.sourceFile, pair.destinationFile);
+        });
+    }
+
+    void handleFilePair(FilePair pair, ref Config conf, void delegate(FilePair) action)
+    {
+        if(!pair.sourceIsNewer(conf) && !this.force.get(false))
+        {
+            UserIO.logInfof("[NOT MODIFIED] %s", pair);
+            return;
+        }
+
+        mkdirRecurse(pair.destinationFile.dirName);
+        action(pair);
     }
 
     void iterateFilePairs(string sourceDir, string destExt, ref Config conf, void delegate(FilePair) action)
@@ -98,14 +106,7 @@ struct DefaultCommand
                 continue;
 
             auto pair = this.createPair(file, destExt);
-            if(!pair.sourceIsNewer(conf) && !this.force.get(false))
-            {
-                UserIO.logInfof("[NOT MODIFIED] %s", pair);
-                continue;
-            }
-
-            mkdirRecurse(pair.destinationFile.dirName);
-            action(pair);
+            this.handleFilePair(pair, conf, action);
         }
     }
     

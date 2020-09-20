@@ -108,7 +108,6 @@ final class Text : IDisposable, ITransformable!(AddHooks.no)
                 this._colour,
                 this._lineSpacing
             );
-
             this._verts.transformAndUpload(0, this._vertsToRender, this.transform);
         this._verts.unlock();
     }

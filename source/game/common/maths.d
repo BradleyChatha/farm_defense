@@ -16,6 +16,12 @@ VkExtent2D toExtent(Vect)(Vect vect)
     return VkExtent2D(vect.x.to!uint, vect.y.to!uint);
 }
 
+bool isNaN(Vect)(Vect vect)
+{
+    import std.math : isNaN;
+    return vect.x.isNaN && vect.y.isNaN;
+}
+
 /++ 
  + Handles the following edge cases:
  +      amount = 0:                               returns 0

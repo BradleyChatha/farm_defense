@@ -1,0 +1,9 @@
+// This file lists the entire asset list for the game.
+//
+// Assets are given well-defined names, so that they can easily be referred to in other assets and from within code.
+//
+// Asset paths are from the view-point of the EXE, so instead of "./textures/blah.png" you must use "./resources/textures/blah.png"
+
+texture "t_jcli" "./resources/images/test/jcli_128x.png"
+
+font "f_arial" "./resources/fonts/arial.ttf"

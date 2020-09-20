@@ -57,14 +57,8 @@ private final class DebugConsole : Container, IFocusable
         {
             message.handled = true;
 
-            if(message.data.state & ButtonState.down && message.data.button == MouseButton.left)
-            {
-                import std.stdio;
-                if(box2f(this.textbox.position, this.textbox.position + this.textbox.size).contains(vec2f(message.data.position)))
-                    this.gui.focusedControl = this;
-                else
-                    this.gui.focusedControl = null;
-            }
+            if(message.data.state & ButtonState.down && message.data.button == MouseButton.left && message.data.state & ButtonState.tapped)
+                this.gui.focusedControl = (this.textbox.bounds.contains(vec2f(message.data.position))) ? this : null;
         }
 
         void onKeyButton(KeyButtonMessage message)

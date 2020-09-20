@@ -252,6 +252,12 @@ abstract class Control : IDisposable, ITransformable!(AddHooks.yes)
     }
 
     @property
+    final box2f bounds()
+    {
+        return box2f(this.position, this.position + this.size);
+    }
+
+    @property
     final Control parent()
     {
         return this._parent;

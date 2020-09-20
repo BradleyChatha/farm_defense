@@ -18,13 +18,8 @@ final class AlignmentContainer : Container
 
         void onLayoutChanged()
         {
-            auto box = box2f(
-                this.position,
-                this.position + this.size
-            );
-
             foreach(child; this.children)
-                child.alignWithinBox(box);
+                child.alignWithinBox(this.bounds);
         }
     }
 }
