@@ -119,6 +119,7 @@ final class DebugUIService : Service
     Gui          gui;
     Label        fpsLabel;
     DebugConsole console;
+    Image        testTexture;
 
     this()
     {
@@ -138,6 +139,11 @@ final class DebugUIService : Service
         this.console = this.gui.make!DebugConsole();
         this.console.isVisible = false;
         this.gui.root.addChild(this.console);
+
+        this.testTexture = this.gui.make!Image(null);
+        this.testTexture.vertAlignment = VertAlignment.center;
+        this.testTexture.horizAlignment = HorizAlignment.center;
+        this.gui.root.addChild(this.testTexture);
     }
 
     override
@@ -181,5 +187,21 @@ final class DebugUIService : Service
             message.handled = true;
             this.console.isVisible = !this.console.isVisible;
         }
+    }
+
+    @Subscribe
+    void onDebugCommand(DebugCommandMessage message)
+    {
+        import std.algorithm : countUntil;
+
+        const firstSpace = message.data.countUntil(' ');
+        const command    = (firstSpace < 0) ? message.data : message.data[0..firstSpace];
+        const arg        = (firstSpace < 0) ? null         : message.data[firstSpace+1..$];
+
+        switch(command)
+        {
+            case "show_texture": this.testTexture.changeTexture(assetsGet!Texture(arg.idup)); break;
+            default: break;
+        }   
     }
 }

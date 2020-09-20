@@ -12,8 +12,22 @@ final class Image : Control
 
     this(Texture texture, vec2f size = vec2f(float.nan), Color colour = Color.white)
     {
+        this.changeTexture(texture, size, colour);
+    }
+
+    void changeTexture(Texture texture, vec2f size = vec2f(float.nan), Color colour = Color.white)
+    {
+        if(texture is null)
+        {
+            if(this._verts.length == 0)
+                this._verts.resize(6);
+
+            this.size = vec2f(0);
+            return;
+        }
+
         this._texture = texture;
-        auto sizef = (size == vec2f(float.nan)) ? vec2f(texture.size) : size;
+        auto sizef = (size.isNaN) ? vec2f(texture.size) : size;
         VertexBuffer.quad(this._verts, sizef, vec2f(texture.size), colour);
         this.size = sizef;
     }
@@ -39,6 +53,9 @@ final class Image : Control
 
         void onDraw(AddDrawCommandsFunc add)
         {
+            if(this._texture is null)
+                return;
+
             if(this.transform.isDirty)
             {
                 this._verts.lock();

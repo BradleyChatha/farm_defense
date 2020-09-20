@@ -132,11 +132,10 @@ struct VertexBuffer
     /// this isn't always feasable.
     static void quad(ref VertexBuffer buffer, vec2f size, vec2f uv, Color colour)
     {
-        assert(buffer == VertexBuffer.init, "This is a ctor function, so can only be used in buffers that are in their initial state.");
-        auto  topLeft  = TexturedVertex(vec3f(0,      0,      0), vec2f(0,    0),    colour);
-        auto  topRight = TexturedVertex(vec3f(size.x, 0,      0), vec2f(uv.x, 0),    colour);
-        auto  botRight = TexturedVertex(vec3f(size.x, size.y, 0), vec2f(uv.x, uv.y), colour);
-        auto  botLeft  = TexturedVertex(vec3f(0,      size.y, 0), vec2f(0,    uv.y), colour);
+        auto topLeft  = TexturedVertex(vec3f(0,      0,      0), vec2f(0,    0),    colour);
+        auto topRight = TexturedVertex(vec3f(size.x, 0,      0), vec2f(uv.x, 0),    colour);
+        auto botRight = TexturedVertex(vec3f(size.x, size.y, 0), vec2f(uv.x, uv.y), colour);
+        auto botLeft  = TexturedVertex(vec3f(0,      size.y, 0), vec2f(0,    uv.y), colour);
 
         buffer.resize(6);
         buffer.lock();
