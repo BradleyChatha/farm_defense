@@ -22,6 +22,11 @@ bool isNaN(Vect)(Vect vect)
     return vect.x.isNaN && vect.y.isNaN;
 }
 
+bool isNaN(box2f box)
+{
+    return box.min.isNaN && box.max.isNaN;
+}
+
 /++ 
  + Handles the following edge cases:
  +      amount = 0:                               returns 0

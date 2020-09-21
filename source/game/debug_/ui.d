@@ -120,6 +120,8 @@ final class DebugUIService : Service
     Label        fpsLabel;
     DebugConsole console;
     Image        testTexture;
+    import game.data.tiled;
+    Map          test;
 
     this()
     {
@@ -144,6 +146,8 @@ final class DebugUIService : Service
         this.testTexture.vertAlignment = VertAlignment.center;
         this.testTexture.horizAlignment = HorizAlignment.center;
         this.gui.root.addChild(this.testTexture);
+
+        this.test = assetsGet!Map("m_test");
     }
 
     override
@@ -154,6 +158,7 @@ final class DebugUIService : Service
             this.gui.onUpdate();
 
             messageBusSubmit!SubmitDrawCommandsMessage(this.gui.gatherDrawCommands());
+            messageBusSubmit!SubmitDrawCommandsMessage(this.test.drawCommands);
         }
     }
 

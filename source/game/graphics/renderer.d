@@ -75,7 +75,10 @@ final class RendererMessageHandler : IMessageHandler
 
             auto uploadInfo = command.buffer.uploadInfo;
             if(!uploadInfo.requiresUpload)
+            {
+                command.vertexUpload = OneTimeSubmit.init;
                 continue;
+            }
 
             command.vertexUpload = g_device.transfer.getOneTimeBuffer();
             command.vertexUpload.buffer.begin(ResetOnSubmit.no);

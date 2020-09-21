@@ -26,6 +26,11 @@ struct SpriteBatchMemory
 
     ~this()
     {
+        this.free();
+    }
+
+    void free()
+    {
         if(this._batch !is null)
             this._batch.deallocate(this);
     }

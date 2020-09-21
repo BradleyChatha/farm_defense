@@ -7,3 +7,5 @@
 texture "t_jcli" "./resources/images/test/jcli_128x.png"
 
 font "f_arial" "./resources/fonts/arial.ttf"
+
+map "m_test" "./resources/maps/EXPORT/test.json"

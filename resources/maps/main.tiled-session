@@ -1,0 +1,74 @@
+{
+    "Map/SizeTest": {
+        "height": 4300,
+        "width": 2
+    },
+    "activeFile": "maps/test.tmx",
+    "expandedProjectPaths": [
+        "tilesets",
+        ".",
+        "maps",
+        "templates"
+    ],
+    "fileStates": {
+        "EXPORT/test.json": {
+            "scale": 1.037962962962963,
+            "selectedLayer": 0,
+            "viewCenter": {
+                "x": 416.1998215878679,
+                "y": 400.7850133809099
+            }
+        },
+        "EXPORT/test.json#tileset_entities": {
+            "scaleInDock": 1
+        },
+        "EXPORT/test.json#tileset_test": {
+            "scaleInDock": 1
+        },
+        "maps/test.json": {
+            "scale": 1.037962962962963,
+            "selectedLayer": 0,
+            "viewCenter": {
+                "x": 416.1998215878679,
+                "y": 400.7850133809099
+            }
+        },
+        "maps/test.tmx": {
+            "scale": 1,
+            "selectedLayer": 1,
+            "viewCenter": {
+                "x": 464,
+                "y": 384
+            }
+        },
+        "tilesets/tileset_entities.tsx": {
+            "dynamicWrapping": true,
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "tilesets/tileset_test.tsx": {
+            "dynamicWrapping": false,
+            "scaleInDock": 1,
+            "scaleInEditor": 11
+        }
+    },
+    "map.height": 26,
+    "map.lastUsedExportFilter": "JSON map files (*.json)",
+    "map.lastUsedFormat": "tmx",
+    "map.width": 26,
+    "openFiles": [
+        "tilesets/tileset_entities.tsx",
+        "maps/test.tmx"
+    ],
+    "project": "main.tiled-project",
+    "recentFiles": [
+        "tilesets/tileset_entities.tsx",
+        "EXPORT/test.json",
+        "maps/test.tmx",
+        "tilesets/tileset_test.tsx",
+        "maps/test.json",
+        "maps/test..tmx"
+    ],
+    "tileset.lastUsedFormat": "tsx",
+    "tileset.type": 1
+}

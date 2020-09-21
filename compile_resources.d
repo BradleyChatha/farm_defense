@@ -39,8 +39,9 @@ struct DefaultCommand
 
     void onExecute()
     {
-        auto conf   = this.config.value;
-        auto assets = parseFile("./resources/assets.sdl");
+        auto conf      = this.config.value;
+        auto assets    = parseFile("./resources/assets.sdl");
+        auto assetsNew = parseFile("./resources/assets.sdl");
         scope(exit)
         {
             this.config.value = conf;
@@ -61,17 +62,20 @@ struct DefaultCommand
             );
         });
 
-        this.copyFile("./resources/assets.sdl", "ASSET LIST", conf);
         foreach(tag; assets.tags)
         {
             switch(tag.name)
             {
+                case "map":     this.handleMap(tag.values[1].get!string, assetsNew, conf);  break;
+
                 case "font":
                 case "texture": this.copyFile(tag.values[1].get!string, tag.name, conf); break;
 
                 default: throw new Exception("Don't know how to handle tag: "~tag.name);
             }
         }
+
+        std.file.write("./bin/resources/assets.sdl", assetsNew.toSDLDocument());
     }
 
     void copyFile(string source, string typeName, ref Config conf)
@@ -81,6 +85,21 @@ struct DefaultCommand
             UserIO.logInfof("[%s] %s", typeName, pair);
             copy(pair.sourceFile, pair.destinationFile);
         });
+    }
+
+    void handleMap(string source, Tag assets, ref Config conf)
+    {
+        auto exp     = regex(`"image":"(.+)"`);
+        auto matches = (cast(string)std.file.read(source)).matchAll(exp);
+
+        foreach(file; matches.map!(m => m[1]).uniq.map!(f => f.replace("\\/", "/")))
+        {
+            auto fixedPath = file.replace("\\/", "/").replace("../../", "./resources/");
+            this.copyFile(fixedPath, "TILESET", conf);
+            assets.add(new Tag("dep", "texture", [Value(file), Value(fixedPath)]));
+        }
+
+        this.copyFile(source, "MAP", conf);
     }
 
     void handleFilePair(FilePair pair, ref Config conf, void delegate(FilePair) action)
