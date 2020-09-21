@@ -197,13 +197,20 @@ final class Layer
 
 final class Tile
 {
+    enum Type
+    {
+        none,
+        collision,
+        base
+    }
+
     private
     {
         Tileset         _tileset;
         box2f           _textureBounds;
         TiledProperty[] _properties;
-        box2f           _collisionRect;
         Texture         _texture;
+        Type            _type;
     }
 
     private this(Tileset tileset, box2f textureBounds, TiledTile tileInfo, Texture texture)
@@ -215,22 +222,12 @@ final class Tile
         this._properties    = tileInfo.properties;
         this._texture       = texture;
 
-        if(tileInfo.objectgroup.type !is null)
+        switch(tileInfo.type)
         {
-            auto layer = new Layer(tileInfo.objectgroup);
-            assert(layer.type == Layer.Type.objects, "%s".format(layer.type));
-
-            auto collisionFilter = layer.objects.filter!(o => o.type == "COLLISION");
-            if(!collisionFilter.empty)
-            {
-                auto obj = collisionFilter.front;
-                this._collisionRect = rectanglef(
-                    obj.x,
-                    obj.y,
-                    obj.width,
-                    obj.height
-                );
-            }
+            case "COLLISION":   this._type = Type.collision; break;
+            case "PLAYER_BASE": this._type = Type.base;      break;
+            case null: break;
+            default: throw new Exception("Unsupported tile type: " ~ tileInfo.type);
         }
     }
 
@@ -241,15 +238,9 @@ final class Tile
     }
 
     @property
-    box2f collisionRect()
+    Type type()
     {
-        return this._collisionRect;
-    }
-
-    @property
-    bool hasCollision()
-    {
-        return !this._collisionRect.isNaN;
+        return this._type;
     }
 
     @property
