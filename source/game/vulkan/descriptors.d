@@ -60,11 +60,6 @@ struct DescriptorPool
         {
             type            = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
             descriptorCount = g_swapchain.images.length.to!uint * MAX_SETS;
-        }        
-        with(sizes[1])
-        {
-            type            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-            descriptorCount = g_swapchain.images.length.to!uint * 2 * MAX_SETS; // Since we have two uniform buffers in each pipeline.
         }
 
         VkDescriptorPoolCreateInfo poolInfo = 
