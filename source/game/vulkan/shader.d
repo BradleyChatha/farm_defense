@@ -56,11 +56,10 @@ struct ShaderModule
     }
 }
 
-struct Shader(PushConstantsT_, UniformStructT_)
+struct Shader(PushConstantsT_)
 {
     // Forwarding, so other types can get this info easily.
     alias PushConstantsT = PushConstantsT_;
-    alias UniformStructT = UniformStructT_;
     
     static assert(PushConstantsT.sizeof <= 128, "The Vulkan spec mandates that 128 bytes is the minimum supported length, so we're using that as our maximum length.");
 

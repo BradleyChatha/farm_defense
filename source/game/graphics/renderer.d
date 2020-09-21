@@ -12,7 +12,7 @@ Semaphore[]                         g_renderRenderFinishedSemaphores;
 Semaphore                           g_currentImageAvailableSemaphore;
 CommandBuffer[]                     g_renderGraphicsCommandBuffers;
 QueueSubmitSyncInfo[]               g_renderGraphicsSubmitSyncInfos;
-DescriptorSet!TexturedQuadUniform[] g_renderDescriptorSets;
+//DescriptorSet!TexturedQuadUniform[] g_renderDescriptorSets;
 GpuCpuBuffer*[]                     g_renderDescriptorSetBuffersMandatory;
 GpuCpuBuffer*[]                     g_renderDescriptorSetBuffersQuad;
 uint                                g_imageIndex;
@@ -225,14 +225,8 @@ void renderFrameEnd()
 
             g_pushConstants.view = command.camera;
             buffer.pushConstants(g_pipelineQuadTexturedTransparent.base, g_pushConstants);
-
-            auto uniforms = g_descriptorPools.pool.allocate!TexturedQuadUniform(pipeline);
-            uniforms.updateImage(
-                command.texture.imageView, 
-                command.texture.sampler
-            );
             buffer.bindVertexBuffer(command.buffer.gpuHandle);
-            buffer.bindDescriptorSet(pipeline, uniforms);
+            buffer.bindDescriptorSet(pipeline, command.texture.uniform);
             buffer.drawVerts(cast(uint)command.count, cast(uint)command.offset);
         buffer.popDebugRegion();
     }

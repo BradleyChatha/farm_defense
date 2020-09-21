@@ -11,10 +11,8 @@ struct PipelineBase
     VkDescriptorSetLayout  descriptorLayoutHandle;
 }
 
-struct Pipeline(VertexT, PushConstantsT, UniformT_)
+struct Pipeline(VertexT, PushConstantsT)
 {
-    alias UniformT = UniformT_;
-
     PipelineBase* base;
     alias base this;
 
@@ -27,7 +25,7 @@ struct Pipeline(VertexT, PushConstantsT, UniformT_)
         scope ref   PipelineBase*                       ptr,
                     VkVertexInputBindingDescription     vertexBinding,
                     VkVertexInputAttributeDescription[] vertexAttributes,
-                    Shader!(PushConstantsT, UniformT)   shader,
+                    Shader!(PushConstantsT)             shader,
                     bool                                enableAlphaBlending
     )
     {
@@ -213,11 +211,11 @@ struct Pipeline(VertexT, PushConstantsT, UniformT_)
     }
 }
 
-struct PipelineBuilder(VertexT, PushConstantsT, UniformT)
+struct PipelineBuilder(VertexT, PushConstantsT)
 {
     static assert(__traits(hasMember, VertexT, "defineAttributes"), "Vertex type "~VertexT.stringof~" must have a function called `defineAttributes`");
 
-    alias ShaderT = Shader!(PushConstantsT, UniformT);
+    alias ShaderT = Shader!(PushConstantsT);
 
     VkVertexInputAttributeDescription[] vertexAttributes;
     VkVertexInputBindingDescription     vertexBinding;
@@ -254,7 +252,7 @@ struct PipelineBuilder(VertexT, PushConstantsT, UniformT)
         return this;
     }
 
-    Pipeline!(VertexT, PushConstantsT, UniformT)* build()
+    Pipeline!(VertexT, PushConstantsT)* build()
     {
         PipelineBase* ptr = null;
         typeof(return).create(

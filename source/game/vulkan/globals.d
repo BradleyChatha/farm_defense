@@ -25,9 +25,9 @@ alias g_renderPass        = RenderPass.instance;
 FT_Library g_freeType;
 
 // START aliases //
-alias TexturedQuadShader          = Shader!(PushConstants, TexturedQuadUniform);
-alias TexturedQuadPipeline        = Pipeline!(TexturedVertex, PushConstants, TexturedQuadUniform);
-alias TexturedQuadPipelineBuilder = PipelineBuilder!(TexturedVertex, PushConstants, TexturedQuadUniform);
+alias TexturedQuadShader          = Shader!(PushConstants);
+alias TexturedQuadPipeline        = Pipeline!(TexturedVertex, PushConstants);
+alias TexturedQuadPipelineBuilder = PipelineBuilder!(TexturedVertex, PushConstants);
 
 // START Additional data types //
 align(4) struct PushConstants
@@ -35,10 +35,6 @@ align(4) struct PushConstants
     // Vulkan spec guarentees at least 128 bytes of push constant memory, exactly enough for 2 mat4fs.
     mat4f projection;
     mat4f view;
-}
-
-struct TexturedQuadUniform
-{
 }
 
 struct TexturedVertex

@@ -16,6 +16,7 @@ final class Texture : IDisposable
         CommandBuffer       _transferBuffer;
         QueueSubmitSyncInfo _uploadSync;
         vec2u               _size;
+        DescriptorSet       _uniform;
     }
 
     this(ubyte[] pixels, vec2u size, string debugName = "Unnamed Texture")
@@ -101,6 +102,13 @@ final class Texture : IDisposable
         GpuImageView.create(this._imageView, this._image, GpuImageType.colour2D);
         Sampler.create(this._sampler);
 
+        // Doesn't matter which pipeline we use, as they both have the same uniform layout.
+        this._uniform = g_descriptorPools.persistentPool.allocate(g_pipelineQuadTexturedTransparent.base);
+        this._uniform.updateImage(
+            this.imageView,
+            this.sampler
+        );
+
         return true;
     }
 
@@ -114,6 +122,12 @@ final class Texture : IDisposable
     Sampler* sampler()
     {
         return this._sampler;
+    }
+
+    @property
+    DescriptorSet uniform()
+    {
+        return this._uniform;
     }
 
     @property

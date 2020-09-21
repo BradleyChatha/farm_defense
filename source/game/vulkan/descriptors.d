@@ -11,6 +11,7 @@ struct DescriptorPoolManager
         uint              _swapchainImageIndex;
         OnFrameChangeId   _onFrameChangeId;
         DescriptorPool*[] _pools;
+        DescriptorPool*   _persistentPool;
     }
 
     @disable
@@ -25,6 +26,8 @@ struct DescriptorPoolManager
         ptr._pools.length = g_swapchain.images.length;
         foreach(i; 0..g_swapchain.images.length)
             DescriptorPool.create(ptr._pools[i]);
+
+        DescriptorPool.create(ptr._persistentPool);
     }
 
     void onFrameChange(uint swapchainImageIndex)
@@ -37,6 +40,13 @@ struct DescriptorPoolManager
     DescriptorPool* pool()
     {
         return this._pools[this._swapchainImageIndex];
+    }
+
+    // Doesn't get reset between frames. Only one pool as opposed to one pool per swapchain image.
+    @property
+    DescriptorPool* persistentPool()
+    {
+        return this._persistentPool;
     }
 }
 
@@ -76,7 +86,7 @@ struct DescriptorPool
         vkTrackJAST(ptr);
     }
 
-    DescriptorSet!UniformT allocate(UniformT)(PipelineBase* pipeline)
+    DescriptorSet allocate(PipelineBase* pipeline)
     {
         VkDescriptorSet handle;
 
@@ -91,14 +101,9 @@ struct DescriptorPool
 
         return typeof(return)(handle);
     }
-
-    auto allocate(PipelineT)(PipelineT* pipeline)
-    {
-        return this.allocate!(PipelineT.UniformT)(pipeline.base);
-    }
 }
 
-struct DescriptorSet(UniformT)
+struct DescriptorSet
 {
     mixin VkWrapperJAST!VkDescriptorSet;
 
