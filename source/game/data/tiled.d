@@ -349,13 +349,23 @@ final class Map : IDisposable
 {
     mixin IDisposableBoilerplate;
 
+    // Amalgamation of all layers on a single cell grid.
+    //
+    // e.g. if layer 0 is not collidable, but layer 1 is, then that particular cell is marked as solid.
+    struct TileInfo
+    {
+        bool isSolid;
+    }
+
     private
     {
         VertexBuffer  _verts;
         DrawCommand[] _drawCommands;
         Tileset[]     _tilesets;
         Layer[]       _layers;
+        vec2u         _gridSize;
         vec2u         _gridTileSize;
+        TileInfo[]    _grid;
     }
 
     this(string file)
@@ -365,7 +375,9 @@ final class Map : IDisposable
         auto json = cast(string)fread(file);
         auto map  = json.deserialize!TiledMap();
 
+        this._gridSize     = vec2u(map.width, map.height);
         this._gridTileSize = vec2u(map.tilewidth, map.tileheight);
+        this._grid.length  = this._gridSize.x * this._gridSize.y;
 
         foreach(tileset; map.tilesets)
             this._tilesets ~= new Tileset(tileset);
@@ -385,6 +397,20 @@ final class Map : IDisposable
     DrawCommand[] drawCommands()
     {
         return this._drawCommands;
+    }
+
+    vec2u worldToGridCoord(vec2f world)
+    {
+        if(world.x < 0)
+            world.x = 0;
+        if(world.y < 0)
+            world.y = 0;
+        return vec2u(cast(uint)world.x, cast(uint)world.y) / this._gridSize;
+    }
+
+    TileInfo cellAt(vec2u gridCoord)
+    {
+        return this._grid[gridCoord.toIndex(this._gridSize.x)];
     }
 
     private void createDrawCommands()
@@ -422,6 +448,9 @@ final class Map : IDisposable
                 assert(instance.tile !is null, "Seems the tile resolver is broken.");
 
                 tilesThisLayer ~= instance;
+
+                if(instance.tile.type == Tile.Type.collision)
+                    this._grid[instance.gridPos.toIndex(this._gridSize.x)].isSolid = true;
             }
 
             // Group tiles by texture, and create a draw command for each of them.

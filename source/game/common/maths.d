@@ -16,6 +16,11 @@ VkExtent2D toExtent(Vect)(Vect vect)
     return VkExtent2D(vect.x.to!uint, vect.y.to!uint);
 }
 
+auto toIndex(Vect)(Vect vect, size_t columnCount)
+{
+    return (vect.y * columnCount) + vect.x;
+}
+
 bool isNaN(Vect)(Vect vect)
 {
     import std.math : isNaN;
