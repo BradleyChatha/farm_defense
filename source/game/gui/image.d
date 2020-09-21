@@ -69,7 +69,8 @@ final class Image : Control
                     0,
                     this._verts.length,
                     this._texture,
-                    true
+                    true,
+                    SORT_ORDER_UI
                 )
             ];
             add(commands[]);

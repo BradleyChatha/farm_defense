@@ -157,7 +157,11 @@ final class DebugUIService : Service
             this.displayFPS();
             this.gui.onUpdate();
 
-            messageBusSubmit!SubmitDrawCommandsMessage(this.gui.gatherDrawCommands());
+            auto commands = this.gui.gatherDrawCommands();
+            foreach(ref command; commands)
+                command.sortOrder = SORT_ORDER_DEBUG_UI;
+
+            messageBusSubmit!SubmitDrawCommandsMessage(commands);
             messageBusSubmit!SubmitDrawCommandsMessage(this.test.drawCommands);
         }
     }

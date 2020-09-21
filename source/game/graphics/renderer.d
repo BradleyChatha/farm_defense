@@ -101,6 +101,13 @@ public:
 // Essentially a 1x1 white dot. Useful for shapes, which don't have textures generally.
 Texture g_blankTexture;
 
+// START predefined sort orders.
+
+enum SORT_ORDER_MAP      = -1;
+enum SORT_ORDER_DEFAULT  = 0;
+enum SORT_ORDER_UI       = 10;
+enum SORT_ORDER_DEBUG_UI = 1000;
+
 // START Data Types
 
 struct DrawCommand
@@ -110,7 +117,7 @@ struct DrawCommand
     size_t        count;
     Texture       texture;
     bool          enableBlending;
-    int           sortOrder;    // User-specified sort order, e.g. 0 = Background, 1 = player, etc.
+    int           sortOrder = SORT_ORDER_DEFAULT; // User-specified sort order, e.g. 0 = Background, 1 = player, etc.
     mat4f         camera = mat4f.identity;
     uint          drawOrder;    // Submission order. So if this was the 2nd command this frame, then this'd be 2. Used to preserve a bit of command ordering.
     OneTimeSubmit vertexUpload; // Submit Sync info about uploading the buffer's verts.

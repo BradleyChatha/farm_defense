@@ -69,7 +69,8 @@ class RectangleShape : Control
                     0,
                     vertCount,
                     g_blankTexture,
-                    true
+                    true,
+                    SORT_ORDER_UI
                 )
             ];
             add(commands[]);

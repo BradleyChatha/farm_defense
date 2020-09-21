@@ -27,6 +27,7 @@ final class Label : Control
         void onDraw(AddDrawCommandsFunc add)
         {
             DrawCommand[1] commands = [this._text.drawCommand];
+            commands[0].sortOrder = SORT_ORDER_UI;
             add(commands[]);
         }
     }
