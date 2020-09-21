@@ -18,8 +18,8 @@ GpuCpuBuffer*[]                     g_renderDescriptorSetBuffersQuad;
 uint                                g_imageIndex;
 
 // START Rendering related variables.
-MandatoryUniform g_uniformsMandatory;
-DrawCommand[]    g_drawCommands;
+PushConstants g_pushConstants;
+DrawCommand[] g_drawCommands;
 
 // START Vulkan Event Callbacks
 void onFrameChange(uint imageIndex)
@@ -44,13 +44,13 @@ void onSwapchainRecreate(uint imageCount)
         vkDestroyJAST(buffer);
     g_renderGraphicsCommandBuffers = g_device.graphics.commandPools.get(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT).allocate(imageCount);
 
-    g_renderDescriptorSetBuffersMandatory.length = imageCount;
-    g_renderDescriptorSetBuffersQuad.length      = imageCount;
-    foreach(i; 0..imageCount)
-    {
-        g_renderDescriptorSetBuffersMandatory[i] = g_gpuCpuAllocator.allocate(MandatoryUniform.sizeof,    VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
-        g_renderDescriptorSetBuffersQuad[i]      = g_gpuCpuAllocator.allocate(TexturedQuadUniform.sizeof, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
-    }
+    // g_renderDescriptorSetBuffersMandatory.length = imageCount;
+    // g_renderDescriptorSetBuffersQuad.length      = imageCount;
+    // foreach(i; 0..imageCount)
+    // {
+    //     g_renderDescriptorSetBuffersMandatory[i] = g_gpuCpuAllocator.allocate(MandatoryUniform.sizeof,    VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+    //     g_renderDescriptorSetBuffersQuad[i]      = g_gpuCpuAllocator.allocate(TexturedQuadUniform.sizeof, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+    // }
 
     recreateSemaphores(g_renderImageAvailableSemaphores);
     recreateSemaphores(g_renderRenderFinishedSemaphores);
@@ -123,7 +123,7 @@ void renderInit()
     vkListenOnFrameChangeJAST((v) => onFrameChange(v));
     vkListenOnSwapchainRecreateJAST((v) => onSwapchainRecreate(v));
 
-    g_uniformsMandatory.projection = mat4f.orthographic(0, Window.size.x, 0, Window.size.y, 1, 0);
+    g_pushConstants.projection = mat4f.orthographic(0, Window.size.x, 0, Window.size.y, 1, 0);
 
     messageBusSubscribe(new RendererMessageHandler());
 
@@ -198,9 +198,6 @@ void renderFrameEnd()
     buffer.pushDebugRegion("Begin Render Pass");
     buffer.beginRenderPass(g_swapchain.framebuffers[g_imageIndex]);
 
-    buffer.pushDebugRegion("Setting common data");
-        buffer.pushConstants(g_pipelineQuadTexturedTransparent.base, PushConstants(SDL_GetTicks()));
-    buffer.popDebugRegion();
     for(commandIndex = 0; commandIndex < g_drawCommands.length; commandIndex++)
     {
         auto command = g_drawCommands[commandIndex];
@@ -226,15 +223,13 @@ void renderFrameEnd()
         );
             buffer.bindPipeline(pipeline);
 
-            g_uniformsMandatory.view = command.camera;
-            g_renderDescriptorSetBuffersMandatory[g_imageIndex].as!MandatoryUniform[0] = g_uniformsMandatory;
+            g_pushConstants.view = command.camera;
+            buffer.pushConstants(g_pipelineQuadTexturedTransparent.base, g_pushConstants);
 
             auto uniforms = g_descriptorPools.pool.allocate!TexturedQuadUniform(pipeline);
-            uniforms.update(
+            uniforms.updateImage(
                 command.texture.imageView, 
-                command.texture.sampler,
-                g_renderDescriptorSetBuffersMandatory[g_imageIndex],
-                g_renderDescriptorSetBuffersQuad[g_imageIndex]
+                command.texture.sampler
             );
             buffer.bindVertexBuffer(command.buffer.gpuHandle);
             buffer.bindDescriptorSet(pipeline, uniforms);

@@ -4,12 +4,6 @@ import std.conv : to;
 import std.experimental.logger;
 import game.common.util, game.vulkan, game.graphics.window, game.common.maths;
 
-struct MandatoryUniform
-{
-    mat4f view       = mat4f.identity;
-    mat4f projection = mat4f.identity;
-}
-
 struct PipelineBase
 {
     mixin VkSwapchainResourceWrapperJAST!VkPipeline;
@@ -174,22 +168,8 @@ struct Pipeline(VertexT, PushConstantsT, UniformT_)
             descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
             stageFlags      = VK_SHADER_STAGE_FRAGMENT_BIT;
         }
-        with(mandatoryUniformBinding)
-        {
-            binding         = 1;
-            descriptorCount = 1;
-            descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-            stageFlags      = VK_SHADER_STAGE_VERTEX_BIT;
-        }
-        with(userDefinedUniformBinding)
-        {
-            binding         = 2;
-            descriptorCount = 1;
-            descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-            stageFlags      = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-        }
 
-        auto bindings = [textureSamplerBinding, mandatoryUniformBinding, userDefinedUniformBinding];
+        auto bindings = [textureSamplerBinding];
         with(uniformLayout)
         {
             bindingCount = bindings.length.to!uint();

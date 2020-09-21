@@ -32,7 +32,9 @@ alias TexturedQuadPipelineBuilder = PipelineBuilder!(TexturedVertex, PushConstan
 // START Additional data types //
 align(4) struct PushConstants
 {
-    uint ticks;
+    // Vulkan spec guarentees at least 128 bytes of push constant memory, exactly enough for 2 mat4fs.
+    mat4f projection;
+    mat4f view;
 }
 
 struct TexturedQuadUniform

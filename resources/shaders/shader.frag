@@ -1,10 +1,6 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
 
-layout(push_constant) uniform _PushConstant {
-    uint ticks;
-} PushConstant;
-
 layout(binding = 0) uniform sampler2D texSampler;
 
 layout(location = 0) in vec4 fragColor;

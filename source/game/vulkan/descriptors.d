@@ -111,37 +111,21 @@ struct DescriptorSet(UniformT)
     {
         this.handle = toWrap;
     }
-    
-    void update(
+
+    void updateImage(
         scope GpuImageView* imageView,
-        scope Sampler*      sampler,
-        scope GpuCpuBuffer* mandatoryUniformBuffer,
-        scope GpuCpuBuffer* userUniformBuffer)
+        scope Sampler*      sampler
+    )
     {
         VkDescriptorImageInfo imageInfo = 
         {
             imageLayout: VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             imageView:   imageView.handle,
             sampler:     sampler.handle
-        };
-
-        VkDescriptorBufferInfo mandatoryInfo = 
-        {
-            buffer: mandatoryUniformBuffer.handle,
-            offset: 0,
-            range:  MandatoryUniform.sizeof.to!uint
-        };
-
-        VkDescriptorBufferInfo userInfo = 
-        {
-            buffer: userUniformBuffer.handle,
-            offset: 0,
-            range:  UniformT.sizeof.to!uint
-        };
-
-        VkWriteDescriptorSet[3] writeInfo;
-
-        with(writeInfo[0])
+        };        
+        
+        VkWriteDescriptorSet writeInfo;
+        with(writeInfo)
         {
             dstSet          = this;
             dstBinding      = 0;
@@ -150,25 +134,7 @@ struct DescriptorSet(UniformT)
             descriptorCount = 1;
             pImageInfo      = &imageInfo;
         }
-        with(writeInfo[1])
-        {
-            dstSet          = this;
-            dstBinding      = 1;
-            dstArrayElement = 0;
-            descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-            descriptorCount = 1;
-            pBufferInfo     = &mandatoryInfo;
-        }
-        with(writeInfo[2])
-        {
-            dstSet          = this;
-            dstBinding      = 2;
-            dstArrayElement = 0;
-            descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-            descriptorCount = 1;
-            pBufferInfo     = &userInfo;
-        }
 
-        vkUpdateDescriptorSets(g_device, writeInfo.length.to!uint, writeInfo.ptr, 0, null);
+        vkUpdateDescriptorSets(g_device, 1, &writeInfo, 0, null);
     }
 }
