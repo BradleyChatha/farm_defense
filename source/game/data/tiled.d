@@ -456,7 +456,7 @@ final class Map : IDisposable
                     this._verts.length - vertOffset,
                     uniqueTexture,
                     true,
-                    -1
+                    SORT_ORDER_MAP
                 );
             }
 
