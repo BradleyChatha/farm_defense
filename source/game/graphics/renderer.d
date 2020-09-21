@@ -185,11 +185,8 @@ void renderFrameEnd()
     import std.algorithm : multiSort;
 
     multiSort!(
-        "a.sortOrder       < b.sortOrder",
-        "a.enableBlending != b.enableBlending",
-        "a.drawOrder       < b.drawOrder",
-        "a.texture        != b.texture",
-        "a.camera         != b.camera"
+        "a.sortOrder < b.sortOrder",
+        "a.drawOrder < b.drawOrder"
     )(g_drawCommands);
 
     auto buffer         = g_renderGraphicsCommandBuffers[g_imageIndex];
