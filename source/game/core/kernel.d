@@ -1,5 +1,6 @@
 module game.core.kernel;
 
+import std.experimental.logger;
 import game.core, game.common;
 
 private:
@@ -13,7 +14,9 @@ enum ServiceType
 {
     // Update order depends on order within this enum.
     ERROR,
-    debugUI
+    debugUI,
+    scenes,
+    sceneMapViewer
 }
 
 // START data types.
@@ -73,8 +76,9 @@ void servicesRegister(ServiceType type, Service service)
     g_services[type] = service;
 }
 
-void servicesStart(ServiceType type)
+void servicesStart(string FILE = __FILE__, size_t LINE = __LINE__, string FUNC = __PRETTY_FUNCTION__)(ServiceType type)
 {
+    tracef("Starting service %s from %s:%s:%s", type, FILE, LINE, FUNC);
     g_services[type].start();
     messageBusSubscribe(g_services[type]);
 }

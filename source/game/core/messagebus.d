@@ -27,7 +27,9 @@ enum MessageType
     allowTextInput,
     textInput,
     debugCommand,
-    debugLog
+    debugLog,
+    setSceneInstance,
+    setActiveScene
 }
 
 interface IMessageHandler

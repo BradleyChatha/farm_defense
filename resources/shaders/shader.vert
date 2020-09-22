@@ -3,8 +3,8 @@
 
 layout(push_constant) uniform _PushConstant
 {
-    mat4 view;
-    mat4 projection;
+    layout(row_major) mat4 view;
+                      mat4 projection; // Don't ask me why this one works fine, even though it's also supposed to be row_major (unless mat4f.orthographic is different here).
 } PushConstant;
 
 layout(location = 0) in vec3 inPosition;
@@ -16,7 +16,10 @@ layout(location = 1) out vec2 uv;
 
 void main()
 {
-    gl_Position = vec4((PushConstant.projection * PushConstant.view * vec4(floor(inPosition), 1.0)).xyz, 1.0) - vec4(1, 1, 0, 0);
+    // We floor the view * model calculation, as inaccuracies can cause random gaps between verts.
+    //
+    // By flooring across the board, we ensure everything looks consistent to eachother, even if it means other slight oddities down the line.
+    gl_Position = vec4((PushConstant.projection * floor(PushConstant.view * vec4(inPosition, 1.0))).xyz, 1.0) - vec4(1, 1, 0, 0);
     fragColour  = inColour;
     uv          = inUv;
 }

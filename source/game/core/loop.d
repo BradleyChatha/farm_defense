@@ -41,9 +41,16 @@ void loopInit()
 {
     messageBusSubscribe(new LoopMessageHandler());
     servicesRegister(ServiceType.debugUI, new DebugUIService());
+    servicesRegister(ServiceType.scenes, new SceneService());
 
     // Order of message evaluation is determined by order of being started.
     servicesStart(ServiceType.debugUI);
+    servicesStart(ServiceType.scenes);
+
+    // Register scenes.
+    import game.scenes;
+    messageBusSubmit!SetSceneInstanceMessage(SetSceneInstance(new MapViewerScene(), ServiceType.sceneMapViewer));
+    messageBusSubmit!SetActiveSceneMessage(ServiceType.sceneMapViewer);
 }
 
 void loopRun()

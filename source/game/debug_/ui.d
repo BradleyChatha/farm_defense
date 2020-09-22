@@ -6,7 +6,10 @@ import game.common, game.core, game.graphics, game.gui;
 private ubyte[] DEBUG_FONT_BYTES = cast(ubyte[])import("Roboto-Black.ttf");
 private Font g_debugFont;
 
-alias DebugCommandMessage = MessageWithData!(MessageType.debugCommand, const char[]);
+import std.algorithm : splitter;
+alias DebugCommandRange = typeof((cast(char[])"hello").splitter(' '));
+
+alias DebugCommandMessage = MessageWithData!(MessageType.debugCommand, DebugCommandRange);
 alias DebugLogMessage     = MessageWithData!(MessageType.debugLog, const char[]);
 
 private final class DebugConsole : Container, IFocusable
@@ -17,6 +20,7 @@ private final class DebugConsole : Container, IFocusable
     Label          text;
     char[]         textBuffer;
     char[]         logTextBuffer;
+    string         lastCommand;
 
     override
     {
@@ -66,6 +70,14 @@ private final class DebugConsole : Container, IFocusable
             if(!this.gui.isFocusedControl(this))
                 return;
 
+            if(message.data.scancode == SDL_SCANCODE_UP && message.data.state & ButtonState.down)
+            {
+                message.handled = true;
+                this.textBuffer.length = this.lastCommand.length;
+                this.textBuffer[0..$]  = this.lastCommand[0..$];
+                this.text.text = this.textBuffer;
+            }
+
             if(message.data.scancode == SDL_SCANCODE_BACKSPACE && message.data.state & ButtonState.down)
             {
                 message.handled = true;
@@ -83,7 +95,8 @@ private final class DebugConsole : Container, IFocusable
                 if(this.textBuffer.length > 0)
                 {
                     this.addLogMessage(this.textBuffer);
-                    messageBusSubmit!DebugCommandMessage(this.textBuffer);
+                    messageBusSubmit!DebugCommandMessage(this.textBuffer.splitter(' '));
+                    this.lastCommand = this.textBuffer.idup;
                 }
                 this.textBuffer.length = 0;
                 this.text.text = this.textBuffer;
@@ -120,9 +133,7 @@ final class DebugUIService : Service
     Label        fpsLabel;
     DebugConsole console;
     Image        testTexture;
-    import game.data.tiled;
-    Map          test;
-
+    
     this()
     {
         g_debugFont = new Font(DEBUG_FONT_BYTES);
@@ -146,8 +157,6 @@ final class DebugUIService : Service
         this.testTexture.vertAlignment = VertAlignment.center;
         this.testTexture.horizAlignment = HorizAlignment.center;
         this.gui.root.addChild(this.testTexture);
-
-        this.test = assetsGet!Map("m_test");
     }
 
     override
@@ -162,7 +171,6 @@ final class DebugUIService : Service
                 command.sortOrder = SORT_ORDER_DEBUG_UI;
 
             messageBusSubmit!SubmitDrawCommandsMessage(commands);
-            messageBusSubmit!SubmitDrawCommandsMessage(this.test.drawCommands);
         }
     }
 
@@ -195,17 +203,23 @@ final class DebugUIService : Service
         {
             message.handled = true;
             this.console.isVisible = !this.console.isVisible;
+
+            if(this.console.isVisible)
+                this.gui.focusedControl = this.console;
         }
     }
 
     @Subscribe
     void onDebugCommand(DebugCommandMessage message)
     {
-        import std.algorithm : countUntil;
+        import std.array : array;
 
-        const firstSpace = message.data.countUntil(' ');
-        const command    = (firstSpace < 0) ? message.data : message.data[0..firstSpace];
-        const arg        = (firstSpace < 0) ? null         : message.data[firstSpace+1..$];
+        const arr = message.data.array;
+        if(arr.length != 2)
+            return;
+
+        const command = arr[0];
+        const arg     = arr[1];
 
         switch(command)
         {
