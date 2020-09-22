@@ -120,6 +120,10 @@ mixin template IMessageHandlerBoilerplate()
     void handleMessage(scope MessageBase message)
     {
         import std.conv : to;
+
+        static if(__traits(compiles, super.handleMessageBase(message)))
+            super.handleMessageBase(message);
+
         SwitchLabel: switch(message.type)
         {
             case MessageType.ERROR: assert(false, "Message with type ERROR was received.");

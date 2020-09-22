@@ -42,6 +42,8 @@ enum MouseButton : ubyte
     middle = SDL_BUTTON_MIDDLE
 }
 
+alias KeyButton = SDL_Scancode;
+
 private:
 
 struct InfoPair(InfoT)
@@ -51,10 +53,10 @@ struct InfoPair(InfoT)
 }
 
 InfoPair!ButtonState[MouseButton.max+1]  g_mouseButtons;
-InfoPair!ButtonState[SDL_Scancode.max+1] g_keyButtons;
+InfoPair!ButtonState[KeyButton.max+1] g_keyButtons;
 int                                      g_inputEnableCount;
 
-final class InputHandler : IMessageHandler
+final class InputHandlerService : IMessageHandler
 {
     mixin IMessageHandlerBoilerplate;
 
@@ -158,7 +160,57 @@ final class InputHandler : IMessageHandler
 
 public:
 
+alias InputHandlerEvent = void delegate();
+struct InputHandler
+{
+    private
+    {
+        InputHandlerEvent[KeyButton] _onTapped;
+        InputHandlerEvent[KeyButton] _onDown;
+        bool[KeyButton]              _isDown;
+    }
+
+    @disable
+    this(this){}
+
+    void onTapped(KeyButton button, InputHandlerEvent event)
+    {
+        this._onTapped[button] = event;
+    }
+
+    void onDown(KeyButton button, InputHandlerEvent event)
+    {
+        this._onDown[button] = event;
+    }
+
+    void clearEventData()
+    {
+        this._isDown.clear();
+    }
+
+    void onUpdate()
+    {
+        import std.algorithm : filter;
+
+        foreach(key; this._isDown.byKeyValue.filter!(kv => kv.value).filter!(kv => kv.key in this._onDown))
+            this._onDown[key.key]();
+    }
+
+    void handleMessage(KeyButtonMessage message)
+    {
+        this._isDown[message.data.scancode] = !!(message.data.state & ButtonState.down);
+        if(message.data.state & ButtonState.down)
+        {
+            if(message.data.state & ButtonState.tapped && message.data.scancode in this._onTapped)
+            {
+                message.handled = true;
+                this._onTapped[message.data.scancode]();
+            }
+        }
+    }
+}
+
 void inputInit()
 {
-    messageBusSubscribe(new InputHandler());
+    messageBusSubscribe(new InputHandlerService());
 }

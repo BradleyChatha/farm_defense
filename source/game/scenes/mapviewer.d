@@ -8,8 +8,15 @@ final class MapViewerScene : Scene
 
     Map map;
 
-    override void onUpdate()
+    this()
     {
+        super();
+        
+        const CAMERA_SPEED = 200.0f;
+        super.input.onDown(SDL_SCANCODE_D, () => super.camera.move(vec2f(-CAMERA_SPEED * gametimeSecs(), 0)));
+        super.input.onDown(SDL_SCANCODE_A, () => super.camera.move(vec2f(CAMERA_SPEED * gametimeSecs(), 0)));
+        super.input.onDown(SDL_SCANCODE_W, () => super.camera.move(vec2f(0, CAMERA_SPEED * gametimeSecs())));
+        super.input.onDown(SDL_SCANCODE_S, () => super.camera.move(vec2f(0, -CAMERA_SPEED * gametimeSecs())));
     }
 
     override DrawCommand[] drawCommands()

@@ -47,6 +47,7 @@ public:
 abstract class Scene : Service
 {
     protected Camera camera;
+    protected InputHandler input;
 
     this()
     {
@@ -61,8 +62,15 @@ abstract class Scene : Service
         DrawCommand[] uiDrawCommands() { return null; }
     }
 
+    void handleMessageBase(scope MessageBase message)
+    {
+        if(message.type == MessageType.keyButton)
+            this.input.handleMessage(message.as!KeyButtonMessage);
+    }
+
     final override void onFrame()
     {
+        this.input.onUpdate();
         this.onUpdate();
 
         auto commands = this.drawCommands;
@@ -71,5 +79,10 @@ abstract class Scene : Service
 
         messageBusSubmit!SubmitDrawCommandsMessage(commands);
         messageBusSubmit!SubmitDrawCommandsMessage(this.uiDrawCommands);
+    }
+
+    override void onStop()
+    {
+        this.input.clearEventData();
     }
 }
