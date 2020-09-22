@@ -65,7 +65,7 @@ struct DescriptorPool
 
         ptr.recreateFunc = (p) => create(p);
 
-        VkDescriptorPoolSize[2] sizes;
+        VkDescriptorPoolSize[1] sizes;
         with(sizes[0])
         {
             type            = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
