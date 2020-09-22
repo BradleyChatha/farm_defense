@@ -58,5 +58,21 @@ final class MapViewerScene : Scene
                 this.camera.lookAt(vec2f(x, y));
             }
         }
+
+        if(range.front == "constrain_camera")
+        {
+            import std.conv : to;
+            range.popFront();
+            if(!range.empty)
+            {
+                const x = range.front.to!float;
+                range.popFront();
+                if(range.empty)
+                    return;
+
+                const y = range.front.to!float;
+                this.camera.constrainBox = rectanglef(0, 0, x, y);
+            }
+        }
     }
 }
