@@ -7,6 +7,7 @@ final class MapViewerScene : Scene
     mixin IMessageHandlerBoilerplate;
 
     Map map;
+    bool showDebugLayer;
 
     this()
     {
@@ -17,11 +18,13 @@ final class MapViewerScene : Scene
         super.input.onDown(SDL_SCANCODE_A, () => super.camera.move(vec2f(CAMERA_SPEED * gametimeSecs(), 0)));
         super.input.onDown(SDL_SCANCODE_W, () => super.camera.move(vec2f(0, CAMERA_SPEED * gametimeSecs())));
         super.input.onDown(SDL_SCANCODE_S, () => super.camera.move(vec2f(0, -CAMERA_SPEED * gametimeSecs())));
+        super.input.onTapped(SDL_SCANCODE_P, () { this.showDebugLayer = !this.showDebugLayer; });
     }
 
     override DrawCommand[] drawCommands()
     {
-        return (this.map is null) ? null : this.map.drawCommands;
+        return (this.map is null) ? null : this.map.drawCommands
+             ~ ((this.showDebugLayer) ? this.map.debugDrawCommands : null);
     }
 
     void loadMap(string name)

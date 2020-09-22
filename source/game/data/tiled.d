@@ -1,6 +1,7 @@
 module game.data.tiled;
 
 import std.experimental.logger;
+import std.conv : to;
 import asdf;
 import game.common, game.core, game.graphics;
 
@@ -11,6 +12,18 @@ struct TiledProperty
     string name;
     string type;
     string value;
+
+    static TiledProperty deserialize(Asdf data)
+    {
+        enforce(data.kind == Asdf.Kind.null_ || data.kind == Asdf.Kind.object, "%s".format(data.kind));
+        
+        TiledProperty prop;
+        prop.name  = data["name"].get!string(null);
+        prop.type  = data["type"].get!string(null);
+        prop.value = data["value"].get!string(null);
+
+        return prop;
+    }
 }
 
 struct TiledTile
@@ -344,6 +357,18 @@ final class Tileset
         return this._tiles[id - this._gid];
     }
 }
+
+struct PathNode
+{
+    PathNode* next;
+    vec2f position;
+}
+
+struct Spawner
+{
+    vec2f position;
+    PathNode* firstPathNode;
+}
  
 final class Map : IDisposable
 {
@@ -361,11 +386,13 @@ final class Map : IDisposable
     {
         VertexBuffer  _verts;
         DrawCommand[] _drawCommands;
+        DrawCommand[] _debugDrawCommands;
         Tileset[]     _tilesets;
         Layer[]       _layers;
         vec2u         _gridSize;
         vec2u         _gridTileSize;
         TileInfo[]    _grid;
+        Spawner[]     _spawners;
     }
 
     this(string file)
@@ -385,7 +412,9 @@ final class Map : IDisposable
         foreach(layer; map.layers)
             this._layers ~= new Layer(layer);
 
+        this.readSpawnInfo();
         this.createDrawCommands();
+        this.createDebugDrawCommands();
     }
 
     void onDispose()
@@ -397,6 +426,12 @@ final class Map : IDisposable
     DrawCommand[] drawCommands()
     {
         return this._drawCommands;
+    }
+
+    @property
+    DrawCommand[] debugDrawCommands()
+    {
+        return this._debugDrawCommands;
     }
 
     vec2u worldToGridCoord(vec2f world)
@@ -411,6 +446,67 @@ final class Map : IDisposable
     TileInfo cellAt(vec2u gridCoord)
     {
         return this._grid[gridCoord.toIndex(this._gridSize.x)];
+    }
+
+    private void readSpawnInfo()
+    {
+        import std.algorithm: filter;
+
+        struct PathNodeInfo
+        {
+            PathNode* node;
+            int nextNodeId;
+        }
+
+        PathNodeInfo[int] pathNodes;
+
+        // Not overly great Big O wise, but it doesn't really matter for the small data size we're working with.
+        void foreachObjectOfType(string type, void delegate(TiledObject object) func)
+        {
+            foreach(layer; this._layers.filter!(l => l.type == Layer.Type.objects))
+            {
+                foreach(obj; layer.objects.filter!(o => o.type == type))
+                    func(obj);
+            }
+        }
+
+        TiledProperty findProperty(TiledProperty[] prop, string name, string enforceType)
+        {
+            auto range = prop.filter!(p => p.name == name);
+            if(range.empty)
+                return TiledProperty.init;
+
+            enforce(range.front.type == enforceType || enforceType is null);
+            return range.front;
+        }
+
+        foreachObjectOfType("PATH_NODE", (obj)
+        {
+            PathNodeInfo info;
+            info.node = new PathNode(null, vec2f(obj.x, obj.y));
+
+            auto nextNodeProp = findProperty(obj.properties, "next_node", "object");
+            info.nextNodeId = (nextNodeProp == TiledProperty.init) ? -1 : nextNodeProp.value.to!int;
+
+            pathNodes[obj.id] = info;
+        });
+
+        // After the path nodes have been created, match them together.
+        // NOTE: We don't do cycle checks right now cus I'm lazy.
+        foreach(info; pathNodes)
+        {
+            if(info.nextNodeId > 0)
+                info.node.next = pathNodes[info.nextNodeId].node;
+        }
+
+        foreachObjectOfType("SPAWNER", (obj)
+        {
+            Spawner spawner;
+            spawner.position      = vec2f(obj.x, obj.y);
+            spawner.firstPathNode = pathNodes[findProperty(obj.properties, "first_path_node", "object").value.to!int].node;
+
+            this._spawners ~= spawner;
+        });
     }
 
     private void createDrawCommands()
@@ -494,5 +590,55 @@ final class Map : IDisposable
                 this._verts.upload(0, this._verts.length);
             this._verts.unlock();
         }
+    }
+
+    private void createDebugDrawCommands()
+    {
+        const vertStart = this._verts.length;
+
+        void addQuad(vec2f position, Color colour)
+        {
+            const size = this._gridTileSize;
+            this._verts.resize(this._verts.length + 6);
+            this._verts.lock();
+                this._verts.verts[this._verts.length-6..$].setQuadVerts(
+                [
+                    TexturedVertex(vec3f(position,                    0), vec2f(0), colour),
+                    TexturedVertex(vec3f(position + vec2f(size.x, 0), 0), vec2f(0), colour),
+                    TexturedVertex(vec3f(position + size,             0), vec2f(0), colour),
+                    TexturedVertex(vec3f(position + vec2f(0, size.y), 0), vec2f(0), colour),
+                ]);
+            this._verts.unlock();
+        }
+
+        void addPathNode(PathNode* pathNode)
+        {
+            addQuad(pathNode.position, Color(255, 255, 0, 64));
+            if(pathNode.next !is null)
+                addPathNode(pathNode.next);
+        }
+
+        void addSpawner(Spawner spawner)
+        {
+            addQuad(spawner.position, Color(0, 255, 0, 64));
+            if(spawner.firstPathNode !is null)
+                addPathNode(spawner.firstPathNode);
+        }
+
+        foreach(spawner; this._spawners)
+            addSpawner(spawner);
+
+        this._verts.lock();
+            this._verts.vertsToUpload[vertStart..$] = this._verts.verts[vertStart..$];
+            this._verts.upload(vertStart, this._verts.length - vertStart);
+        this._verts.unlock();
+        this._debugDrawCommands ~= DrawCommand(
+            &this._verts,
+            vertStart,
+            this._verts.length - vertStart,
+            g_blankTexture,
+            true,
+            SORT_ORDER_MAP
+        );
     }
 }
