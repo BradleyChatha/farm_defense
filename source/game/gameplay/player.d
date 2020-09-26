@@ -236,18 +236,20 @@ final class PlayerCollision : PlayerComponent
 
     void noWalkIntoWalls(vec2f currPos, PlayerDirection direction, Transform _)
     {
+        // Since we're modifying the position in this function, we need a lock to ensure we don't go into an infinite loop.
         static bool inCollisionCode = false;
         if(inCollisionCode)
             return;
-
         inCollisionCode = true;
         scope(exit) inCollisionCode = false;
 
+        // Edge case.
         if(direction == PlayerDirection.none)
             return;
 
         auto info = this.map.mapInfo;
 
+        // Get all the information with need, index starts at the top-left corner going clockwise.
         vec2f[4] cornerPositions = 
         [
             currPos,
@@ -272,6 +274,7 @@ final class PlayerCollision : PlayerComponent
             info.cellAt(cornerCellPositions[3]),
         ];
 
+        // Helper funcs.
         ref float getAxisRef(ref vec2f vect, bool xFalseYTrue)
         {
             return (xFalseYTrue) ? vect.y : vect.x;
@@ -282,12 +285,14 @@ final class PlayerCollision : PlayerComponent
             return (xFalseYTrue) ? vect.y : vect.x;
         }
 
+        // Collision function.
         bool wasCollision = false;
         void collide(PlayerDirection ifDirection, size_t corner1, size_t corner2, vec2u cellOffset, bool xFalseYTrue)
         {
             if(!(direction & ifDirection))
                 return;
 
+            // If either corner is inside a solid tile, align to the last non-solid tile.
             if(cells[corner1].isSolid)
             {
                 getAxisRef(currPos, xFalseYTrue) = getAxis(info.gridToWorldCoord(cornerCellPositions[corner1] + cellOffset), xFalseYTrue);
@@ -299,6 +304,11 @@ final class PlayerCollision : PlayerComponent
                 wasCollision = true;
             }
 
+            // EDGE CASE: Because of 0-based maths, we need to keep the right-hand and bottom-hand side of the player 1 pixel away
+            //            otherwise these corners will register as being inside a solid block, even when they technically aren't.
+            //
+            // TODO     : Seperate the player's collision box from their visible box, because then I can allow the visual box to be where it should be,
+            //            while still keeping the collision box offset by 1 pixel.
             if(wasCollision && ((direction & PlayerDirection.right) || (direction & PlayerDirection.down)))
                 getAxisRef(currPos, xFalseYTrue) -= getAxis(vec2f(1, 1), xFalseYTrue);
         }
