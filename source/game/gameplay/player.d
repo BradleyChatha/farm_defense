@@ -1,6 +1,6 @@
 module game.gameplay.player;
 
-import game.common, game.core, game.graphics, game.gameplay, game.debug_;
+import game.common, game.core, game.graphics, game.gameplay, game.debug_, game.data;
 
 /++
  + Components can have hard requirements on eachother, but meh.
@@ -46,28 +46,31 @@ final class Player : IMessageHandler, IDisposable
 
     private
     {
-        PlayerInput    _input;
-        PlayerMovement _movement;
-        PlayerGraphics _graphics;
-        MapInstance    _map;
+        PlayerInput     _input;
+        PlayerMovement  _movement;
+        PlayerGraphics  _graphics;
+        PlayerCollision _collision;
 
         PlayerComponent[] _components;
     }
     
-    this(MapInstance map, ref InputHandler input, Camera camera)
+    this(MapInstance map, ref InputHandler input, Camera camera, vec2f spawnPoint)
     {
-        this._map      = map;
-        this._movement = new PlayerMovement(this, camera);
-        this._input    = new PlayerInput(this, input);
-        this._graphics = new PlayerGraphics(this);
+        this._movement  = new PlayerMovement(this, camera);
+        this._input     = new PlayerInput(this, input);
+        this._collision = new PlayerCollision(this, map);
+        this._graphics  = new PlayerGraphics(this);
 
         // Order is important.
         this._components = 
         [
             this._input,
             this._movement,
+            this._collision,
             this._graphics
         ];
+
+        this._movement.position = spawnPoint;
     }
 
     void onUpdate()
@@ -214,4 +217,109 @@ final class PlayerGraphics : PlayerComponent, IDisposable
     }
 
     override void onUpdate(){}
+}
+
+final class PlayerCollision : PlayerComponent
+{
+    mixin IMessageHandlerBoilerplate;
+
+    MapInstance map;
+
+    this(Player player, MapInstance map)
+    {
+        super(player);
+        this.map = map;
+        player._movement.onPlayerMove ~= &this.noWalkIntoWalls;
+    }
+
+    override void onUpdate(){}
+
+    void noWalkIntoWalls(vec2f currPos, PlayerDirection direction, Transform _)
+    {
+        import std;
+
+        static bool inCollisionCode = false;
+        if(inCollisionCode)
+            return;
+
+        inCollisionCode = true;
+        scope(exit) inCollisionCode = false;
+
+        if(direction == PlayerDirection.none)
+            return;
+
+        auto info = this.map.mapInfo;
+
+        vec2f[4] cornerPositions = 
+        [
+            currPos,
+            currPos + vec2f(super.player.size.x, 0),
+            currPos + super.player.size,
+            currPos + vec2f(0, super.player.size.y)
+        ];
+
+        vec2i[4] cornerCellPositions = 
+        [
+            info.worldToGridCoord(cornerPositions[0]),
+            info.worldToGridCoord(cornerPositions[1]),
+            info.worldToGridCoord(cornerPositions[2]),
+            info.worldToGridCoord(cornerPositions[3])
+        ];
+
+        Map.TileInfo[4] cells = 
+        [
+            info.cellAt(cornerCellPositions[0]),
+            info.cellAt(cornerCellPositions[1]),
+            info.cellAt(cornerCellPositions[2]),
+            info.cellAt(cornerCellPositions[3]),
+        ];
+
+        ref float getAxisRef(ref vec2f vect, bool xFalseYTrue)
+        {
+            return (xFalseYTrue) ? vect.y : vect.x;
+        }
+
+        float getAxis(vec2f vect, bool xFalseYTrue)
+        {
+            return (xFalseYTrue) ? vect.y : vect.x;
+        }
+
+        bool wasCollision = false;
+        void collide(PlayerDirection ifDirection, size_t corner1, size_t corner2, vec2u cellOffset, bool xFalseYTrue)
+        {
+            if(!(direction & ifDirection))
+                return;
+
+            if(cells[corner1].isSolid)
+            {
+                getAxisRef(currPos, xFalseYTrue) = getAxis(info.gridToWorldCoord(cornerCellPositions[corner1] + cellOffset), xFalseYTrue);
+                wasCollision = true;
+            }
+            else if(cells[corner2].isSolid)
+            {
+                getAxisRef(currPos, xFalseYTrue) = getAxis(info.gridToWorldCoord(cornerCellPositions[corner2] + cellOffset), xFalseYTrue);
+                wasCollision = true;
+            }
+
+            if(wasCollision && ((direction & PlayerDirection.right) || (direction & PlayerDirection.down)))
+                getAxisRef(currPos, xFalseYTrue) -= getAxis(vec2f(1, 1), xFalseYTrue);
+        }
+
+        collide(PlayerDirection.left, 0, 3, vec2u(1, 0), false);
+        collide(PlayerDirection.right, 1, 2, vec2u(-1, 0), false);
+        collide(PlayerDirection.down, 2, 3, vec2u(0, -1), true);
+        collide(PlayerDirection.up, 0, 1, vec2u(0, 1), true);
+
+        if(currPos.x < 0)
+            currPos.x = 0;
+        if(currPos.y < 0)
+            currPos.y = 0;
+        if(currPos.x + super.player.size.x > info.sizeInPixels.x)
+            currPos.x = info.sizeInPixels.x - super.player.size.x;
+        if(currPos.y + super.player.size.y > info.sizeInPixels.y)
+            currPos.y = info.sizeInPixels.y - super.player.size.y;
+
+        if(wasCollision)
+            super.player._movement.position = currPos;
+    }
 }

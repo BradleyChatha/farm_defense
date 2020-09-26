@@ -15,7 +15,7 @@ final class MapInstance : IMessageHandler
     {
         this._map           = map;
         camera.constrainBox = rectanglef(0, 0, this._map.sizeInPixels.x, this._map.sizeInPixels.y);
-        this._player        = new Player(this, input, camera);
+        this._player        = new Player(this, input, camera, vec2f(Window.size) / vec2f(2));
 
         this._drawCommands.length = this._map.drawCommands.length + 1; // + 1 for player's commands.
     }
@@ -35,5 +35,11 @@ final class MapInstance : IMessageHandler
         this._drawCommands[0]    = this._player.drawCommand;
         this._drawCommands[1..$] = this._map.drawCommands[0..$];
         return this._drawCommands;
+    }
+
+    @property
+    Map mapInfo()
+    {
+        return this._map;
     }
 }

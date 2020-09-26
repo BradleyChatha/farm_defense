@@ -434,24 +434,38 @@ final class Map : IDisposable
         return this._debugDrawCommands;
     }
 
-    vec2u worldToGridCoord(vec2f world)
+    vec2i worldToGridCoord(vec2f world)
     {
-        if(world.x < 0)
-            world.x = 0;
-        if(world.y < 0)
-            world.y = 0;
-        return vec2u(cast(uint)world.x, cast(uint)world.y) / this._gridSize;
+        return vec2i(cast(int)world.x, cast(int)world.y) / this._gridTileSize;
     }
 
-    TileInfo cellAt(vec2u gridCoord)
+    vec2f gridToWorldCoord(vec2i grid)
     {
-        return this._grid[gridCoord.toIndex(this._gridSize.x)];
+        return vec2f(grid) * vec2f(this._gridTileSize);
+    }
+
+    TileInfo cellAt(vec2i gridCoord)
+    {
+        const index = gridCoord.toIndex(this._gridSize.x);
+        return (gridCoord.x < 0 || gridCoord.y < 0 || gridCoord.x >= this._gridSize.x || gridCoord.y >= this._gridSize.y) ? TileInfo(true) : this._grid[index];
     }
 
     @property
     vec2f sizeInPixels()
     {
         return vec2f(this._gridSize) * this._gridTileSize;
+    }
+
+    @property
+    vec2u sizeInCells()
+    {
+        return this._gridSize;
+    }
+
+    @property
+    vec2u gridTileSize()
+    {
+        return this._gridTileSize;
     }
 
     private void readSpawnInfo()
