@@ -37,10 +37,7 @@ interface ITransformable(AddHooks ShouldAddHooks)
 
     final void move(vec2f amount)
     {
-        this.transform.translation += amount;
-        this.transform.markDirty();
-
-        static if(ShouldAddHooks) this.onTransformChanged();
+        this.position = this.position + amount;
     }
     final void move(float x, float y){ this.move(vec2f(x, y)); }
 

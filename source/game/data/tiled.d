@@ -448,6 +448,12 @@ final class Map : IDisposable
         return this._grid[gridCoord.toIndex(this._gridSize.x)];
     }
 
+    @property
+    vec2f sizeInPixels()
+    {
+        return vec2f(this._gridSize) * this._gridTileSize;
+    }
+
     private void readSpawnInfo()
     {
         import std.algorithm: filter;

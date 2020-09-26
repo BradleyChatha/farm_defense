@@ -18,9 +18,10 @@ final class Camera
 
     void lookAt(vec2f point)
     {
-        const topLeft      = point - (this.size / vec2f(2));
+        const topLeft      = (this.size / vec2f(2)) - point;
         this._view.c[0][3] = topLeft.x;
         this._view.c[1][3] = topLeft.y;
+
         this.constrainView();
     }
 

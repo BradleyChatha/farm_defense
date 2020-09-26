@@ -1,3 +1,3 @@
 module game.scenes;
 
-public import game.scenes.mapviewer;
+public import game.scenes.mapviewer, game.scenes.level;

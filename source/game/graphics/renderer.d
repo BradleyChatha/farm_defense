@@ -105,6 +105,7 @@ Texture g_blankTexture;
 
 enum SORT_ORDER_MAP      = -1;
 enum SORT_ORDER_DEFAULT  = 0;
+enum SORT_ORDER_PLAYER   = 1;
 enum SORT_ORDER_UI       = 10;
 enum SORT_ORDER_DEBUG_UI = 1000;
 

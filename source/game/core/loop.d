@@ -49,8 +49,9 @@ void loopInit()
 
     // Register scenes.
     import game.scenes;
+    messageBusSubmit!SetSceneInstanceMessage(SetSceneInstance(new LevelScene(), ServiceType.sceneLevel));
     messageBusSubmit!SetSceneInstanceMessage(SetSceneInstance(new MapViewerScene(), ServiceType.sceneMapViewer));
-    messageBusSubmit!SetActiveSceneMessage(ServiceType.sceneMapViewer);
+    messageBusSubmit!SetActiveSceneMessage(ServiceType.sceneLevel);
 }
 
 void loopRun()

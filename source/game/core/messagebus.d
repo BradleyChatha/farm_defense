@@ -121,8 +121,8 @@ mixin template IMessageHandlerBoilerplate()
     {
         import std.conv : to;
 
-        static if(__traits(compiles, super.handleMessageBase(message)))
-            super.handleMessageBase(message);
+        static if(__traits(compiles, this.handleMessageBase(message)))
+            this.handleMessageBase(message);
 
         SwitchLabel: switch(message.type)
         {

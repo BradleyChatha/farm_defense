@@ -16,7 +16,8 @@ enum ServiceType
     ERROR,
     debugUI,
     scenes,
-    sceneMapViewer
+    sceneMapViewer,
+    sceneLevel
 }
 
 // START data types.
