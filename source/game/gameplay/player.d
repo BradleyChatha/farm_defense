@@ -236,8 +236,6 @@ final class PlayerCollision : PlayerComponent
 
     void noWalkIntoWalls(vec2f currPos, PlayerDirection direction, Transform _)
     {
-        import std;
-
         static bool inCollisionCode = false;
         if(inCollisionCode)
             return;
@@ -311,13 +309,15 @@ final class PlayerCollision : PlayerComponent
         collide(PlayerDirection.up, 0, 1, vec2u(0, 1), true);
 
         if(currPos.x < 0)
+        {
             currPos.x = 0;
+            wasCollision = true;
+        }
         if(currPos.y < 0)
+        {
             currPos.y = 0;
-        if(currPos.x + super.player.size.x > info.sizeInPixels.x)
-            currPos.x = info.sizeInPixels.x - super.player.size.x;
-        if(currPos.y + super.player.size.y > info.sizeInPixels.y)
-            currPos.y = info.sizeInPixels.y - super.player.size.y;
+            wasCollision = true;
+        }
 
         if(wasCollision)
             super.player._movement.position = currPos;
