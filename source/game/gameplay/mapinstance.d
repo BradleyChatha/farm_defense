@@ -19,7 +19,7 @@ final class MapInstance : IMessageHandler
         camera.constrainBox = rectanglef(0, 0, this._map.sizeInPixels.x, this._map.sizeInPixels.y);
         this._player        = new Player(this, input, camera, vec2f(Window.size) / vec2f(2));
         this._enemyManager  = new EnemyManager(map);
-        this._dayNightCycle = new MapDayNightCycle(map);
+        this._dayNightCycle = new MapDayNightCycle(map, input);
 
         this._drawCommands.length = 
             this._map.drawCommands.length 
@@ -56,21 +56,98 @@ final class MapInstance : IMessageHandler
     }
 }
 
+// here be dragons
+
+struct MapTime
+{
+    uint day;
+    uint hour;
+    uint minutes;
+
+    void addMinutes(uint amount)
+    {
+        this.minutes += amount;
+        this.hour    += this.minutes / 60;
+        this.minutes %= 60;
+
+        while(hour >= 24)
+        {
+            hour -= 24;
+            day++;
+        }
+    }
+}
+
 final class MapDayNightCycle : IMessageHandler
 {
     mixin IMessageHandlerBoilerplate;
 
+    // Day is split up into a third, each 8 hours long.
+    // Q1 = 00:00
+    // Q2 = 08:00
+    // Q3 = 16:00
+    //
+    // Q1 -> Q2 dark/dusk to dawn
+    // Q2 -> Q3 dawn to day
+    // Q3 -> Q1 day to dusk/dark
+    //
+    // Day should be around 08:00 to 20:00
+    // Enemies should spawn between 00:00 to 08:00?
+    enum T1_SUN_COLOUR = Color(0, 0, 0);
+    enum T2_SUN_COLOUR = Color(128, 128, 128);
+    enum T3_SUN_COLOUR = Color(255, 255, 255);
+
+    enum IRL_MS_TO_WORLD_MINUTE = 1; // How many milliseconds in real life translates to a minute in the game world.
+
     private
     {
-        Color _sunColour;
+        Color   _sunColour;
+        Color   _prevSunColour = T2_SUN_COLOUR;
+        Color   _nextSunColour = T3_SUN_COLOUR;
+        Timer   _updateWorldTime;
+        MapTime _time;
     }
 
-    this(Map mapInfo)
+    this(Map mapInfo, ref InputHandler input)
     {
+        this._updateWorldTime = Timer(IRL_MS_TO_WORLD_MINUTE, &this.onTimeTick);
     }
 
     void onUpdate()
     {
+        this._updateWorldTime.onUpdate();
+    }
+
+    void onTimeTick()
+    {
+        this._time.addMinutes(1);
+
+        this.updateSun();
+    }
+
+    void updateSun()
+    {
+        if(this._time.hour == 0 && this._time.minutes == 0)
+        {
+            this._prevSunColour = T1_SUN_COLOUR;
+            this._nextSunColour = T2_SUN_COLOUR;
+        }
+        else if(this._time.hour == 8 && this._time.minutes == 0)
+        {
+            this._prevSunColour = T2_SUN_COLOUR;
+            this._nextSunColour = T3_SUN_COLOUR;
+        }
+        else if(this._time.hour == 16 && this._time.minutes == 0)
+        {
+            this._prevSunColour = T3_SUN_COLOUR;
+            this._nextSunColour = T1_SUN_COLOUR;
+        }
+
+        const eightHoursInMins   = cast(float)(8 * 60);
+        const elapsedHoursInMins = cast(float)(((this._time.hour % 8) * 60) + this._time.minutes);
+        const thirdPercentage    = elapsedHoursInMins / eightHoursInMins;
+
+        this._sunColour = this._prevSunColour.mix(this._nextSunColour, thirdPercentage);
     }
 
     @property

@@ -32,6 +32,33 @@ bool isNaN(box2f box)
     return box.min.isNaN && box.max.isNaN;
 }
 
+Color mix(Color from, Color to, float amount)
+{
+    Vector!(ubyte, 4) fromVect;
+    Vector!(ubyte, 4) toVect;
+    fromVect.v = from.components;
+    toVect.v = to.components;
+
+    const resultVect = fromVect.mix(toVect, amount);
+    Color result;
+    result.components = resultVect.v;
+
+    return result;
+}
+
+Vect mix(Vect)(Vect from, Vect to, float amount)
+{
+    Vect result;
+    foreach(i; 0..from.v.length)
+    {
+        const x = cast(float)from.v[i];
+        const y = cast(float)to.v[i];
+        result.v[i] = cast(typeof(from.v[0]))(x * (1 - amount) + y * amount);
+    }
+
+    return result;
+}
+
 /++ 
  + Handles the following edge cases:
  +      amount = 0:                               returns 0

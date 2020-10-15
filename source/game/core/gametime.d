@@ -11,6 +11,33 @@ uint g_fps;
 
 public:
 
+// START Data types
+
+alias TimerFunc = void delegate();
+struct Timer
+{
+    uint timeBetweenTicks;
+    uint timeElapsed;
+    TimerFunc func;
+
+    this(uint timeBetweenTicks, TimerFunc func)
+    {
+        assert(func !is null);
+        this.func = func;
+        this.timeBetweenTicks = timeBetweenTicks;
+    }
+
+    void onUpdate()
+    {
+        this.timeElapsed += gametimeMillisecs();
+        if(this.timeElapsed >= this.timeBetweenTicks)
+        {
+            this.timeElapsed -= this.timeBetweenTicks;
+            this.func();
+        }
+    }
+}
+
 // START functions
 
 @safe @nogc

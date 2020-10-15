@@ -35,6 +35,12 @@ final class LevelScene : Scene
             this.mapInstance.handleMessage(message);
     }
 
+    override void onUpdate()
+    {
+        if(this.mapInstance !is null)
+            this.mapInstance.onUpdate();
+    }
+
     @Subscribe
     void onDebugCommandMessage(DebugCommandMessage message)
     {
