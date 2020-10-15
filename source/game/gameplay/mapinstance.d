@@ -111,6 +111,7 @@ final class MapDayNightCycle : IMessageHandler
     this(Map mapInfo, ref InputHandler input)
     {
         this._updateWorldTime = Timer(IRL_MS_TO_WORLD_MINUTE, &this.onTimeTick);
+        this._time.addMinutes(8 * 60);
     }
 
     void onUpdate()
