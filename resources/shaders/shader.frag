@@ -1,7 +1,12 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
 
-layout(binding = 0) uniform sampler2D texSampler;
+layout(set = 0, binding = 0) uniform sampler2D texSampler;
+
+layout(set = 1, binding = 0) uniform _LightingUniform 
+{
+    vec4 sunColour;
+} LightingUniform;
 
 layout(location = 0) in vec4 fragColor;
 layout(location = 1) in vec2 uv;
@@ -12,11 +17,11 @@ void main() {
     // Normalise UV coords
     vec2 finalUv = uv / textureSize(texSampler, 0);
 
-    // Apply colour calcs
+    // Normalise the fragColour; apply the texture's colour; apply lighting.
     vec4 finalColour = fragColor;
-         //finalColour = finalColour + (vec4(PushConstant.ticks % 255) / vec4(1, 2, 4, 1));
          finalColour = finalColour / vec4(255);
          finalColour = finalColour * texture(texSampler, finalUv);
+         finalColour = finalColour * LightingUniform.sunColour;
 
     outColor = finalColour;
 }

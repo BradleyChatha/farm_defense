@@ -208,14 +208,19 @@ struct CommandBuffer
             vkCmdBindVertexBuffers(this, 0, 1, &buffer.handle, &size);
         }
 
-        void bindDescriptorSet(PipelineBase* pipeline, VkDescriptorSet set)
+        void bindDescriptorSets(PipelineBase* pipeline, VkDescriptorSet textureSet, VkDescriptorSet lightingSet)
         {
+            VkDescriptorSet[2] sets = 
+            [
+                textureSet,
+                lightingSet
+            ];
             vkCmdBindDescriptorSets(
                 this,
                 VK_PIPELINE_BIND_POINT_GRAPHICS,
                 pipeline.layoutHandle,
                 0,
-                1, &set,
+                2, sets.ptr,
                 0, null
             );
         }

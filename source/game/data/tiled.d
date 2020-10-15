@@ -468,6 +468,12 @@ final class Map : IDisposable
         return this._gridTileSize;
     }
 
+    @property
+    Spawner[] spawners()
+    {
+        return this._spawners;
+    }
+
     private void readSpawnInfo()
     {
         import std.algorithm: filter;

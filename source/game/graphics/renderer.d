@@ -20,6 +20,9 @@ uint                                g_imageIndex;
 // START Rendering related variables.
 PushConstants g_pushConstants;
 DrawCommand[] g_drawCommands;
+GpuCpuBuffer* g_uniformStagingBuffer;
+
+enum MAX_UNIQUE_SUNS_PER_FRAME = 10;
 
 // START Vulkan Event Callbacks
 void onFrameChange(uint imageIndex)
@@ -103,11 +106,13 @@ Texture g_blankTexture;
 
 // START predefined sort orders.
 
-enum SORT_ORDER_MAP      = -1;
-enum SORT_ORDER_DEFAULT  = 0;
-enum SORT_ORDER_PLAYER   = 1;
-enum SORT_ORDER_UI       = 10;
-enum SORT_ORDER_DEBUG_UI = 1000;
+enum SORT_ORDER_MAP             = -1;
+enum SORT_ORDER_DEFAULT         = 0;
+enum SORT_ORDER_ENEMY           = 10;
+enum SORT_ORDER_PLAYER          = 20;
+enum SORT_ORDER_LIGHTING_GLOBAL = 30;
+enum SORT_ORDER_UI              = 40;
+enum SORT_ORDER_DEBUG_UI        = 1000;
 
 // START Data Types
 
@@ -120,6 +125,8 @@ struct DrawCommand
     bool          enableBlending;
     int           sortOrder = SORT_ORDER_DEFAULT; // User-specified sort order, e.g. 0 = Background, 1 = player, etc.
     mat4f         camera = mat4f.identity;
+    Color         sun = Color.white;
+
     uint          drawOrder;    // Submission order. So if this was the 2nd command this frame, then this'd be 2. Used to preserve a bit of command ordering.
     OneTimeSubmit vertexUpload; // Submit Sync info about uploading the buffer's verts.
 }
@@ -132,6 +139,7 @@ void renderInit()
     vkListenOnSwapchainRecreateJAST((v) => onSwapchainRecreate(v));
 
     g_pushConstants.projection = mat4f.orthographic(0, Window.size.x, 0, Window.size.y, 1, 0);
+    g_uniformStagingBuffer = g_gpuCpuAllocator.allocate(LightingUniform.sizeof * MAX_UNIQUE_SUNS_PER_FRAME, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
 
     messageBusSubscribe(new RendererMessageHandler());
 
@@ -200,6 +208,9 @@ void renderFrameEnd()
     auto buffer         = g_renderGraphicsCommandBuffers[g_imageIndex];
     size_t commandIndex = 0;
 
+    DescriptorSet[uint] lightingMap;
+    size_t              uniqueSunCount;
+
     buffer.pushDebugRegion("Begin Render Pass");
     buffer.beginRenderPass(g_swapchain.framebuffers[g_imageIndex]);
 
@@ -220,10 +231,21 @@ void renderFrameEnd()
         while(!command.vertexUpload.finalise())
             g_device.transfer.processFences();
 
+        // We'll create one descriptor set per unique sun colour, and reuse that instead of making a set each time.
         auto pipeline = (command.enableBlending) ? g_pipelineQuadTexturedTransparent.base : g_pipelineQuadTexturedOpaque.base;
+        auto lighting = lightingMap.require(command.sun.asUint, ()
+        {
+            g_uniformStagingBuffer.as!LightingUniform[uniqueSunCount] = LightingUniform(command.sun.toSrgb());
+
+            auto set = g_descriptorPools.pool.allocate(pipeline.lightingDescriptorLayoutHandle);
+            set.updateLighting(g_uniformStagingBuffer, LightingUniform.sizeof * uniqueSunCount++);
+
+            return set;
+        }());
+
         buffer.pushDebugRegion(
-            "Command %s Texture %s Blending %s Sort %s Draw %s"
-            .format(commandIndex, command.texture, command.enableBlending, command.sortOrder, command.drawOrder),
+            "Command %s Texture %s Blending %s Sort %s Draw %s Sun %s"
+            .format(commandIndex, command.texture.debugName, command.enableBlending, command.sortOrder, command.drawOrder, command.sun),
             Color(38, 72, 102)
         );
             buffer.bindPipeline(pipeline);
@@ -231,7 +253,7 @@ void renderFrameEnd()
             g_pushConstants.view = command.camera;
             buffer.pushConstants(g_pipelineQuadTexturedTransparent.base, g_pushConstants);
             buffer.bindVertexBuffer(command.buffer.gpuHandle);
-            buffer.bindDescriptorSet(pipeline, command.texture.uniform);
+            buffer.bindDescriptorSets(pipeline, command.texture.uniform, lighting);
             buffer.drawVerts(cast(uint)command.count, cast(uint)command.offset);
         buffer.popDebugRegion();
     }

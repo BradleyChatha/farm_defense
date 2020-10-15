@@ -27,7 +27,7 @@ struct DescriptorPoolManager
         foreach(i; 0..g_swapchain.images.length)
             DescriptorPool.create(ptr._pools[i]);
 
-        DescriptorPool.create(ptr._persistentPool);
+        DescriptorPool.create(ptr._persistentPool, false);
     }
 
     void onFrameChange(uint swapchainImageIndex)
@@ -56,14 +56,17 @@ struct DescriptorPool
 
     mixin VkSwapchainResourceWrapperJAST!VkDescriptorPool;
 
-    static void create(scope ref DescriptorPool* ptr)
+    static void create(scope ref DescriptorPool* ptr, bool allowRecreate = true)
     {
         const areWeRecreating = ptr !is null;
+        if(areWeRecreating && !allowRecreate)
+            return;
+
         if(!areWeRecreating)
             ptr = new DescriptorPool();
         infof("%s the DescriptorPool.", (areWeRecreating) ? "Recreating" : "Creating");
 
-        ptr.recreateFunc = (p) => create(p);
+        ptr.recreateFunc = (p) => create(p, allowRecreate);
 
         VkDescriptorPoolSize[1] sizes;
         with(sizes[0])
@@ -86,7 +89,7 @@ struct DescriptorPool
         vkTrackJAST(ptr);
     }
 
-    DescriptorSet allocate(PipelineBase* pipeline)
+    DescriptorSet allocate(VkDescriptorSetLayout layout)
     {
         VkDescriptorSet handle;
 
@@ -94,7 +97,7 @@ struct DescriptorPool
         {
             descriptorPool:     this,
             descriptorSetCount: 1,
-            pSetLayouts:        &pipeline.descriptorLayoutHandle
+            pSetLayouts:        &layout
         };
 
         CHECK_VK(vkAllocateDescriptorSets(g_device, &allocation, &handle));
@@ -111,6 +114,8 @@ struct DescriptorSet
     {
         this.handle = toWrap;
     }
+
+    // One function for each type of descriptor set.
 
     void updateImage(
         scope GpuImageView* imageView,
@@ -133,6 +138,29 @@ struct DescriptorSet
             descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
             descriptorCount = 1;
             pImageInfo      = &imageInfo;
+        }
+
+        vkUpdateDescriptorSets(g_device, 1, &writeInfo, 0, null);
+    }
+
+    void updateLighting(scope GpuCpuBuffer* buffer, size_t offset = 0)
+    {
+        VkDescriptorBufferInfo info = 
+        {
+            buffer: buffer.handle,
+            offset: offset.to!uint,
+            range:  LightingUniform.sizeof.to!uint
+        };
+
+        VkWriteDescriptorSet writeInfo;
+        with(writeInfo)
+        {
+            dstSet          = this;
+            dstBinding      = 0;
+            dstArrayElement = 0;
+            descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            descriptorCount = 1;
+            pBufferInfo     = &info;
         }
 
         vkUpdateDescriptorSets(g_device, 1, &writeInfo, 0, null);

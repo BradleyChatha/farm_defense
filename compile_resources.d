@@ -70,7 +70,8 @@ struct DefaultCommand
 
                 case "font":
                 case "texture": this.copyFile(tag.values[1].get!string, tag.name, conf); break;
-
+                
+                case "alias": break;
                 default: throw new Exception("Don't know how to handle tag: "~tag.name);
             }
         }

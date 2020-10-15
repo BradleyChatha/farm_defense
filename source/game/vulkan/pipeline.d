@@ -8,7 +8,8 @@ struct PipelineBase
 {
     mixin VkSwapchainResourceWrapperJAST!VkPipeline;
     VkPipelineLayout       layoutHandle;
-    VkDescriptorSetLayout  descriptorLayoutHandle;
+    VkDescriptorSetLayout  textureDescriptorLayoutHandle;
+    VkDescriptorSetLayout  lightingDescriptorLayoutHandle;
 }
 
 struct Pipeline(VertexT, PushConstantsT)
@@ -38,7 +39,7 @@ struct Pipeline(VertexT, PushConstantsT)
         {
             vkDestroyJAST(ptr);
             vkDestroyJAST(wrapperOf!VkPipelineLayout(ptr.layoutHandle));
-            vkDestroyJAST(wrapperOf!VkDescriptorSetLayout(ptr.descriptorLayoutHandle));
+            vkDestroyJAST(wrapperOf!VkDescriptorSetLayout(ptr.textureDescriptorLayoutHandle));
         }
 
         ptr.recreateFunc = (p) => create(p, vertexBinding, vertexAttributes, shader, enableAlphaBlending);
@@ -53,8 +54,7 @@ struct Pipeline(VertexT, PushConstantsT)
         VkPipelineRasterizationStateCreateInfo  rasterMouse;
         VkPipelineInputAssemblyStateCreateInfo  inputAssembly;
         VkPushConstantRange                     pushConstants;
-        VkDescriptorSetLayoutBinding            mandatoryUniformBinding;
-        VkDescriptorSetLayoutBinding            userDefinedUniformBinding;
+        VkDescriptorSetLayoutBinding            lightingBinding;
         VkDescriptorSetLayoutBinding            textureSamplerBinding;
         VkDescriptorSetLayoutCreateInfo         uniformLayout;
         VkPipelineLayoutCreateInfo              layout;
@@ -159,6 +159,7 @@ struct Pipeline(VertexT, PushConstantsT)
             stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
             size       = PushConstantsT.sizeof.to!uint;
         }
+
         with(textureSamplerBinding)
         {
             binding         = 0;
@@ -166,23 +167,36 @@ struct Pipeline(VertexT, PushConstantsT)
             descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
             stageFlags      = VK_SHADER_STAGE_FRAGMENT_BIT;
         }
-
-        auto bindings = [textureSamplerBinding];
         with(uniformLayout)
         {
-            bindingCount = bindings.length.to!uint();
-            pBindings    = bindings.ptr;
+            bindingCount = 1;
+            pBindings    = &textureSamplerBinding;
         }
+        CHECK_VK(vkCreateDescriptorSetLayout(g_device, &uniformLayout, null, &ptr.textureDescriptorLayoutHandle));
+        vkTrackJAST(wrapperOf!VkDescriptorSetLayout(ptr.textureDescriptorLayoutHandle));
 
-        CHECK_VK(vkCreateDescriptorSetLayout(g_device, &uniformLayout, null, &ptr.descriptorLayoutHandle));
-        vkTrackJAST(wrapperOf!VkDescriptorSetLayout(ptr.descriptorLayoutHandle));
+        with(lightingBinding)
+        {
+            binding         = 0;
+            descriptorCount = 1;
+            descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            stageFlags      = VK_SHADER_STAGE_FRAGMENT_BIT;
+        }
+        with(uniformLayout)
+        {
+            bindingCount = 1;
+            pBindings    = &lightingBinding;
+        }
+        CHECK_VK(vkCreateDescriptorSetLayout(g_device, &uniformLayout, null, &ptr.lightingDescriptorLayoutHandle));
+        vkTrackJAST(wrapperOf!VkDescriptorSetLayout(ptr.lightingDescriptorLayoutHandle));
 
+        auto descriptorSetLayouts = [ptr.textureDescriptorLayoutHandle, ptr.lightingDescriptorLayoutHandle];
         with(layout)
         {
             pushConstantRangeCount = 1;
-            setLayoutCount         = 1;
+            setLayoutCount         = descriptorSetLayouts.length.to!uint;
             pPushConstantRanges    = &pushConstants;
-            pSetLayouts            = &ptr.descriptorLayoutHandle;
+            pSetLayouts            = descriptorSetLayouts.ptr;
         }
 
         CHECK_VK(vkCreatePipelineLayout(g_device, &layout, null, &ptr.layoutHandle));

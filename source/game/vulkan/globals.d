@@ -1,7 +1,7 @@
 /// Since our Vulkan wrapper stuff takes on a more C-like API, we need to keep track of globals somewhere, which'll be this module.
 module game.vulkan.globals;
 
-import bindbc.freetype, erupted;
+import bindbc.freetype, erupted, arsd.color;
 import game.vulkan, game.common.maths;
 
 // Most globals will be created during `init.d`, and from that point on won't be modified outside of being passed to Vulkan functions.
@@ -35,6 +35,13 @@ align(4) struct PushConstants
     // Vulkan spec guarentees at least 128 bytes of push constant memory, exactly enough for 2 mat4fs.
     mat4f view;
     mat4f projection;
+}
+
+align(4) struct LightingUniform
+{
+    // NOTE: With vertex types, we can specify that colours are passed as ubytes, but we can't really do that with uniforms.
+    //       So colours have to be passed as in their SRGB form (call .toSrgb on a Color).
+    float[4] sunColour;
 }
 
 struct TexturedVertex

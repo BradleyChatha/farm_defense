@@ -10,3 +10,5 @@ texture "t_player" "./resources/images/player.png"
 font "f_arial" "./resources/fonts/arial.ttf"
 
 map "m_test" "./resources/maps/EXPORT/test.json"
+
+alias "t_enemies" "t_jcli"

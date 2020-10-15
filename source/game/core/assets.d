@@ -43,6 +43,15 @@ void assetLoadMap(Tag tag)
     g_assets[name] = new Map(path);
 }
 
+void assetCreateAlias(Tag tag)
+{
+    const destName = tag.values[0].get!string;
+    const srcName  = tag.values[1].get!string;
+
+    tracef("Creating alias of '%s' called '%s'", srcName, destName);
+    g_assets[destName] = g_assets[srcName];
+}
+
 public:
 
 // START FUNCTIONS
@@ -59,6 +68,7 @@ void assetsLoad()
             case "map":     assetLoadMap(tag);     break;
             case "font":    assetLoadFont(tag);    break;
             case "texture": assetLoadTexture(tag); break;
+            case "alias":   assetCreateAlias(tag); break;
             default:        throw new Exception("Unknown tag name in top-level scope: "~tag.name);
         }
     }

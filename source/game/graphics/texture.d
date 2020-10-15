@@ -17,6 +17,7 @@ final class Texture : IDisposable
         QueueSubmitSyncInfo _uploadSync;
         vec2u               _size;
         DescriptorSet       _uniform;
+        string              _debugName;
     }
 
     this(ubyte[] pixels, vec2u size, string debugName = "Unnamed Texture")
@@ -41,7 +42,8 @@ final class Texture : IDisposable
             this._transferBuffer.transitionImageLayout(this._image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
         }
         this._transferBuffer.end();
-        
+
+        this._debugName  = debugName;
         this._uploadSync = g_device.transfer.submit(this._transferBuffer, null, null); 
         this._size       = size;
     }
@@ -103,7 +105,7 @@ final class Texture : IDisposable
         Sampler.create(this._sampler);
 
         // Doesn't matter which pipeline we use, as they both have the same uniform layout.
-        this._uniform = g_descriptorPools.persistentPool.allocate(g_pipelineQuadTexturedTransparent.base);
+        this._uniform = g_descriptorPools.persistentPool.allocate(g_pipelineQuadTexturedTransparent.base.textureDescriptorLayoutHandle);
         this._uniform.updateImage(
             this.imageView,
             this.sampler
@@ -134,5 +136,11 @@ final class Texture : IDisposable
     vec2u size()
     {
         return this._size;
+    }
+
+    @property
+    string debugName()
+    {
+        return this._debugName;
     }
 }
