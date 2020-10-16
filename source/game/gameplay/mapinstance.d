@@ -93,8 +93,8 @@ final class MapDayNightCycle : IMessageHandler
     //
     // Day should be around 08:00 to 20:00
     // Enemies should spawn between 00:00 to 08:00?
-    enum T1_SUN_COLOUR = Color(0, 0, 0);
-    enum T2_SUN_COLOUR = Color(128, 128, 128);
+    enum T1_SUN_COLOUR = Color(57, 61, 68);
+    enum T2_SUN_COLOUR = Color(222, 183, 132);
     enum T3_SUN_COLOUR = Color(255, 255, 255);
 
     enum IRL_MS_TO_WORLD_MINUTE = 1; // How many milliseconds in real life translates to a minute in the game world.
