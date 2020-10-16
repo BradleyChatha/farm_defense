@@ -68,6 +68,7 @@
  <objectgroup id="5" name="Entities">
   <object id="2" type="SPAWNER" x="867" y="406">
    <properties>
+    <property name="day ALL from SPAWN_START to SPAWN_END" value="spawn TEST every 100"/>
     <property name="first_path_node" type="object" value="7"/>
    </properties>
    <point/>

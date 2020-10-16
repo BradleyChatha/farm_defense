@@ -46,6 +46,11 @@
                  "point":true,
                  "properties":[
                         {
+                         "name":"day ALL from SPAWN_START to SPAWN_END",
+                         "type":"string",
+                         "value":"spawn TEST every 100"
+                        }, 
+                        {
                          "name":"first_path_node",
                          "type":"object",
                          "value":7

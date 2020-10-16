@@ -13,14 +13,14 @@ public:
 
 // START Data types
 
-alias TimerFunc = void delegate();
-struct Timer
+alias TimerFunc(ReturnT) = ReturnT delegate();
+struct Timer(ReturnT)
 {
     uint timeBetweenTicks;
     uint timeElapsed;
-    TimerFunc func;
+    TimerFunc!ReturnT func;
 
-    this(uint timeBetweenTicks, TimerFunc func)
+    this(uint timeBetweenTicks, TimerFunc!ReturnT func)
     {
         assert(func !is null);
         this.func = func;
@@ -29,6 +29,9 @@ struct Timer
 
     void onUpdate()
     {
+        if(this.func is null)
+            return;
+
         this.timeElapsed += gametimeMillisecs();
         if(this.timeElapsed >= this.timeBetweenTicks)
         {

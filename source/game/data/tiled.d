@@ -2,8 +2,8 @@ module game.data.tiled;
 
 import std.experimental.logger;
 import std.conv : to;
-import asdf;
-import game.common, game.core, game.graphics;
+import asdf, taggedalgebraic;
+import game.common, game.core, game.graphics, game.gameplay : MapTime;
 
 // START types for ASDF to deserialise.
 
@@ -368,8 +368,35 @@ struct Spawner
 {
     vec2f position;
     PathNode* firstPathNode;
+    MapTimedEvent[] events;
 }
- 
+
+union MapEventInstructions
+{
+    MapSpawnInstruction spawn;
+}
+
+alias MapEventInstruction = TaggedUnion!MapEventInstructions;
+
+struct MapTimedEvent
+{
+    MapTime start;
+    MapTime end;
+    MapEventInstruction[] instructions;
+
+    @property
+    bool recurring()
+    {
+        return this.start.day == uint.max && this.end.day == uint.max;
+    }
+}
+
+struct MapSpawnInstruction
+{
+    string enemyName;
+    uint spawnEveryMs;
+}
+
 final class Map : IDisposable
 {
     mixin IDisposableBoilerplate;
@@ -476,7 +503,8 @@ final class Map : IDisposable
 
     private void readSpawnInfo()
     {
-        import std.algorithm: filter;
+        import std.algorithm : filter, startsWith, map;
+        import std.array     : array;
 
         struct PathNodeInfo
         {
@@ -530,9 +558,78 @@ final class Map : IDisposable
             Spawner spawner;
             spawner.position      = vec2f(obj.x, obj.y);
             spawner.firstPathNode = pathNodes[findProperty(obj.properties, "first_path_node", "object").value.to!int].node;
+            spawner.events        = obj.properties.filter!(p => p.name.startsWith("day")).map!(p => this.parseTimedEventProperty(p)).array;
 
             this._spawners ~= spawner;
         });
+    }
+
+    private MapTimedEvent parseTimedEventProperty(TiledProperty prop)
+    {
+        import std.algorithm : splitter, startsWith;
+        import std.conv      : to;
+        import std.regex     : regex, matchFirst;
+
+        // Regexes, since I can't be bothered atm with a proper syntax or parser.
+        // BE WARNED, prepare your eyeballs.
+        const TIME_RANGE_REGEX = regex(`^day\s+([\w\d]+)\s+from\s+([\w\d:]+)\s+to\s+([\w\d:]+)$`); // [1] day; [2] start; [3] end
+        const SPAWN_REGEX      = regex(`spawn\s+([\w]+)\s+every\s+([\d]+)`); // [1] enemy; [2] every
+        const HOURS_MINS_REGEX = regex(`^(\d\d):(\d\d)$`);
+
+        MapTimedEvent event;
+
+        // Helper functions.
+        uint parseDayString(string day)
+        {
+            return (day == "ALL") ? uint.max : day.to!uint;
+        }
+
+        MapTime parseHoursMinutesString(string hoursMinutes)
+        {
+            switch(hoursMinutes)
+            {
+                case "SPAWN_START": return MapTime(0, 0, 0);
+                case "SPAWN_END":   return MapTime(0, 8, 0);
+
+                default:
+                    auto hoursMinsMatch = hoursMinutes.matchFirst(HOURS_MINS_REGEX);
+                    enforce(!hoursMinsMatch.empty, "Unable to parse hours+minutes range: "~hoursMinutes);
+
+                    return MapTime(0, hoursMinsMatch[0].to!uint, hoursMinsMatch[1].to!uint);
+            }
+        }
+
+        // Read time range.
+        auto timeMatch = prop.name.matchFirst(TIME_RANGE_REGEX);
+        enforce(!timeMatch.empty, "Unable to parse time range for prop: %s".format(prop));
+        event.start     = parseHoursMinutesString(timeMatch[2]);
+        event.end       = parseHoursMinutesString(timeMatch[3]);
+        event.start.day = parseDayString(timeMatch[1]);
+        event.end.day   = event.start.day;
+
+        // Read instructions.
+        foreach(line; prop.value.splitter('\n'))
+        {
+            MapEventInstruction instruction;
+
+            if(line.startsWith("spawn"))
+            {
+                auto match = line.matchFirst(SPAWN_REGEX);
+                enforce(!match.empty, "Malformed spawn command: "~line);
+
+                MapSpawnInstruction spawn;
+                spawn.enemyName    = match[1];
+                spawn.spawnEveryMs = match[2].to!uint;
+
+                instruction = spawn;
+            }
+            else
+                throw new Exception("Unknown instruction line: "~line);
+
+            event.instructions ~= instruction;
+        }
+
+        return event;
     }
 
     private void createDrawCommands()

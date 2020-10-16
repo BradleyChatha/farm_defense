@@ -11,6 +11,7 @@ final class MapInstance : IMessageHandler
         EnemyManager        _enemyManager;
         DrawCommand[]       _drawCommands;
         MapDayNightCycle    _dayNightCycle;
+        MapEventManager     _events;
     }
 
     this(Map map, ref InputHandler input, Camera camera)
@@ -18,8 +19,9 @@ final class MapInstance : IMessageHandler
         this._map           = map;
         camera.constrainBox = rectanglef(0, 0, this._map.sizeInPixels.x, this._map.sizeInPixels.y);
         this._player        = new Player(this, input, camera, vec2f(Window.size) / vec2f(2));
-        this._enemyManager  = new EnemyManager(map);
         this._dayNightCycle = new MapDayNightCycle(map, input);
+        this._enemyManager  = new EnemyManager(map, this._dayNightCycle);
+        this._events        = new MapEventManager(map, this._dayNightCycle);
 
         this._drawCommands.length = 
             this._map.drawCommands.length 
@@ -29,6 +31,7 @@ final class MapInstance : IMessageHandler
     void onUpdate()
     {
         this._dayNightCycle.onUpdate();
+        this._events.onUpdate();
         this._player.onUpdate();
     }
 
@@ -76,6 +79,46 @@ struct MapTime
             day++;
         }
     }
+
+    @property @safe @nogc
+    uint asMinutes() nothrow pure const
+    {
+        return (this.day * 24 * 60) + (this.hour * 60) + this.minutes;
+    }
+    ///
+    unittest
+    {
+        MapTime time;
+
+        time.minutes = 20;
+        assert(time.asMinutes == 20);
+
+        time.hour = 8;
+        assert(time.asMinutes == 500);
+
+        time.day = 1;
+        assert(time.asMinutes == 1940);
+    }
+
+    @safe @nogc
+    int opCmp(const MapTime rhs) const nothrow pure
+    {
+        if(this.asMinutes > rhs.asMinutes)
+            return 1;
+        else if(this.asMinutes < rhs.asMinutes)
+            return -1;
+        else
+            return 0;
+    }
+    ///
+    unittest
+    {
+        auto t1 = MapTime(1, 8, 20);
+        auto t2 = MapTime(1, 7, 19);
+
+        assert(t1 > t2);
+        assert(t2 < t1);
+    }
 }
 
 final class MapDayNightCycle : IMessageHandler
@@ -99,19 +142,33 @@ final class MapDayNightCycle : IMessageHandler
 
     enum IRL_MS_TO_WORLD_MINUTE = 1; // How many milliseconds in real life translates to a minute in the game world.
 
+    alias TimeEvent = void delegate(MapTime currTime);
+
     private
     {
-        Color   _sunColour;
-        Color   _prevSunColour = T2_SUN_COLOUR;
-        Color   _nextSunColour = T3_SUN_COLOUR;
-        Timer   _updateWorldTime;
-        MapTime _time;
+        struct Event
+        {
+            MapTime at;
+            TimeEvent func;
+        }
+
+        Color      _sunColour;
+        Color      _prevSunColour = T2_SUN_COLOUR;
+        Color      _nextSunColour = T3_SUN_COLOUR;
+        Timer!void _updateWorldTime;
+        MapTime    _time;
+        Event[]    _events;
     }
 
     this(Map mapInfo, ref InputHandler input)
     {
-        this._updateWorldTime = Timer(IRL_MS_TO_WORLD_MINUTE, &this.onTimeTick);
+        this._updateWorldTime = Timer!void(IRL_MS_TO_WORLD_MINUTE, &this.onTimeTick);
         this._time.addMinutes(8 * 60);
+    }
+
+    void at(MapTime time, TimeEvent func)
+    {
+        this._events ~= Event(time, func);
     }
 
     void onUpdate()
@@ -124,6 +181,7 @@ final class MapDayNightCycle : IMessageHandler
         this._time.addMinutes(1);
 
         this.updateSun();
+        this.runEvents();
     }
 
     void updateSun()
@@ -151,9 +209,112 @@ final class MapDayNightCycle : IMessageHandler
         this._sunColour = this._prevSunColour.mix(this._nextSunColour, thirdPercentage);
     }
 
+    void runEvents()
+    {
+        import std.algorithm : remove;
+
+        for(size_t i = 0; i < this._events.length; i++)
+        {
+            auto event = this._events[i];
+            if(event.at <= this._time)
+            {
+                event.func(this._time);
+                this._events = this._events.remove(i);
+                i--;
+            }
+        }
+    }
+
     @property
     Color sunColour()
     {
         return this._sunColour;
+    }
+}
+
+final class MapEventManager
+{
+    private
+    {
+        MapDayNightCycle _dayNightCycle;
+        Map              _mapInfo;
+        Timer!void[]     _timers;
+    }
+
+    this(Map map, MapDayNightCycle dayNightCycle)
+    {
+        this._dayNightCycle = dayNightCycle;
+        this._mapInfo       = map;
+        this._timers.reserve(1000);
+
+        this.registerEvents();
+    }
+
+    void onUpdate()
+    {
+        foreach(ref timer; this._timers)
+            timer.onUpdate();
+    }
+
+    private size_t getTimerIndex()
+    {
+        // Just for now, we'll literally just grow the array and never shrink.
+        auto index = this._timers.length;
+        this._timers.length++;
+
+        return index;
+    }
+    
+    private void registerEvents()
+    {
+        foreach(spawner; this._mapInfo.spawners)
+        {
+            foreach(event; spawner.events)
+            {
+                auto start = event.start;
+                auto end   = event.end;
+
+                if(event.recurring)
+                {
+                    start.day = 1;
+                    end.day   = 1;
+                }
+
+                foreach(instruction; event.instructions)
+                {
+                    MapDayNightCycle.TimeEvent startFunc;
+                    auto timerIndex = this.getTimerIndex();
+                    final switch(instruction.kind) with(typeof(instruction.kind))
+                    {
+                        case spawn:
+                            auto spawn = cast(MapSpawnInstruction)instruction;
+                            startFunc = (_)
+                            {
+                                this._timers[timerIndex] = Timer!void(spawn.spawnEveryMs, ()
+                                {
+                                });                                
+                            };
+                            break;
+                    }
+
+                    MapDayNightCycle.TimeEvent endFunc;
+                    endFunc = (_)
+                    {
+                        this._timers[timerIndex] = Timer!void.init;
+                        
+                        if(event.recurring)
+                        {
+                            start.day++;
+                            end.day++;
+                            this._dayNightCycle.at(start, startFunc);
+                            this._dayNightCycle.at(end, endFunc);
+                        }
+                    };
+
+                    this._dayNightCycle.at(start, startFunc);
+                    this._dayNightCycle.at(end, endFunc);
+                }
+            }
+        }
     }
 }

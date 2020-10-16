@@ -222,17 +222,6 @@ struct Matrix(T, size_t Columns_, size_t Rows_)
 
             return data;
         }
-        ///
-        unittest
-        {
-            assert(mat4.identity.columns ==
-            [
-                vec4(1, 0, 0, 0),
-                vec4(0, 1, 0, 0),
-                vec4(0, 0, 1, 0),
-                vec4(0, 0, 0, 1)
-            ]);
-        }
 
         @safe @nogc
         T determinant() nothrow const pure
@@ -259,17 +248,6 @@ struct Matrix(T, size_t Columns_, size_t Rows_)
             }
             
             assert(false);
-        }
-        ///
-        unittest
-        {
-	        imat4 mat;
-            mat.columns = [ ivec4(  1.0,   2.0,   3.0,   4.0),
-					        ivec4(- 2.0,   1.0,   5.0, - 2.0),
-					        ivec4(  2.0, - 1.0,   7.0,   1.0),
-					        ivec4(  3.0, - 3.0,   2.0,   0.0) ];
-            
-            assert(mat.determinant == -8.0);
         }
 
         @safe @nogc
@@ -325,20 +303,6 @@ struct Matrix(T, size_t Columns_, size_t Rows_)
             }
 
             assert(false);
-        }
-        ///
-        unittest
-        {
-            mat4 m4;
-            m4.columns = [ vec4(   1.0f,   2.0f,   3.0f,   4.0f),
-					       vec4( - 2.0f,   1.0f,   5.0f, - 2.0f),
-					       vec4(   2.0f, - 1.0f,   7.0f,   1.0f),
-					       vec4(   3.0f, - 3.0f,   2.0f,   0.0f) ];
-            assert( m4.determinant == - 8.0f );
-            assert( m4.inverted.columns ==  [vec4(   6.875f,   7.875f, - 11.75f,  11.125f),
-                                             vec4(   6.625f,   7.625f, - 11.25f,  10.375f),
-                                             vec4( - 0.375f, - 0.375f,    0.75f, - 0.625f),
-                                             vec4( - 4.5f,   -   5.5f,     8.0f,   - 7.5f )]);
         }
 
         // ###############
@@ -442,26 +406,6 @@ struct Matrix(T, size_t Columns_, size_t Rows_)
 
             return data;
         }
-        ///
-        unittest
-        {
-            imat4 mat;
-            mat.columns = 
-            [
-                ivec4(20, 0,  0, 10),
-                ivec4(0, 40,  0, 20),
-                ivec4(0,  0, 60, 30),
-                ivec4(0,  0,  0, 90)
-            ];
-
-            assert((mat + mat.identity).columns == 
-            [
-                ivec4(21, 0,  0, 10),
-                ivec4(0, 41,  0, 20),
-                ivec4(0,  0, 61, 30),
-                ivec4(0,  0,  0, 91)
-            ]);
-        }
 
         /// Matrix-Matrix multiplication
         @safe @nogc
@@ -473,34 +417,6 @@ struct Matrix(T, size_t Columns_, size_t Rows_)
                 data.columns[column] = this * rhs.columns[column];
 
             return data;
-        }
-        ///
-        unittest
-        {
-            import std.conv : to;
-            imat2 mat;
-            mat.columns = 
-            [
-                ivec2(1, 2),
-                ivec2(3, 4)
-            ];
-
-            imat2 mat_2;
-            mat_2.columns =
-            [
-                ivec2(2, 4),
-                ivec2(6, 8)
-            ];
-
-            assert((mat * mat_2).columns == 
-            [
-                ivec2(1*2+3*4, 2*2+4*4),
-                ivec2(1*6+3*8, 2*6+4*8)
-            ], (mat * mat_2).to!string);
-
-            mat2 m2;
-            m2.columns = [vec2(2.0f, 4.0f), vec2(6.0f, 8.0f)];
-            assert(( m2 * m2 ).columns == [ vec2( 28.0f, 40.0f ), vec2( 60.0f, 88.0f ) ] );
         }
 
         /// Matrix-Vector multiplication
@@ -550,21 +466,6 @@ struct Matrix(T, size_t Columns_, size_t Rows_)
             }
 
             return data;
-        }
-        ///
-        unittest
-        {
-            import std.conv : to;
-
-            imat2 mat;
-            mat.columns = 
-            [
-                ivec2(1, 2),
-                ivec2(3, 4)
-            ];
-
-            assert(mat * ivec2(2, 4) == ivec2(1*2+3*4, 2*2+4*4), to!string(mat * ivec2(2, 4)));
-            assert(mat * ivec2(6, 8) == ivec2(1*6+3*8, 2*6+4*8));
         }
     }
 }

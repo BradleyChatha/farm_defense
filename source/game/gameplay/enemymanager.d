@@ -10,7 +10,7 @@ final class EnemyManager
         SpriteBatch _sprites;
     }
 
-    this(Map map)
+    this(Map map, MapDayNightCycle dayNightCycle)
     {
         // TODO: Get sprite atlas stuff up and running, and modify SpriteBatch to directly support SpriteAtlas instead of just a Texture.
         //       Want to get gameplay going though before graphics, so it can wait.
