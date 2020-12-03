@@ -147,10 +147,14 @@ struct Bookkeeper(size_t Bits, Allocator = NullAllocator)
                 bool skippedSetBits = false;
                 foreach(i2; 0..8)
                 {
-                    if((byte_ & (1 << i2)) != 0 && !skippedSetBits)
-                        continue;
+                    if(unsetBitsInRange == 0)
+                    {
+                        if((byte_ & (1 << i2)) != 0 && !skippedSetBits)
+                            continue;
 
-                    skippedSetBits = true;
+                        skippedSetBits = true;
+                    }
+                    
                     if((byte_ & (1 << i2)) == 0)
                         unsetBitsAtStartOfByte++;
                     else
