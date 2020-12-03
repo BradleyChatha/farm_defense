@@ -1,5 +1,6 @@
 module engine.util.structures.bookkeeper;
 
+import std.typecons : Nullable;
 import stdx.allocator.building_blocks.null_allocator;
 import engine.util.structures.bufferarray;
 
@@ -79,7 +80,7 @@ struct Bookkeeper(size_t Bits, Allocator = NullAllocator)
     @disable this(this){}
 
     private
-    {
+    {        
         Booking _earliestUnsetBooking;
         static if(Bits != 0)
         {
@@ -95,6 +96,108 @@ struct Bookkeeper(size_t Bits, Allocator = NullAllocator)
                 BufferArray!(ubyte, Allocator) _bytes;
             
             size_t _maxBits;
+        }
+
+        bool getBit(ubyte byte_, size_t bitIndex)
+        {
+            assert(bitIndex < 8);
+            return (byte_ & (1 << bitIndex)) > 0;
+        }
+
+        bool getBit(size_t bitIndex)
+        {
+            return this.getBit(this._bytes[bitIndex / 8], bitIndex % 8);
+        }
+
+        size_t countEmptyConsecutiveBits(size_t startingBit, const size_t limit, ref bool hitLimit)
+        {
+            size_t count;
+
+            size_t fixCount()
+            {
+                if(count > limit)
+                    count = limit;
+
+                if(startingBit + count > this._maxBits)
+                {
+                    hitLimit = true;
+                    return (this._maxBits - startingBit);
+                }
+                else
+                {
+                    hitLimit = false;
+                    return count;
+                }
+            }
+
+            // Count start byte
+            auto byte_ = this._bytes[startingBit / 8];
+            bool skippedSetBits = false;
+            foreach(i; startingBit % 8..8)
+            {
+                if(this.getBit(byte_, i) && !skippedSetBits)
+                    continue;
+
+                skippedSetBits = true;
+                if(!this.getBit(byte_, i))
+                {
+                    count++;
+                    if(count == limit)
+                        return fixCount();
+                }
+            }
+
+            if(this.getBit(byte_, 7)) // Check if we can't leak over into other bytes.
+                return fixCount();
+
+            // Keep counting bytes.
+            for(size_t i = (startingBit / 8) + 1; i < this._bytes.length; i++)
+            {
+                if(count >= limit)
+                    return fixCount();
+
+                byte_ = this._bytes[i];
+                if(byte_ == 0xFF)
+                    break;
+                else if(byte_ == 0)
+                {
+                    count += 8;
+                    continue;
+                }
+
+                foreach(j; 0..8)
+                {
+                    if(!this.getBit(byte_, j))
+                        count++;
+                    else
+                        return fixCount();
+                }
+            }
+            
+            return fixCount();
+        }
+
+        Nullable!size_t findNextUnsetBit(size_t startingBit)
+        {
+            size_t bitCursor = startingBit % 8;
+            for(size_t i = startingBit / 8; i < this._bytes.length; i++)
+            {
+                const byte_ = this._bytes[i];
+                if(byte_ == 0xFF)
+                {
+                    bitCursor = 0;
+                    continue;
+                }
+
+                for(; bitCursor < 8; bitCursor++)
+                {
+                    if(!this.getBit(byte_, bitCursor))
+                        return typeof(return)((i * 8) + bitCursor);
+                }
+                bitCursor = 0;
+            }
+
+            return typeof(return).init;
         }
         
         Booking nextUnsetBooking(size_t availableBits)
@@ -122,126 +225,33 @@ struct Bookkeeper(size_t Bits, Allocator = NullAllocator)
             }
 
             // Slow path: Earliest unset booking doesn't have enough bits.
-            size_t unsetBitsInRange;
-            size_t startByte;
-            for(size_t i = this._earliestUnsetBooking.startByte; i < this._bytes.length; i++)
+            auto start = this.findNextUnsetBit(this._earliestUnsetBooking.startInBits + this._earliestUnsetBooking.bitCount);
+            while(!start.isNull)
             {
-                if(unsetBitsInRange >= availableBits)
+                bool hitLimit;
+                const count = this.countEmptyConsecutiveBits(start.get, availableBits, hitLimit);
+                if(hitLimit)
                     break;
 
-                const byte_ = this._bytes[i];
-                if(byte_ == 0xFF)
-                {
-                    unsetBitsInRange = 0;
-                    startByte = i + 1;
-                    continue;
-                }
+                if(count >= availableBits)
+                    return Booking(start / 8, start % 8, availableBits);
 
-                if(byte_ == 0)
-                {
-                    unsetBitsInRange += 8;
-                    continue;
-                }
-
-                ubyte unsetBitsAtStartOfByte;
-                bool skippedSetBits = false;
-                foreach(i2; 0..8)
-                {
-                    if(unsetBitsInRange == 0)
-                    {
-                        if((byte_ & (1 << i2)) != 0 && !skippedSetBits)
-                            continue;
-
-                        skippedSetBits = true;
-                    }
-                    
-                    if((byte_ & (1 << i2)) == 0)
-                        unsetBitsAtStartOfByte++;
-                    else
-                        break;
-                }
-
-                unsetBitsInRange += unsetBitsAtStartOfByte;
-                if(unsetBitsInRange < availableBits)
-                {
-                    startByte = i + 1;
-                    unsetBitsInRange = 0;
-                }
+                start = this.findNextUnsetBit(start.get + count);
             }
 
-            if(unsetBitsInRange < availableBits)
-                return Booking.invalid;
-
-            const byte_ = this._bytes[startByte];
-            ubyte startBit;
-            foreach(i; 0..8)
-            {
-                if((byte_ & (1 << i)) == 0)
-                {
-                    startBit = cast(ubyte)i;
-                    break;
-                }
-            }
-
-            const result = Booking(startByte, startBit, availableBits);
-            return (result.startInBits + result.bitCount > this._maxBits) ? Booking.invalid : result;
+            return Booking.invalid;
         }
 
         Booking nextEarliestUnsetBooking()
         {
-            auto earliestUnset = this.nextUnsetBooking(1); // Won't enter loop as the parent if statement should always be false in this case.
+            const index = this.findNextUnsetBit(this._earliestUnsetBooking.startInBits);
+            if(index.isNull)
+                return Booking.invalid;
+            
+            bool _;
+            const count = this.countEmptyConsecutiveBits(index, size_t.max, _);
 
-            // For the current byte, count how many bits are unset in a row from us, and more importantly, is it to the end of the byte?
-            const bitsToCount = 8 - earliestUnset.startBit;
-            const startByte = this._bytes[earliestUnset.startByte];
-            size_t unsetBits;
-            foreach(i; 0..bitsToCount)
-            {
-                if((startByte & (1 << (i + earliestUnset.startBit))) == 0)
-                    unsetBits++;
-                else
-                    break;
-            }
-
-            earliestUnset.bitCount = unsetBits;
-            if(unsetBits != bitsToCount)
-                return earliestUnset;
-
-            // We have the rest of the byte to ourself, meaning we can leak over into other bytes, so we need to check for that.
-            size_t emptyBytes;
-            ubyte semiEmptyByte = 0xFF;
-            for(size_t i = earliestUnset.startByte + 1; i < this._bytes.length; i++)
-            {
-                const byte_ = this._bytes[i];
-                if(byte_ == 0)
-                {
-                    emptyBytes++;
-                    continue;
-                }
-                else if(byte_ == 0xFF)
-                    break;
-                else
-                {
-                    semiEmptyByte++;
-                    break;
-                }
-            }
-
-            // For the semi-empty byte, count how many on the LSB side are unset.
-            unsetBits = 0;
-            foreach(i; 0..8)
-            {
-                if((semiEmptyByte & (1 << i)) > 0)
-                    break;
-
-                unsetBits++;
-            }
-
-            earliestUnset.bitCount += (emptyBytes * 8) + unsetBits;
-            if(earliestUnset.startInBits + earliestUnset.bitCount > this._maxBits)
-                earliestUnset.bitCount = (this._maxBits - (earliestUnset.startInBits + earliestUnset.bitCount));
-
-            return earliestUnset;
+            return Booking(index / 8, index % 8, count);
         }
 
         void markBookingAs(bool setUnset)(Booking booking)
@@ -308,20 +318,16 @@ struct Bookkeeper(size_t Bits, Allocator = NullAllocator)
             {
                 if(booking.startInBits == this._earliestUnsetBooking.startInBits + this._earliestUnsetBooking.bitCount)
                 {
-                    // Esentially, all we're doing is temporarily moving our "cursor" to the end `booking`
-                    // then invoking the logic to measure how much free space we have directl after the "cursor"
-                    // then adding that free space into the earliestUnsetBooking.
                     this._earliestUnsetBooking.bitCount += booking.bitCount;
-                    const old = this._earliestUnsetBooking;
-
-                    const bits  = booking.startInBits + booking.bitCount;
-                    this._earliestUnsetBooking = booking;
-                    this._earliestUnsetBooking.startByte = bits / 8;
-                    this._earliestUnsetBooking.startBit = bits % 8;
                     
-                    const additionalSpace = this.nextEarliestUnsetBooking();
-                    this._earliestUnsetBooking = old;
-                    this._earliestUnsetBooking.bitCount += additionalSpace.bitCount;
+                    bool _;
+                    const amount = this.countEmptyConsecutiveBits(
+                        this._earliestUnsetBooking.startInBits + this._earliestUnsetBooking.bitCount, 
+                        size_t.max, 
+                        _
+                    );
+
+                    this._earliestUnsetBooking.bitCount += amount;
                 }
             }
         }
@@ -397,18 +403,30 @@ unittest
 
     // Set earliestUnsetBooking (not adjacent)
     b.free(booking2);
+    b._bytes[0].should.equal(0b0000_1111);
+    b._bytes[1].should.equal(b._bytes[2]);
+    b._bytes[2].should.equal(0xFF);
+    b._bytes[3].should.equal(0b0011_1111);
     b._earliestUnsetBooking.startInBits.should.equal(4);
     b._earliestUnsetBooking.bitCount.should.equal(4);
 
     // Set earliestUnsetBooking (merge before)
     b.free(booking);
+    b._bytes[0].should.equal(0);
+    b._bytes[1].should.equal(b._bytes[2]);
+    b._bytes[2].should.equal(0xFF);
+    b._bytes[3].should.equal(0b0011_1111);
     b._earliestUnsetBooking.startInBits.should.equal(0);
     b._earliestUnsetBooking.bitCount.should.equal(8);
 
     // Set earliestUnsetBooking (merge after)
     b.free(booking3);
+    b._bytes[0].should.equal(0);
+    b._bytes[1].should.equal(0);
+    b._bytes[2].should.equal(0);
+    b._bytes[3].should.equal(0);
     b._earliestUnsetBooking.startInBits.should.equal(0);
-    b._earliestUnsetBooking.bitCount.should.equal(30);
+    b._earliestUnsetBooking.bitCount.should.equal(32);
 
     // Test bookkeeper that isn't a mulitple of 8
     Bookkeeper!30 b2;
