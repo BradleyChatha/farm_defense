@@ -249,7 +249,7 @@ struct Bookkeeper(size_t Bits, Allocator = NullAllocator)
                 return Booking.invalid;
             
             bool _;
-            const count = this.countEmptyConsecutiveBits(index, size_t.max, _);
+            const count = this.countEmptyConsecutiveBits(index.get, size_t.max, _);
 
             return Booking(index / 8, index % 8, count);
         }
@@ -290,7 +290,7 @@ struct Bookkeeper(size_t Bits, Allocator = NullAllocator)
                 static if(setUnset)
                     to |= bitMask;
                 else
-                    to &= ~bitMask;
+                    to &= ~cast(int)bitMask;
             }
 
             size_t byteCursor = booking.startByte;
