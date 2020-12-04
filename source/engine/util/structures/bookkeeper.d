@@ -333,6 +333,28 @@ struct Bookkeeper(size_t Bits, Allocator = NullAllocator)
         }
     }
 
+    static if(Bits == 0)
+    @disable this(){}
+
+    static if(Bits == 0)
+    this(size_t bits)
+    {
+        this.resize(bits);
+    }
+
+    static if(Bits == 0)
+    void resize(size_t bits)
+    {
+        if(bits == 0)
+            bits = 1;
+
+        this._maxBits = bits;
+        this._bytes.length = (bits + 7) / 8;
+
+        if(this._earliestUnsetBooking.startInBits + this._earliestUnsetBooking.bitCount > this._maxBits)
+            this._earliestUnsetBooking.bitCount = (this._maxBits - this._earliestUnsetBooking.startInBits);
+    }
+
     Booking allocate(size_t bitCount)
     {
         auto booking = this.nextUnsetBooking(bitCount);
