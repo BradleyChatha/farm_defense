@@ -21,9 +21,9 @@ struct Result(ValueT)
     static if(!is(ValueT == void))
     static Result!ValueT ok()(ValueT value)
     {
-        auto value = Result!ValueT(ResultType.ok);
-        value._okValue = value;
-        return value;
+        auto result = Result!ValueT(ResultType.ok);
+        result._okValue = value;
+        return result;
     }
     else
     static Result!ValueT ok()()
