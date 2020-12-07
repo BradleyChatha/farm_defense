@@ -74,7 +74,7 @@ struct BufferArray(T, Allocator = Mallocator)
         this._length = newLength;
         if(newLength < this._capacity)
         {
-            this._array[newLength..this._capacity] = T.init;
+            this._array[newLength+1..this._capacity] = T.init;
             return;
         }
 
@@ -105,6 +105,7 @@ struct BufferArray(T, Allocator = Mallocator)
     }
 
     void opSliceAssign(T2)(T2 value, size_t start, size_t end)
+    if(is(T2 : T))
     {
         assert(end <= this._length, "Index out of bounds.");
         this._array[start..end] = value;

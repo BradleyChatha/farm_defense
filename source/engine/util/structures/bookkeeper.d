@@ -21,6 +21,7 @@ struct Booking
     {
         return (this.startByte * 8) + this.startBit;
     }
+    alias asIndex = startInBits;
 
     bool tryAddBits(size_t bits)
     {
@@ -40,6 +41,11 @@ struct Booking
     static Booking invalid()
     {
         return Booking(size_t.max);
+    }
+
+    static Booking fromIndexAndLength(size_t index, size_t length)
+    {
+        return Booking(index / 8, index % 8, length);
     }
 }
 ///
@@ -334,9 +340,6 @@ struct Bookkeeper(size_t Bits, Allocator = NullAllocator)
     }
 
     static if(Bits == 0)
-    @disable this(){}
-
-    static if(Bits == 0)
     this(size_t bits)
     {
         this.resize(bits);
@@ -370,6 +373,11 @@ struct Bookkeeper(size_t Bits, Allocator = NullAllocator)
         assert(booking.isValid, "Invalid booking");
         this.markBookingAs!false(booking);
         booking = Booking.invalid;
+    }
+
+    size_t length()
+    {
+        return this._bytes.length;
     }
 }
 @("Bookkeeper")
