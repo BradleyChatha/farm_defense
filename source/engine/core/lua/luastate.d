@@ -9,27 +9,34 @@ struct LuaState
     private
     {
         lua_State* _state;
+        bool _canClose;
     }
 
-    package this(lua_State* state)
+    package this(lua_State* state, bool canClose) nothrow
     {
         assert(state !is null);
         this._state = state;
+        this._canClose = canClose;
         luaL_openlibs(state);
     }
 
-    ~this()
+    ~this() nothrow
     {
-        if(this._state !is null)
+        if(this._state !is null && this._canClose)
             lua_close(this._state);
     }
 
-    static LuaState create()
+    static LuaState create() nothrow
     {
-        return LuaState(luaL_newstate());
+        return LuaState(luaL_newstate(), true);
     }
 
-    lua_State* handle()
+    static LuaState wrap(lua_State* state) nothrow
+    {
+        return LuaState(state, false);
+    }
+
+    lua_State* handle() nothrow
     {
         return this._state;
     }

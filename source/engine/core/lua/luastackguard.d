@@ -29,10 +29,15 @@ struct LuaStackGuard
             import std.format;
             const stackSize = (*this._state).getTop();
             const expected  = (this._startSize + this.delta);
-            assert(stackSize == expected, 
-                "Expected stack size to be %s (start %s with delta %s) but instead it's %s."
-                .format(expected, this._startSize, this.delta, stackSize)
-            );
+
+            if(stackSize != expected)
+            {
+                (*this._state).printStack();
+                assert(false, 
+                    "Expected stack size to be %s (start %s with delta %s) but instead it's %s."
+                    .format(expected, this._startSize, this.delta, stackSize)
+                );
+            }
         }
     }
 }

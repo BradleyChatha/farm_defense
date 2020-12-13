@@ -19,6 +19,16 @@ void pop(ref LuaState lua, int amount)
     lua_pop(lua.handle, amount);
 }
 
+void insert(ref LuaState lua, int index)
+{
+    lua_insert(lua.handle, index);
+}
+
+void remove(ref LuaState lua, int index)
+{
+    lua_remove(lua.handle, index);
+}
+
 int getTop(ref LuaState lua)
 {
     return lua_gettop(lua.handle);
@@ -46,7 +56,7 @@ void push(ref LuaState lua, bool b)
     lua_pushboolean(lua.handle, cast(int)b);
 }
 
-void push(ref LuaState lua, const(char)[] str)
+void push(ref LuaState lua, const(char)[] str) nothrow
 {
     // NOTE: Lua creates a copy of the string.
     lua_pushlstring(lua.handle, str.ptr, str.length);
@@ -55,6 +65,11 @@ void push(ref LuaState lua, const(char)[] str)
 void push(ref LuaState lua, Nil nil)
 {
     lua_pushnil(lua.handle);
+}
+
+void push(ref LuaState lua, void* lightUserData)
+{
+    lua_pushlightuserdata(lua.handle, lightUserData);
 }
 
 // GET
@@ -84,8 +99,6 @@ if(isNumeric!T)
 {
     static if(isFloatingPoint!T)
         return lua_tonumber(lua.handle, index).to!T;
-    else static if(isUnsigned!T)
-        return lua_tounsigned(lua.handle, index).to!T;
     else
         return lua_tointeger(lua.handle, index).to!T;
 }
@@ -94,6 +107,12 @@ bool as(T)(ref LuaState lua, int index)
 if(is(T == bool))
 {
     return cast(bool)lua_toboolean(lua.handle, index);
+}
+
+void* as(T)(ref LuaState lua, int index)
+if(is(T == void*))
+{
+    return lua_touserdata(lua.handle, index);
 }
 
 // IS
@@ -126,4 +145,11 @@ bool isFunction(ref LuaState lua, int index)
 bool isNil(ref LuaState lua, int index)
 {
     return cast(bool)lua_isnil(lua.handle, index);
+}
+
+// CHECK
+
+void checkType(ref LuaState lua, int argNum, int type)
+{
+    luaL_checktype(lua.handle, argNum, type);
 }

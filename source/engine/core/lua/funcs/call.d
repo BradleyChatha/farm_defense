@@ -11,10 +11,17 @@ Result!void pcall(ref LuaState lua, int argCount, int resultCount, int msgh = 0)
     {
         const msg = lua.toGCString(-1);
         lua.pop(1);
-        guard.delta = 0;
+        guard.delta = -(argCount + 1);
         return Result!void.failure(msg);
     }
 
     CHECK_LUA(result);
     return Result!void.ok();
+}
+
+void register(ref LuaState lua, string libName, const luaL_Reg[] funcs)
+{
+    assert(funcs.length > 0, "No funcs.");
+    assert(funcs[$-1] == luaL_Reg(null, null), "The last element must always be the sentinal value (because passing a length was too hard for the API designers).");
+    luaL_register(lua.handle, libName.toStringz, funcs.ptr);
 }
