@@ -4,6 +4,7 @@
 		"asdf": "0.5.7",
 		"bindbc-freetype": "0.9.1",
 		"bindbc-loader": "0.3.2",
+		"bindbc-lua": "0.3.0",
 		"bindbc-sdl": "0.19.2",
 		"ddmp": "0.0.1-0.dev.3",
 		"erupted": "2.0.70+v1.2.150",
@@ -16,6 +17,6 @@
 		"silly": "1.0.2",
 		"stdx-allocator": "3.0.2",
 		"taggedalgebraic": "0.11.18",
-		"unit-threaded": "0.7.55"
+		"unit-threaded": "1.0.11"
 	}
 }

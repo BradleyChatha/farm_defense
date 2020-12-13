@@ -29,7 +29,7 @@ struct WithDependencyLoadInfo
 
 final class BasicLoadInfoLoader : IResourceLoader
 {
-    override TypeInfo loadInfoT() { return typeid(BasicLoadInfo); }
+    mixin IResourceLoaderBoilerplate!BasicLoadInfo;
 
     override Result!IResource loadFromLoadInfo(ResourceLoadInfo loadInfo, ref PackageLoadContext context)
     {
@@ -40,7 +40,7 @@ final class BasicLoadInfoLoader : IResourceLoader
 
 final class WithDependencyLoadInfoLoader : IResourceLoader
 {
-    override TypeInfo loadInfoT() { return typeid(WithDependencyLoadInfo); }
+    mixin IResourceLoaderBoilerplate!WithDependencyLoadInfo;
 
     override Result!IResource loadFromLoadInfo(ResourceLoadInfo loadInfo, ref PackageLoadContext context)
     {
