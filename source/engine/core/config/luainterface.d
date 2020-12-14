@@ -4,6 +4,8 @@ import engine.core.config, engine.core.lua, engine.util;
 
 void registerConfigLibrary(ref LuaState state, string name)
 {
+    auto guard = LuaStackGuard(state, 0);
+
     auto funcs = 
     [
         luaL_Reg("setString", &luaCFuncWithContext!setString),
@@ -11,6 +13,7 @@ void registerConfigLibrary(ref LuaState state, string name)
         luaL_Reg(null, null)
     ];
     state.register(name, funcs);
+    state.pop(1);
 }
 
 private int setString(Config ctx, ref LuaState lua)

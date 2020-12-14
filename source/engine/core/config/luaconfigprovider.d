@@ -7,19 +7,22 @@ import engine.core, engine.util;
 //
 // Currently there are no specially supported functions/objects.
 
-Result!void loadLuaTableAsConfig(ref LuaState lua, int tableIndex, Config conf)
+Result!void loadLuaTableAsConfig(ref LuaState lua, Config conf)
 {
     import std.math : ceil;
     assert(conf !is null);
 
     auto guard = LuaStackGuard(lua, -1);
 
-    if(!lua.isTable(tableIndex))
+    if(!lua.isTable(-1))
+    {
+        guard.delta = 0;
         return Result!void.failure("Top of stack is not a table.");
+    }
 
     void serialise(int index, string keyPrefix)
     {
-        lua.forEach(tableIndex, (ref _)
+        lua.forEach(index, (ref _)
         {
             const key = keyPrefix ~ lua.as!string(-2);
             const valueType = lua.type(-1);
@@ -43,7 +46,7 @@ Result!void loadLuaTableAsConfig(ref LuaState lua, int tableIndex, Config conf)
         });
     }
 
-    serialise(tableIndex, "");
+    serialise(-1, "");
     lua.pop(1);
 
     return Result!void.ok();

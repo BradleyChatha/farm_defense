@@ -1,5 +1,7 @@
 module engine.util.structures.result;
 
+import std.format : format;
+
 enum ResultType
 {
     ERROR,
@@ -62,4 +64,10 @@ struct Result(ValueT)
     @safe @nogc bool isType(ResultType type)() nothrow const { return this._type == type; }
     alias isOk = isType!(ResultType.ok);
     alias isFailure = isType!(ResultType.failure);
+
+    @safe void enforceOk() const 
+    { 
+        if(!this.isOk) 
+            throw new Exception("Failure result: "~this.error); 
+    }
 }
