@@ -70,6 +70,7 @@ struct BufferArray(T, Allocator = Mallocator)
     void length()(size_t newLength)
     {
         import core.exception : onOutOfMemoryError;
+        import core.memory : GC;
 
         this._length = newLength;
         if(newLength < this._capacity)
@@ -90,10 +91,15 @@ struct BufferArray(T, Allocator = Mallocator)
             success = this._array !is null;
         }
         else
+        {
+            GC.removeRange(this._array.ptr);
             success = this._alloc.expandArray(this._array, this._capacity - this._array.length);
+        }
 
         if(!success)
             onOutOfMemoryError(null);
+
+        GC.addRange(this._array.ptr, this._alloc.length * T.sizeof, typeid(T));
     }
     size_t length()() const { return this._length; }
     size_t opDollar() const { return this._length; }
