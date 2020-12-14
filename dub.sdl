@@ -1,4 +1,4 @@
-name "farm_defense"
+name "engine"
 description "A minimal D application."
 authors "Sealab"
 copyright "Copyright © 2020, Sealab"
@@ -20,3 +20,7 @@ copyFiles "deps/COPYING_sdl2.txt" "deps/LICENSE_lodepng" "deps/FTL.TXT"
 copyFiles "deps/win_x64/*.dll" platform="x86_64"
 copyFiles "deps/win_x86/*.dll" platform="x86"
 versions "SDL_206" "FT_210" "LUA_51" "BindFT_Static" "BindLua_Static"
+
+configuration "library" {
+    versions "Engine_Library"
+}
