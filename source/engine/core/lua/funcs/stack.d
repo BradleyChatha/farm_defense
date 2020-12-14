@@ -24,7 +24,7 @@ void insert(ref LuaState lua, int index)
     lua_insert(lua.handle, index);
 }
 
-void remove(ref LuaState lua, int index)
+void remove(ref LuaState lua, int index) nothrow
 {
     lua_remove(lua.handle, index);
 }
@@ -149,7 +149,7 @@ bool isNil(ref LuaState lua, int index)
 
 // CHECK
 
-void checkType(ref LuaState lua, int argNum, int type)
+void checkType(ref LuaState lua, int argNum, int type) nothrow
 {
     luaL_checktype(lua.handle, argNum, type);
 }

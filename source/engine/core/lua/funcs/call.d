@@ -25,3 +25,9 @@ void register(ref LuaState lua, string libName, const luaL_Reg[] funcs)
     assert(funcs[$-1] == luaL_Reg(null, null), "The last element must always be the sentinal value (because passing a length was too hard for the API designers).");
     luaL_register(lua.handle, libName.toStringz, funcs.ptr);
 }
+
+int error(ref LuaState lua, const(char)[] error) nothrow
+{
+    lua.push(error);
+    return lua_error(lua.handle);
+}

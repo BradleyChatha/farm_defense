@@ -6,8 +6,8 @@ void registerConfigLibrary(ref LuaState state, string name)
 {
     auto funcs = 
     [
-        luaL_Reg("setString", &luaCFuncFor!(setString, Config)),
-        luaL_Reg("getString", &luaCFuncFor!(getString, Config)),
+        luaL_Reg("setString", &luaCFuncWithContext!setString),
+        luaL_Reg("getString", &luaCFuncWithContext!getString),
         luaL_Reg(null, null)
     ];
     state.register(name, funcs);

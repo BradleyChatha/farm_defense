@@ -49,34 +49,20 @@ void pushAsLuaTable(T)(ref LuaState state, T obj)
     state.pushAsLuaTable!(FailIfCantConvert.yes, T)(obj);
 }
 
-int luaCFuncFor(alias Func, alias ContextT = void)(lua_State* state) nothrow
-if(isSomeFunction!Func)
+int luaCFuncWithContext(alias Func)(lua_State* state) nothrow
+if(isFunction!Func)
 {
-    static assert(isFunction!Func || !is(ContextT == void), "You must provide ContextT for delegates, i.e. the struct/class' type.");
+    alias Params = Parameters!Func;
+    static assert(Params.length == 2, "Function must have exactly 2 parameters.");
+    static assert(is(Params[0] == class) || is(Params[0] == interface) || isPointer!(Params[0]), "The first parameter must be a pointer or reference type.");
+    static assert(is(Params[1] == LuaState) && (ParameterStorageClassTuple!Func[1] | ParameterStorageClass.ref_) > 0, "The second parameter must be a `ref LuaState`");
 
     auto lua = LuaState.wrap(state);
-    try
-    {
-        // The first parameter for delegates should be a light userdata pointing to the delegate's context.
-        static if(isDelegate!Func || Parameters!Func.length == 2)
-        {
-            lua.checkType(1, LUA_TLIGHTUSERDATA);
-            auto ctx = cast(ContextT)lua.as!(void*)(1);
-            lua.remove(1);
+    lua.checkType(1, LUA_TLIGHTUSERDATA);
+    auto ctx = cast(Params[0])lua.as!(void*)(1);
+    lua.remove(1);
 
-            static if(Parameters!Func.length == 1)
-                auto func = () => mixin("ctx.%s(lua);".format(__traits(identifier, Func)));
-            else
-                auto func = () => Func(ctx, lua);
-        }
-        else
-            auto func = () => Func(lua);
-
-        return func();
-    }
+    try return Func(ctx, lua);
     catch(Exception ex)
-    {
-        lua.push(ex.msg);
-        return lua_error(lua.handle);
-    }
+        return lua.error(ex.msg);
 }
