@@ -55,7 +55,7 @@ if(isFunction!Func)
     alias Params = Parameters!Func;
     static assert(Params.length == 2, "Function must have exactly 2 parameters.");
     static assert(is(Params[0] == class) || is(Params[0] == interface) || isPointer!(Params[0]), "The first parameter must be a pointer or reference type.");
-    static assert(is(Params[1] == LuaState) && (ParameterStorageClassTuple!Func[1] | ParameterStorageClass.ref_) > 0, "The second parameter must be a `ref LuaState`");
+    static assert(is(Params[1] == LuaState) && (ParameterStorageClassTuple!Func[1] & ParameterStorageClass.ref_) > 0, "The second parameter must be a `ref LuaState`");
 
     auto lua = LuaState.wrap(state);
     lua.checkType(1, LUA_TLIGHTUSERDATA);
