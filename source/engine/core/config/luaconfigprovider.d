@@ -71,7 +71,7 @@ unittest
     `).isOk.should.equal(true);
 
     state.pcall(0, 1).isOk.should.equal(true);
-    state.loadLuaTableAsConfig(-1, conf);
+    state.loadLuaTableAsConfig(conf);
 
     conf.getOrDefault!string("str").should.equal("Hello!");
     conf.getOrDefault!long("i").should.equal(420);
