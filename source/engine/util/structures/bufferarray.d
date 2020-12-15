@@ -61,6 +61,24 @@ struct BufferArray(T, Allocator = Mallocator)
         }
     }
 
+    void shrink()()
+    {
+        import core.memory : GC;
+        import core.exception : onOutOfMemoryError;
+
+        if(this._array is null)
+            return;
+
+        GC.removeRange(this._array.ptr);
+        this._capacity = this._length;
+        auto success = this._alloc.shrinkArray(this._array, (this._array.length - this._length));
+
+        if(!success)
+            onOutOfMemoryError(null);
+        
+        GC.addRange(this._array.ptr, this._array.length * T.sizeof, typeid(T));
+    }
+
     void clear()(T value = T.init)
     {
         this._array[] = value;
@@ -99,7 +117,7 @@ struct BufferArray(T, Allocator = Mallocator)
         if(!success)
             onOutOfMemoryError(null);
 
-        GC.addRange(this._array.ptr, this._alloc.length * T.sizeof, typeid(T));
+        GC.addRange(this._array.ptr, this._array.length * T.sizeof, typeid(T));
     }
     size_t length()() const { return this._length; }
     size_t opDollar() const { return this._length; }
@@ -189,4 +207,8 @@ unittest
     b ~= "World!";
     b.length.should.equal(3);
     b[0..$].should.equal(["Hello, ", "there ", "World!"]);
+
+    b._capacity.should.equal(64);
+    b.shrink();
+    b._capacity.should.equal(3);
 }
