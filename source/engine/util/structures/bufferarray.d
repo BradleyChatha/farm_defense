@@ -1,5 +1,6 @@
 module engine.util.structures.bufferarray;
 
+import engine.util.structures.growthrange;
 import stdx.allocator, stdx.allocator.mallocator;
 
 /++
@@ -9,7 +10,11 @@ import stdx.allocator, stdx.allocator.mallocator;
  +
  + Only escape slices, or keep slices after buffer grows, at your own risk.
  + ++/
-struct BufferArray(T, Allocator = Mallocator)
+struct BufferArray(
+    T, 
+    Allocator = Mallocator,
+    Growth = DefaultGrowthRange
+)
 {
     @disable this(this) {}
 
@@ -99,7 +104,7 @@ struct BufferArray(T, Allocator = Mallocator)
 
         bool success;
 
-        this._capacity = newLength * 2;
+        this._capacity = Growth.grow(this._length);
         if(this._capacity < 64)
             this._capacity = 64; // Make memory thrashing less likely.
 

@@ -5,4 +5,6 @@ public import
     engine.util.structures.bookkeeper, 
     engine.util.structures.bufferarray, 
     engine.util.structures.ssobufferarray,
-    engine.util.structures.typedpointer;
+    engine.util.structures.typedpointer,
+    engine.util.structures.objectpool,
+    engine.util.structures.growthrange;
