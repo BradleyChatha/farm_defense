@@ -39,10 +39,7 @@ int getTop(ref LuaState lua)
 void push(T)(ref LuaState lua, T integer)
 if(isNumeric!T && !isFloatingPoint!T)
 {
-    static if(isUnsigned!T)
-        lua_pushunsigned(lua.handle, integer.to!lua_Unsigned);
-    else
-        lua_pushinteger(lua.handle, integer.to!lua_Integer);
+    lua_pushinteger(lua.handle, integer.to!lua_Integer);
 }
 
 void push(T)(ref LuaState lua, T floating)
