@@ -59,7 +59,9 @@ if(isFunction!Func)
 
     auto lua = LuaState.wrap(state);
     lua.checkType(1, LUA_TLIGHTUSERDATA);
-    auto ctx = cast(Params[0])lua.as!(void*)(1);
+    auto obj = cast(Object)lua.as!(void*)(1);
+    auto ctx = cast(Params[0])obj;
+    assert(ctx !is null, "Expected user data of type "~Params[0].stringof~" but got something else instead.");
     lua.remove(1);
 
     try return Func(ctx, lua);

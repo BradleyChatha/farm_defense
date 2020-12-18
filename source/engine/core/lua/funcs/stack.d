@@ -66,6 +66,7 @@ void push(ref LuaState lua, Nil nil)
 
 void push(ref LuaState lua, void* lightUserData)
 {
+    // NOTE: The GC can't scan the LUA stack, so keep a reference around yourself.
     lua_pushlightuserdata(lua.handle, lightUserData);
 }
 

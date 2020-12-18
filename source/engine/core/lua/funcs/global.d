@@ -6,3 +6,8 @@ void setGlobal(ref LuaState lua, const(char)[] name)
 {
     lua_setglobal(lua.handle, name.toStringz);
 }
+
+void getGlobal(ref LuaState lua, const(char)[] name)
+{
+    lua_getglobal(lua.handle, name.toStringz);
+}
