@@ -16,6 +16,7 @@ void registerConfigLibrary(ref LuaState state, string name)
         luaL_Reg("getFloating", &luaCFuncWithContext!getFloating),
         luaL_Reg("setBoolean", &luaCFuncWithContext!setBoolean),
         luaL_Reg("getBoolean", &luaCFuncWithContext!getBoolean),
+        luaL_Reg("serialiseTable", &luaCFuncWithContext!tableToConfig),
         luaL_Reg(null, null)
     ];
     state.register(name, funcs);
@@ -50,3 +51,14 @@ alias getFloating = get!double;
 
 alias setBoolean = set!(LUA_TBOOLEAN, bool);
 alias getBoolean = get!bool;
+
+private int tableToConfig(Config ctx, ref LuaState lua)
+{
+    lua.checkType(1, LUA_TTABLE);
+
+    auto result = lua.loadLuaTableAsConfig(ctx);
+    if(!result.isOk)
+        return lua.error(result.error);
+
+    return 0;
+}

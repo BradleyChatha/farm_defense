@@ -1,6 +1,8 @@
 module engine.core.config.luaconfigprovider;
 import engine.core, engine.util;
 
+private const MAX_TABLE_DEPTH = 5;
+
 // A LUA configuration file is simply a LUA file that that returns an object.
 //
 // We can auto serialise the values we want.
@@ -20,8 +22,11 @@ Result!void loadLuaTableAsConfig(ref LuaState lua, Config conf)
         return Result!void.failure("Top of stack is not a table.");
     }
 
-    void serialise(int index, string keyPrefix)
+    void serialise(int index, string keyPrefix, int depth = 0)
     {
+        if(depth == MAX_TABLE_DEPTH)
+            return;
+
         lua.forEach(index, (ref _)
         {
             const key = keyPrefix ~ lua.as!string(-2);
@@ -39,7 +44,7 @@ Result!void loadLuaTableAsConfig(ref LuaState lua, Config conf)
                         conf.set(key, d);
                     break;
 
-                case LUA_TTABLE: serialise(-1, key~":"); break;
+                case LUA_TTABLE: serialise(-1, key~":", depth+1); break;
                 
                 default: break;
             }
