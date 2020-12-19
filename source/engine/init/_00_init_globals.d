@@ -5,6 +5,7 @@ import engine.core;
 void init_00_init_globals()
 {
     Config.instance();
+    startLoggingThread();
     setupLua();
 }
 

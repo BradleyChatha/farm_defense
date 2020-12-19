@@ -7,8 +7,7 @@ struct StaticObjectPool(T, size_t capacity)
     @disable this(this){}
 
     alias FreeListT = ContiguousFreeList!(GCAllocator, stateSize!T);
-    FreeListT instance;
-    alias instance this;
+    FreeListT alloc;
 
     static typeof(this) create()()
     {
@@ -21,10 +20,14 @@ struct DynamicObjectPool(T, size_t capacityPerStep)
     @disable this(this){}
 
     alias FreeListT = AllocatorList!((n) =>
-        ContiguousFreeList!(GCAllocator, stateSize!T)(stateSize!T * n)
+        ContiguousFreeList!(NullAllocator, stateSize!T)(new ubyte[stateSize!T * n])
     );
-    FreeListT instance;
-    alias instance this;
+    FreeListT alloc;
+
+    auto make(Args...)(Args args)
+    {
+        return this.alloc.make!T(args);
+    }
 
     static typeof(this) create()()
     {
