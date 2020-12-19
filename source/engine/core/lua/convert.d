@@ -1,6 +1,6 @@
 module engine.core.lua.convert;
 
-import std.format, std.traits;
+import std.format, std.traits, std.conv;
 import std.typecons : Flag;
 import engine.core.lua.funcs._import;
 
@@ -44,7 +44,28 @@ if(is(T == struct))
     }}
 }
 
-void pushAsLuaTable(T)(ref LuaState state, T obj)
+void pushAsLuaTable(FailIfCantConvert Fail, E)(ref LuaState state, E IGNORED = E.init)
+if(is(E == enum))
+{
+    assert(IGNORED == E.init, "The value parameter isn't used here.");
+
+    auto guard = LuaStackGuard(state, 1);
+    state.newTable();
+
+    // `Fail` is ignored, it's just for API parity for the other versions.
+    static assert(__traits(compiles, state.push(OriginalType!E.init)), "Can't convert "~E.stringof~" due to its base type.");
+
+    static foreach(member; EnumMembers!E)
+    {{
+        const EnumValueName = member.to!string;
+        const EnumValue = member.to!(OriginalType!E);
+        state.push(EnumValueName);
+        state.push(EnumValue);
+        state.rawSet(-3);
+    }}
+}
+
+void pushAsLuaTable(T)(ref LuaState state, T obj = T.init)
 {
     state.pushAsLuaTable!(FailIfCantConvert.yes, T)(obj);
 }
@@ -65,6 +86,19 @@ if(isFunction!Func)
     lua.remove(1);
 
     try return Func(ctx, lua);
+    catch(Exception ex)
+        return lua.error(ex.msg);
+}
+
+int luaCFunc(alias Func)(lua_State* state) nothrow
+if(isFunction!Func)
+{
+    alias Params = Parameters!Func;
+    static assert(Params.length == 1, "Function must have only 1 parameter.");
+    static assert(is(Params[0] == LuaState) && (ParameterStorageClassTuple!Func[0] & ParameterStorageClass.ref_) > 0, "The parameter must be a `ref LuaState`");
+
+    auto lua = LuaState.wrap(state);
+    try return Func(lua);
     catch(Exception ex)
         return lua.error(ex.msg);
 }

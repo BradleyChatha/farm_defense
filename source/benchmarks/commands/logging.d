@@ -21,6 +21,8 @@ struct BenchmarkLoggingCommand
 
     void onExecute()
     {
+        import std.stdio;
+        //addLoggingSink(m => writeln(m.message));
         startLoggingThread();
         scope(exit) g_shouldThreadsStop = true;
 
@@ -50,7 +52,7 @@ private void loggingThread(string message)(size_t reps, size_t flushEvery, bool 
 {
     foreach(i; 0..reps)
     {
-        logQueue(LogMessage.fromString(message));
+        logInfo(message);
         if((i % flushEvery) == 0)
             while(!logFlush() && block){}
     }

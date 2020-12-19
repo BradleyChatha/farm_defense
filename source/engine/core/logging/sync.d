@@ -45,8 +45,7 @@ void logForceFlush()
     while(!logFlush()){}
 }
 
-// TEMP PUBLIC.
-/*package*/ void logQueue(LogMessage message)
+package void logQueue(LogMessage message)
 {
     g_logLocalQueue ~= message;
 }

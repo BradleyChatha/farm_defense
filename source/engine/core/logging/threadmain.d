@@ -3,7 +3,7 @@ module engine.core.logging.threadmain;
 import std.stdio;
 import core.thread;
 import libasync;
-import engine.core, engine.core.logging.sync;
+import engine.core, engine.core.logging.sync, engine.core.logging.sink;
 
 void startLoggingThread()
 {
@@ -16,6 +16,7 @@ void startLoggingThread()
 
     version(Engine_DebugLoggingThread)
     {
+        logDebugWritefln("I'm the main thread!");
         logQueue(LogMessage.fromString("This is a test message: Logging thread has been started."));
         logFlush();
         logQueue(LogMessage.fromString("Hopefully this one won't show up until the last flush!"));
@@ -68,6 +69,8 @@ private void onDoWork()
     logDebugWritefln("START processing of log messages.");
     foreach(msg; logThreadMainGetLogs())
     {
+        foreach(sink; g_logSinks)
+            sink(msg);
     }
     logDebugWritefln("END processing of log messages.");
 }

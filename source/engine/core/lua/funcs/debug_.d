@@ -28,3 +28,18 @@ void printStack (ref LuaState state) {
         }
     }
 }
+
+Result!lua_Debug getDebugInfo(ref LuaState state, string what, int level = 1)
+{
+    auto guard = LuaStackGuard(state, 0);
+
+    lua_Debug dbg;
+
+    const result = lua_getstack(state.handle, level, &dbg);
+    if(result != 1)
+        return typeof(return).failure("lua_getstack returned non-1");
+
+    lua_getinfo(state.handle, what.ptr, &dbg);
+
+    return typeof(return).ok(dbg);
+}

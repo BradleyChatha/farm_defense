@@ -44,6 +44,9 @@ void forEach(ref LuaState lua, int tableIndex, scope void delegate(ref LuaState)
     if(tableIndex < 0)
         tableIndex--; // Since we're pushing a key on top.
 
+    const oldTop = lua.getTop();
+    scope(failure) lua.setTop(oldTop);
+
     lua.push(Nil());
     while(lua.next(tableIndex))
     {

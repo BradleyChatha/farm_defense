@@ -1,0 +1,7 @@
+{
+    "Lua.diagnostics.globals": [
+        "LogLevel",
+        "ConsoleLoggerStyle",
+        "Logger"
+    ]
+}
