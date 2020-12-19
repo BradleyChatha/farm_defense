@@ -22,8 +22,13 @@ private LogQueue g_logLocalQueue;
 // Functions
 bool logFlush()
 {
+    logDebugWritefln("Attempting flush.");
     if(!cas(&g_logQueueLock, false, true))
+    {
+        logDebugWritefln("Logging thread is busy.");
         return false;
+    }
+    logDebugWritefln("Acquired lock.");
 
     // We have the lock, so do whatever now.
     g_logQueue.length = g_logLocalQueue.length;
