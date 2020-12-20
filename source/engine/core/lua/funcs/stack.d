@@ -81,6 +81,14 @@ if(is(E == enum))
     lua.push(cast(OriginalType!E)value);
 }
 
+void pushWithUpvalues(Args...)(ref LuaState lua, lua_CFunction func, Args upvalues)
+{
+    auto guard = LuaStackGuard(lua, 1);
+    foreach(v; upvalues)
+        lua.push(v);
+    lua_pushcclosure(lua.handle, func, Args.length);
+}
+
 // GET
 
 const(char)[] toTempString(ref LuaState lua, int index)

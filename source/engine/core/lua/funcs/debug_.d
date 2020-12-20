@@ -6,6 +6,9 @@ import engine.core.lua.funcs._import;
 // Taken from StackOverflow since I was lazy.
 void printStack (ref LuaState state) {
     auto L = state.handle;
+
+    printf("=====LUA STACK TRACE=====\n");
+
     int top=lua_gettop(L);
     for (int i=1; i <= top; i++) {
         printf("%d\t%s\t", i, luaL_typename(L,i));

@@ -102,3 +102,23 @@ if(isFunction!Func)
     catch(Exception ex)
         return lua.error(ex.msg);
 }
+
+int luaCFuncWithUpvalues(alias Func)(lua_State* state) nothrow
+if(isFunction!Func)
+{
+    alias Params = Parameters!Func;
+    static assert(Params.length > 0, "Function must have at least 1 parameter.");
+    static assert(is(Params[0] == LuaState) && (ParameterStorageClassTuple!Func[0] & ParameterStorageClass.ref_) > 0, "The first parameter must be a `ref LuaState`");
+
+    Params params;
+    params[0] = LuaState.wrap(state);
+
+    static foreach(i, Param; Params[1..$])
+    {{
+        params[i+1] = params[0].as!Param(lua_upvalueindex(i+1));
+    }}
+
+    try return Func(params);
+    catch(Exception ex)
+        return params[0].error(ex.msg);
+}

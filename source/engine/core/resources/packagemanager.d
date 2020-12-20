@@ -45,6 +45,11 @@ final class PackageManager
         }
     }
 
+    debug void debugSetResource(string name, IResource value)
+    {
+        this._resourcesByName[name] = ResourceInfo(value, false);
+    }
+
     void register(string typeName, IPackageLoader loader)
     {
         this._packageLoadersByTypeName[typeName] = loader;

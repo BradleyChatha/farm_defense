@@ -7,4 +7,5 @@ public import
     engine.core.resources.packageloadcontext,
     engine.core.resources.ipackageloader,
     engine.core.resources.iresourceloader,
-    engine.core.resources.resourceloadinfo;
+    engine.core.resources.resourceloadinfo,
+    engine.core.resources.luainterface;

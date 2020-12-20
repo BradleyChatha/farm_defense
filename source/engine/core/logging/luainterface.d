@@ -14,7 +14,7 @@ void registerLoggingLibrary(ref LuaState state, string name)
     ];
     state.register(name, funcs);
 
-    auto result = state.loadString(`
+    state.loadString(`
         local library = ...
         library.logTrace   = function(str) library.log(LogLevel.trace,   str, 2) end
         library.logDebug   = function(str) library.log(LogLevel.debug_,  str, 2) end
@@ -22,12 +22,9 @@ void registerLoggingLibrary(ref LuaState state, string name)
         library.logWarning = function(str) library.log(LogLevel.warning, str, 2) end
         library.logError   = function(str) library.log(LogLevel.error,   str, 2) end
         library.logFatal   = function(str) library.log(LogLevel.fatal,   str, 2) end
-    `);
-    enforce(result.isOk, result.error);
+    `).enforceOk;
     state.insert(-2);
-
-    result = state.pcall(1, 0);
-    enforce(result.isOk, result.error);
+    state.pcall(1, 0).enforceOk;
 }
 
 void loadLuaLoggingConfigFile(ref LuaState lua, string configFile)
