@@ -47,6 +47,14 @@ private void threadMain()
         // Run the loop.
         g_threadLoggingLoop.loop(1.seconds);
 
+        // Check the main thread didn't unexpectedly die.
+        // This is a fail-safe to ensure that this thread doesn't linger.
+        if(!threadIsMainResponding())
+        {
+            writeln("MAIN THREAD DETECTED AS DEAD, ENDING ALL THREADS.");
+            g_shouldThreadsStop = true;
+        }
+
         // And check if we caught anything interesting.
         if(g_threadUncaughtError !is null)
         {

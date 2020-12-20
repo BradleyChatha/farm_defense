@@ -8,4 +8,5 @@ public import
     engine.core.resources.ipackageloader,
     engine.core.resources.iresourceloader,
     engine.core.resources.resourceloadinfo,
-    engine.core.resources.luainterface;
+    engine.core.resources.luainterface,
+    engine.core.resources.globals;

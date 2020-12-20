@@ -17,6 +17,7 @@ else
 
     int main(string[] args)
     {
+        threadMainResetKeepAlive();
         init_00_init_globals();
         init_03_load_config();
         init_06_init_resources();

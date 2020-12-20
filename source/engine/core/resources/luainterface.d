@@ -27,22 +27,32 @@ private int loader(ref LuaState lua, void* managerPtr)
     if(manager is null)
         return lua.error("Upvalue passed is not a PackageManager.");
 
+    lua.checkType(1, LUA_TSTRING);
+
     const path = lua.as!string(1);
     if(!path.startsWith("res:"))
     {
-        lua.push("Require path does not begin with 'res:'. Assuming this loader is not to be used.");
+        lua.push("\nRequire path does not begin with 'res:'. Assuming this loader is not to be used.");
         return 1;
     }
+
+    logfDebug("\nLoading script %s", path);
 
     auto split = path.splitter(':');
     split.popFront();
     if(split.empty)
     {
-        lua.push("'res:' was specified but no path/name was provided.");
+        lua.push("\n'res:' was specified but no path/name was provided.");
         return 1;
     }
 
     const code = manager.getOrNull!LuaScriptResource(split.front);
+    if(code is null)
+    {
+        lua.push("\nno script resource "~split.front);
+        return 1;
+    }
+
     auto result = lua.loadString(code.code);
     if(!result.isOk)
         lua.push(result.error);

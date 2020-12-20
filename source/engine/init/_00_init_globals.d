@@ -7,6 +7,11 @@ private const LOGGER_CONFIG_FILE = "./assets/config/loggers.lua";
 
 void init_00_init_globals()
 {
+    import core.thread : Thread;
+    g_threadMain = Thread.getThis();
+    g_keepAliveStopwatch.start();
+    threadMainResetKeepAlive();
+
     Config.instance();
     setupLua();
     setupLogging();
