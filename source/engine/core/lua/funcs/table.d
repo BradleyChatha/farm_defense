@@ -55,3 +55,15 @@ void forEach(ref LuaState lua, int tableIndex, scope void delegate(ref LuaState)
         lua.pop(1); // Pop the value, keep the key
     }
 }
+
+T rawGet(T, alias Getter = as)(ref LuaState lua, int tableIndex, string key)
+{
+    auto guard = LuaStackGuard(lua, 0);
+
+    lua.push(key);
+    lua.rawGet(tableIndex - 1);
+    auto value = Getter!T(lua, -1);
+    lua.pop(1);
+
+    return value;
+}

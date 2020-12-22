@@ -44,23 +44,9 @@ void loadLuaLoggingConfigFile(ref LuaState lua, string configFile)
         enforce(lua.type(-1) == LUA_TTABLE, "Returned table can only contain other tables.");
 
         // TODO: Helper functions that condense this code.
-        lua.push("type");
-        lua.rawGet(-2);
-        enforce(lua.type(-1) == LUA_TSTRING, "Expected a string for value 'type'");
-        const type = lua.as!string(-1);
-        lua.pop(1);
-
-        lua.push("minLogLevel");
-        lua.rawGet(-2);
-        enforce(lua.type(-1) == LUA_TNUMBER, "Expected a number for value 'minLogLevel'");
-        const minLogLevel = lua.as!LogLevel(-1);
-        lua.pop(1);
-
-        lua.push("style");
-        lua.rawGet(-2);
-        enforce(lua.type(-1) == LUA_TNUMBER, "Expected a number for value 'style'");
-        const style = lua.asUnchecked!LogMessageStyle(-1);
-        lua.pop(1);
+        const type = lua.rawGet!string(-1, "type");
+        const minLogLevel = lua.rawGet!LogLevel(-1, "minlogLevel");
+        const style = lua.rawGet!(LogMessageStyle, asUnchecked)(-1, "style");
 
         switch(type)
         {
