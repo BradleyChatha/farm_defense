@@ -55,12 +55,7 @@ void loadLuaLoggingConfigFile(ref LuaState lua, string configFile)
                 break;
 
             case "file":
-                lua.push("file");
-                lua.rawGet(-2);
-                enforce(lua.type(-1) == LUA_TSTRING, "Expected a string for value 'file'");
-                const fileName = lua.as!string(-1);
-                lua.pop(1);
-
+                const fileName = lua.rawGet!string(-1, "file");
                 addFileLoggingSink(fileName, style, minLogLevel);
                 break;
 
