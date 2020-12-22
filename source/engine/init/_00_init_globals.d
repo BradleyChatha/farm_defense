@@ -27,8 +27,8 @@ private void setupLua()
 
 private void setupLogging()
 {
-    g_luaState.pushAsLuaTable!ConsoleLoggerStyle();
-    g_luaState.setGlobal("ConsoleLoggerStyle");
+    g_luaState.pushAsLuaTable!LogMessageStyle();
+    g_luaState.setGlobal("LogMessageStyle");
 
     g_luaState.pushAsLuaTable!LogLevel();
     g_luaState.setGlobal("LogLevel");

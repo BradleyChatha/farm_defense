@@ -56,16 +56,26 @@ void loadLuaLoggingConfigFile(ref LuaState lua, string configFile)
         const minLogLevel = lua.as!LogLevel(-1);
         lua.pop(1);
 
+        lua.push("style");
+        lua.rawGet(-2);
+        enforce(lua.type(-1) == LUA_TNUMBER, "Expected a number for value 'style'");
+        const style = lua.asUnchecked!LogMessageStyle(-1);
+        lua.pop(1);
+
         switch(type)
         {
             case "console":
-                lua.push("style");
+                addConsoleLoggingSink(style, minLogLevel);
+                break;
+
+            case "file":
+                lua.push("file");
                 lua.rawGet(-2);
-                enforce(lua.type(-1) == LUA_TNUMBER, "Expected a number for value 'style'");
-                const style = lua.asUnchecked!ConsoleLoggerStyle(-1);
+                enforce(lua.type(-1) == LUA_TSTRING, "Expected a string for value 'file'");
+                const fileName = lua.as!string(-1);
                 lua.pop(1);
 
-                addConsoleLoggingSink(style, minLogLevel);
+                addFileLoggingSink(fileName, style, minLogLevel);
                 break;
 
             default: throw new Exception("Unknown logger type: "~type);

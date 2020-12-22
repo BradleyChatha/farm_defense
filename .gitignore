@@ -20,3 +20,4 @@ out.log
 log.log
 /*.spv
 *.tiled-session
+/logs/
