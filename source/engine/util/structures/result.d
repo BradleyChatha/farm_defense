@@ -65,9 +65,17 @@ struct Result(ValueT)
     alias isOk = isType!(ResultType.ok);
     alias isFailure = isType!(ResultType.failure);
 
+    static if(!is(ValueT == void))
+    @safe ValueT enforceOkValue() 
+    { 
+        if(!this.isOk) 
+            throw new Exception("Failure result: "~this.error);
+        return this.value;
+    }
+
     @safe void enforceOk() const 
     { 
         if(!this.isOk) 
-            throw new Exception("Failure result: "~this.error); 
+            throw new Exception("Failure result: "~this.error);
     }
 }

@@ -37,3 +37,6 @@ configuration "benchmark" {
 	targetType "executable"
 	versions "Engine_Benchmark"
 }
+configuration "debug-lua" {
+    versions "Engine_EnableStackGuard"
+}

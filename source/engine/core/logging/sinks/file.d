@@ -17,15 +17,15 @@ private class FileLogger
     }
 }
 
-void addFileLoggingSink(string file, LogMessageStyle style, LogLevel minLevel)
+void addFileLoggingSink(string file, LogMessageStyle style, LogLevel minLevel, LogLevel maxLevel)
 {
     auto logger = new FileLogger(file);
-    addLoggingSink(msg => fileLogger(logger, msg, style, minLevel));
+    addLoggingSink(msg => fileLogger(logger, msg, style, minLevel, maxLevel));
 }
 
-void fileLogger(FileLogger logger, LogMessage msg, LogMessageStyle style, LogLevel minLevel)
+void fileLogger(FileLogger logger, LogMessage msg, LogMessageStyle style, LogLevel minLevel, LogLevel maxLevel)
 {
-    if(cast(int)msg.level < cast(int)minLevel)
+    if(cast(int)msg.level < cast(int)minLevel || cast(int)msg.level > cast(int)maxLevel)
         return;
 
     Appender!(char[]) output;

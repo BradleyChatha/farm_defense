@@ -56,14 +56,21 @@ void forEach(ref LuaState lua, int tableIndex, scope void delegate(ref LuaState)
     }
 }
 
-T rawGet(T, alias Getter = as)(ref LuaState lua, int tableIndex, string key)
+Result!T rawGet(T, alias Getter = as)(ref LuaState lua, int tableIndex, string key)
 {
     auto guard = LuaStackGuard(lua, 0);
 
     lua.push(key);
     lua.rawGet(tableIndex - 1);
+    if(lua.type(-1) != luaTypeOf!T)
+    {
+        auto result = Result!T.failure("Expected "~luaTypeOf!T.stringof~" not "~lua.type(-1).to!string~" for value of index '"~key~"'");
+        lua.pop(1);
+        return result;
+    }
+
     auto value = Getter!T(lua, -1);
     lua.pop(1);
 
-    return value;
+    return Result!T.ok(value);
 }

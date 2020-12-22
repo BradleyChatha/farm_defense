@@ -43,20 +43,20 @@ void loadLuaLoggingConfigFile(ref LuaState lua, string configFile)
         // -1 is value. Value should be a table.
         enforce(lua.type(-1) == LUA_TTABLE, "Returned table can only contain other tables.");
 
-        // TODO: Helper functions that condense this code.
-        const type = lua.rawGet!string(-1, "type");
-        const minLogLevel = lua.rawGet!LogLevel(-1, "minlogLevel");
-        const style = lua.rawGet!(LogMessageStyle, asUnchecked)(-1, "style");
+        const type        = lua.rawGet!string(-1, "type").enforceOkValue;
+        const minLogLevel = lua.rawGet!LogLevel(-1, "minLogLevel").enforceOkValue;
+        const maxLogLevel = lua.rawGet!LogLevel(-1, "maxLogLevel").enforceOkValue;
+        const style       = lua.rawGet!(LogMessageStyle, asUnchecked)(-1, "style").enforceOkValue;
 
         switch(type)
         {
             case "console":
-                addConsoleLoggingSink(style, minLogLevel);
+                addConsoleLoggingSink(style, minLogLevel, maxLogLevel);
                 break;
 
             case "file":
-                const fileName = lua.rawGet!string(-1, "file");
-                addFileLoggingSink(fileName, style, minLogLevel);
+                const fileName = lua.rawGet!string(-1, "file").enforceOkValue;
+                addFileLoggingSink(fileName, style, minLogLevel, maxLogLevel);
                 break;
 
             default: throw new Exception("Unknown logger type: "~type);

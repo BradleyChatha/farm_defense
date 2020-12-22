@@ -22,6 +22,7 @@ struct LuaStackGuard
         this._startSize = state.getTop();
     }
 
+    version(Engine_EnableStackGuard)
     ~this()
     {
         if(this._state !is null)
