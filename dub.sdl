@@ -40,3 +40,6 @@ configuration "benchmark" {
 configuration "debug-lua" {
     versions "Engine_EnableStackGuard"
 }
+configuration "profile" {
+    versions "Engine_Profile"
+}

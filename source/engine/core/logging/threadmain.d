@@ -5,6 +5,8 @@ import core.thread;
 import libasync;
 import engine.core, engine.core.logging.sync, engine.core.logging.sink;
 
+private const PROFILE_LOG_PROCESS_FUNC = "logging:process";
+
 void startLoggingThread()
 {
     assert(g_threadLogging is null, "Cannot create multiple logging threads.");
@@ -36,6 +38,9 @@ private void threadMain()
     g_logNotifyAboutWork = new AsyncNotifier(g_threadLoggingLoop);
     g_logNotifyAboutWork.run(() => threadCatch!onDoWork);
     
+    profileInit("logging");
+    scope(exit) profileFlush();
+
     while(!g_shouldThreadsStop)
     {
         logDebugWritefln("Loop");
@@ -75,10 +80,13 @@ private void threadMain()
 private void onDoWork()
 {
     logDebugWritefln("START processing of log messages.");
+    profileStart(PROFILE_LOG_PROCESS_FUNC);
+    profileStartTimer(PROFILE_LOG_PROCESS_FUNC, "time");
     foreach(msg; logThreadMainGetLogs())
     {
         foreach(sink; g_logSinks)
             sink(msg);
     }
+    profileEnd(PROFILE_LOG_PROCESS_FUNC); // profileEnd can auto-end timers.
     logDebugWritefln("END processing of log messages.");
 }

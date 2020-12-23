@@ -12,6 +12,9 @@ void init_00_init_globals()
     g_keepAliveStopwatch.start();
     threadMainResetKeepAlive();
 
+    profileInit("main", true);
+    profileFlushAddFileSink();
+
     Config.instance();
     setupLua();
     setupLogging();

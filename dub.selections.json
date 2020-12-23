@@ -1,7 +1,6 @@
 {
 	"fileVersion": 1,
 	"versions": {
-		"asdf": "0.5.7",
 		"bindbc-freetype": "0.9.1",
 		"bindbc-loader": "0.3.2",
 		"bindbc-lua": "0.3.0",

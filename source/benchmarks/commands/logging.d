@@ -1,5 +1,7 @@
 module benchmarks.commands.logging;
 
+version(Engine_Benchmark):
+
 import core.thread;
 import benchmarks.commands._common;
 import engine.core;

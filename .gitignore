@@ -21,3 +21,4 @@ log.log
 /*.spv
 *.tiled-session
 /logs/
+/profiling/

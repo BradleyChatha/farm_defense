@@ -9,6 +9,6 @@ interface IResource
 mixin template IResourceBoilerplate()
 {
     private string _resourceName;
-    void resourceName(string name) { this._resourceName = name; }
+    void resourceName(string name) { assert(this._resourceName is null, "I already have a name: "~this._resourceName); this._resourceName = name; }
     string resourceName() { return this._resourceName; }
 }

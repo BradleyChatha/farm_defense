@@ -1,5 +1,7 @@
 module benchmarks.commands._common;
 
+version(Engine_Benchmark):
+
 public import std.datetime.stopwatch : benchmark;
 import jaster.cli;
 

@@ -21,6 +21,7 @@ else
         init_00_init_globals();
         init_03_load_config();
         init_06_init_resources();
+        profileFlush();
         scope(exit) g_shouldThreadsStop = true;
         return 0;
     }
