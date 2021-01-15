@@ -5,6 +5,8 @@ import engine.core.lua;
 
 struct LuaRef
 {
+    @disable this(this){}
+
     private
     {
         LuaState* _state; // Might need to keep in mind the possiblity of this memory being moved...
@@ -25,5 +27,10 @@ struct LuaRef
     {
         if(this._state !is null)
             luaL_unref(this._state.handle, this._tableIndex, this._handle);
+    }
+
+    package int handle()
+    {
+        return this._handle;
     }
 }

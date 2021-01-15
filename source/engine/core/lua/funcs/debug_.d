@@ -8,7 +8,7 @@ void printStack(string F = __FUNCTION__, size_t L = __LINE__)(ref LuaState state
     auto L = state.handle;
 
     printf("=====LUA STACK TRACE=====\n");
-    printf("FROM: %s:%d", F.ptr, cast(uint)L);
+    printf("FROM: %s:%d\n", F.ptr, cast(uint)L);
 
     int top=lua_gettop(L);
     for (int i=1; i <= top; i++) {

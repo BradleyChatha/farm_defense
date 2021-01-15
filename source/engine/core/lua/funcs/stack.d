@@ -81,6 +81,11 @@ if(is(E == enum))
     lua.push(cast(OriginalType!E)value);
 }
 
+void push(ref LuaState lua, ref LuaRef ref_)
+{
+    lua.rawGet(LUA_REGISTRYINDEX, ref_.handle);
+}
+
 void pushWithUpvalues(Args...)(ref LuaState lua, lua_CFunction func, Args upvalues)
 {
     auto guard = LuaStackGuard(lua, 1);

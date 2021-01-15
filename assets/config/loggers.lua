@@ -37,7 +37,4 @@ addConsoleLogger(LOG_STYLE_ALL, LogLevel.trace, LogLevel.fatal)
 addFileLogger("./logs/all.log", LOG_STYLE_ALL, LogLevel.trace, LogLevel.fatal)
 addFileLogger("./logs/warn_and_error.log", LOG_STYLE_ALL, LogLevel.warning, LogLevel.error)
 
--- A bit weird to be able to log here, but it's possible due to how everything's setup!
-Logger.logError("Hey Mah!");
-
 return loggers;

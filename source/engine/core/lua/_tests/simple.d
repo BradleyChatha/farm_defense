@@ -66,7 +66,9 @@ unittest
 
     state.type(-1).should.equal(LUA_TFUNCTION);
     state.pcall(0, 1).isOk.should.equal(true); // Get the function
-    state.pushAsLuaTable(S("Hello", 69)); // Push the table.
+    state.pushEx(S("Hello", 69)); // Push the table.
+
+    state.asEx!S(-1).enforceOkValue.should.equal(S("Hello", 69));
 
     state.getTop.should.equal(2);
     state.type(-1).should.equal(LUA_TTABLE);
@@ -80,7 +82,7 @@ unittest
 
     state.loadString(code);
     state.pcall(0, 1);
-    state.pushAsLuaTable!(FailIfCantConvert.no)(S2("non", null));
+    state.pushEx!(FailIfCantConvert.no)(S2("non", null));
     state.pcall(1, 1).isOk.should.equal(true);
     state.as!bool(-1).should.equal(true);
 }
@@ -101,7 +103,7 @@ unittest
     result.isOk.should.equal(true).because((result.isFailure) ? result.error : null);
     state.pcall(0, 1).isOk.should.equal(true);
 
-    state.pushAsLuaTable!E();
+    state.pushEx!E();
 
     state.type(-1).should.equal(LUA_TTABLE);
     state.type(-2).should.equal(LUA_TFUNCTION);

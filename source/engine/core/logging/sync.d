@@ -23,6 +23,14 @@ private LogQueue g_logLocalQueue;
 bool logFlush()
 {
     logDebugWritefln("Attempting flush.");
+
+    // Assume we're under a use case where logging (at least in this form) isn't desired if the logging thread hasn't started up.
+    if(g_threadLogging is null)
+    {
+        g_logLocalQueue.length = 0;
+        return true;
+    }
+
     if(!cas(&g_logQueueLock, false, true))
     {
         logDebugWritefln("Logging thread is busy.");

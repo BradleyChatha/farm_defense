@@ -12,17 +12,27 @@ else version(Engine_Benchmark)
 }
 else
 {
-    import engine.core;
-    import engine.init;
+    import engine.core, engine.init, engine.gameplay;
 
     int main(string[] args)
     {
+        scope(exit)
+        {
+            // Specific condition that likely means this thread has thrown an uncaught error, but we can do a quick log flush first.
+            if(!g_shouldThreadsStop && g_threadLogging !is null)
+                logForceFlush(); 
+            g_shouldThreadsStop = true;
+        }
         threadMainResetKeepAlive();
         init_00_init_globals();
+        init_01_init_thirdparty();
         init_03_load_config();
         init_06_init_resources();
+        init_09_init_graphics();
         profileFlush();
-        scope(exit) g_shouldThreadsStop = true;
+        logForceFlush();
+        loopStart();
+        uninit_all();
         return 0;
     }
 }

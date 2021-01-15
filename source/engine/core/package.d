@@ -6,4 +6,5 @@ public import
     engine.core.config,
     engine.core.logging,
     engine.core.threading,
-    engine.core.profile;
+    engine.core.profile,
+    engine.core.interfaces;

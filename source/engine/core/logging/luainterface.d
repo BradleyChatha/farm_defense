@@ -9,7 +9,8 @@ void registerLoggingLibrary(ref LuaState state, string name)
 
     auto funcs = 
     [
-        luaL_Reg("log", &luaCFunc!log),
+        luaL_Reg("log",        &luaCFunc!log),
+        luaL_Reg("forceFlush", &luaCFunc!luaLogForceFlush),
         luaL_Reg(null, null)
     ];
     state.register(name, funcs);
@@ -88,5 +89,11 @@ private int log(ref LuaState lua)
     msg.timestamp = Clock.currTime;
     
     logRaw(msg);
+    return 0;
+}
+
+private int luaLogForceFlush(ref LuaState _)
+{
+    logForceFlush();
     return 0;
 }

@@ -22,3 +22,7 @@ log.log
 *.tiled-session
 /logs/
 /profiling/
+/test.bin
+/engine.exe
+/SDL2.dll
+.vs/
