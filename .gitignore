@@ -26,3 +26,4 @@ log.log
 /engine.exe
 /SDL2.dll
 .vs/
+/assets/packages/build/
