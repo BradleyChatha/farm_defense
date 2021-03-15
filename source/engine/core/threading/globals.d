@@ -2,7 +2,10 @@ module engine.core.threading.globals;
 
 import core.thread;
 import std.datetime.stopwatch : StopWatch;
+import std.typecons : Flag;
 import libasync;
+
+alias IsThreadSafe = Flag!"threadSafe";
 
 __gshared bool g_shouldThreadsStop; // So infinite-loop threads have an exit condition.
 

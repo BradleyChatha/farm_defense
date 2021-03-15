@@ -84,6 +84,7 @@ private void selectPhysicalDevice(DeviceInfo[] devices, VStringAndVersion[] want
     {
         int transfer;
         int graphics;
+        int compute;
     }
 
     static struct LuaResult
@@ -108,20 +109,76 @@ private void selectPhysicalDevice(DeviceInfo[] devices, VStringAndVersion[] want
     auto result = g_luaState.asEx!LuaResult(-1).enforceOkValue;
     auto device = devices[result.deviceIndex];
 
+    foreach(ext; result.enabledExtensions)
+        g_device.enabledExtensions[ext.name] = ext;
+
     g_device.physical          = device.device;
     g_device.properties        = device.props;
     g_device.memoryProperties  = device.memory;
     g_device.features          = device.features;
     g_device.queueFamilies     = device.queueFamilies;
     g_device.allExtensions     = device.extensions;
-    g_device.enabledExtensions = result.enabledExtensions;
     g_device.graphicsFamily    = VQueueFamily(result.queueFamilyIndicies.graphics, g_device.queueFamilies[result.queueFamilyIndicies.graphics]);
     g_device.transferFamily    = VQueueFamily(result.queueFamilyIndicies.transfer, g_device.queueFamilies[result.queueFamilyIndicies.transfer]);
+
+    if(Config.instance.getOrDefault!bool(CONFIG_OPTION_REQUIRE_COMPUTE))
+        g_device.computeFamily = VQueueFamily(result.queueFamilyIndicies.compute, g_device.queueFamilies[result.queueFamilyIndicies.compute]);
     
     g_luaState.pop(2); // pop RESULT and g_graphicsRulesFuncs
 }
 
 private void createLogicalDevice()
 {
+    import std.algorithm : uniq, map, filter;
+    import std.exception : enforce;
+    import std.range : array;
+
     logfInfo("06. Creating logical device.");
+
+    const priority = 1.0f;
+    VkDeviceQueueCreateInfo[] queueInfos;
+    foreach(uniqueFamily; [g_device.graphicsFamily.index, g_device.transferFamily.index, g_device.computeFamily.index].filter!(f => f != FAMILY_NOT_FOUND).uniq)
+    {
+        VkDeviceQueueCreateInfo info = 
+        {
+            queueFamilyIndex: uniqueFamily,
+            queueCount: 1,
+            pQueuePriorities: &priority
+        };
+        queueInfos ~= info;
+    }
+
+    VkPhysicalDeviceFeatures features = 
+    {
+        textureCompressionBC: true
+    };
+
+    static foreach(featureMemberName; __traits(allMembers, VkPhysicalDeviceFeatures))
+    {
+        enforce(!mixin("features."~featureMemberName) || mixin("g_device.features."~featureMemberName), "Feature "~featureMemberName~" is not supported by this device.");
+        if(mixin("features."~featureMemberName))
+            logfDebug("Using feature %s", featureMemberName);
+    }
+
+    const enabledLayers = g_vkInstance.layers.byValue.filter!(l => l.isEnabled).map!(l => l.name.ptr).array;
+    VkDeviceCreateInfo info = 
+    {
+        queueCreateInfoCount: cast(uint)queueInfos.length,
+        pQueueCreateInfos: queueInfos.ptr,
+        enabledLayerCount: cast(uint)enabledLayers.length,
+        ppEnabledLayerNames: enabledLayers.ptr,
+        enabledExtensionCount: cast(uint)g_device.enabledExtensions.length,
+        ppEnabledExtensionNames: g_device.enabledExtensions.byValue.map!(e => e.name.ptr).array.ptr
+    };
+
+    CHECK_VK(vkCreateDevice(g_device.physical, &info, null, &g_device.logical));
+    g_device.transfer = VQueue(g_device.transferFamily, VQueueType.transfer);
+    g_device.graphics = VQueue(g_device.graphicsFamily, VQueueType.graphics);
+
+    if(Config.instance.getOrDefault!bool(CONFIG_OPTION_REQUIRE_COMPUTE))
+        g_device.compute = VQueue(g_device.computeFamily, VQueueType.compute);
+
+    g_device.queueByType[VQueueType.transfer] = g_device.transfer;
+    g_device.queueByType[VQueueType.graphics] = g_device.graphics;
+    g_device.queueByType[VQueueType.compute]  = g_device.compute;
 }

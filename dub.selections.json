@@ -8,7 +8,7 @@
 		"ddmp": "0.0.1-0.dev.3",
 		"erupted": "2.0.70+v1.2.150",
 		"fluent-asserts": "0.13.3",
-		"gfm": "8.0.5",
+		"gfm": "8.0.6",
 		"intel-intrinsics": "1.3.8",
 		"jcli": "0.11.0",
 		"jioc": "0.2.0",
@@ -19,7 +19,7 @@
 		"sdlang-d": "0.10.6",
 		"silly": "1.0.2",
 		"stdx-allocator": "3.1.0-beta.2",
-		"taggedalgebraic": "0.11.18",
+		"taggedalgebraic": "0.11.19",
 		"unit-threaded": "1.0.11"
 	}
 }

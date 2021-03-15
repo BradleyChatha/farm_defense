@@ -1,0 +1,41 @@
+define "test" {
+    use:file "1.png"
+    use:asset "test_image_2"
+
+    pipeline {
+        to:texture "1.png" format="rgba_u8" alias="image1"
+        texture:stitch "image1" "test_image_2" "test_image_2" "image1" "image1" "image1""image1" "image1" "image1""image1" "image1" "image1" alias="result" // texture:stitch always results in an RGBA_U8 texture, due to ease-of-use.
+    }
+    
+    output:texture {
+        raw "test_stitch.png"
+        compiled "test_stitch.tex"
+    }
+    export "result"
+}
+
+define "test2" {
+    use:file "1.png"
+    use:asset "test_image_2"
+
+    pipeline {
+        to:texture "1.png" format="rgba_u8" alias="image1"
+        texture:stitch "image1" "test_image_2" "image1" "image1"  "image1""image1" "image1" "image1""image1" "image1" "image1" "image1" "image1" "image1""image1" "image1" "image1""image1" "image1" "image1" "image1" "image1" "image1""image1" "image1" "image1""image1" "image1" "image1""image1" "image1" "image1""image1" "image1" "image1" "image1" "image1" "image1""image1" "image1" "image1""image1" "image1" "image1" "image1" "image1" "image1""image1" "image1" "image1""image1" "image1" "image1"  "image1""image1" "image1" "image1""image1" "image1" "image1" "image1" "image1" "image1""image1" "image1" "image1""image1" "image1" "image1" "image1" "image1" "image1""image1" "image1" "image1""image1" "image1" alias="result" // texture:stitch always results in an RGBA_U8 texture, due to ease-of-use.
+    }
+    
+    output:texture {
+        raw "test_stitch2.png"
+        compiled "test_stitch2.tex"
+    }
+    export "result"
+}
+
+define "test_image_2" {
+    use:file "2.png" alias="image"
+
+    pipeline {
+        to:texture "image" format="rgba_u8"
+    }
+
+    export "image"
+}

@@ -1,0 +1,15 @@
+.dub
+docs.json
+__dummy.html
+docs/
+/packagec
+packagec.so
+packagec.dylib
+packagec.dll
+packagec.a
+packagec.lib
+packagec-test-*
+*.exe
+*.o
+*.obj
+*.lst

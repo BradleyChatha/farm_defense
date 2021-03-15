@@ -81,6 +81,9 @@ unittest
     b.tryAddBits(1).should.equal(false);
 }
 
+// Oh you sweet sweet child.
+// How little to you know of the dastardly ideas for your rewrite.
+// ... When I have the energy for it!
 struct Bookkeeper(size_t Bits, Allocator = NullAllocator)
 {
     @disable this(this){}

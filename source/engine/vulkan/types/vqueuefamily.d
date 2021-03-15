@@ -2,9 +2,11 @@ module engine.vulkan.types.vqueuefamily;
 
 import engine.vulkan;
 
+enum FAMILY_NOT_FOUND = uint.max;
+
 struct VQueueFamily
 {
-    uint index;
+    uint index = FAMILY_NOT_FOUND;
     uint queueCount;
 
     this(uint index, VkQueueFamilyProperties family)

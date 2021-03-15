@@ -12,8 +12,14 @@ struct Device
     VStringAndVersion[] allExtensions;
     
     VkDevice logical;
-    VStringAndVersion[] enabledExtensions;
+    VStringAndVersion[string] enabledExtensions;
     VQueueFamily transferFamily;
     VQueueFamily graphicsFamily;
+    VQueueFamily computeFamily;
     VQueueFamily presentFamily;
+    VQueue transfer;
+    VQueue graphics;
+    VQueue present;
+    VQueue compute;
+    VQueue[VQueueType.max+1] queueByType;
 }

@@ -9,4 +9,6 @@ void initVulkanBasic()
     _02_load_instance_layers_and_extensions();
     _04_load_instance();
     _06_select_device();
+    _08_load_vma();
+    _10_init_managers();
 }

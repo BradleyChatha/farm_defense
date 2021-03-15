@@ -4,6 +4,9 @@ import core.sync.mutex;
 import std.traits;
 import engine.util, engine.core.config;
 
+// It's a bit of bad design to put *all* statically known config options here, buuuut it really helps keep things simple.
+const CONFIG_OPTION_REQUIRE_COMPUTE = "requireCompute";
+
 private struct ArrayWrapper(T)
 {
     T array;

@@ -8,6 +8,13 @@ import engine.core, engine.util;
 //
 // Goal is to make calls to logging functions fast and low-cost, while still being able to support
 // multiple logging backends of varying speeds.
+//
+// Thread A gets the lock, uploads their lock data, then signals to the logging thread that there's work to do.
+// Thread B enters a busy loop to get the lock in the meantime.
+// Logging thread gets signal for work, pushes all logging data into sinks, and then releases the lock.
+// Thread B now gets the lock and the cycle repeats itself.
+//
+// Main thing of importance is: The logging thread is responsible for releasing the lock, not the thread that got the lock in the first place.
 
 alias LogQueue = BufferArray!LogMessage;
 

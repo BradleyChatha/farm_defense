@@ -16,17 +16,16 @@ dependency "bindbc-sdl" version="~>0.19.0"
 dependency "libasync" version="~>0.8.6"
 targetType "executable"
 targetPath "bin"
-libs "deps/win_x64/freetype" "deps/win_x64/lua51" platform="x86_64"
-libs "deps/win_x86/freetype" platform="x86"
-copyFiles "deps/COPYING_sdl2.txt" "deps/LICENSE_lodepng" "deps/FTL.TXT"
-copyFiles "deps/win_x64/*.dll" platform="x86_64"
-copyFiles "deps/win_x86/*.dll" platform="x86"
+libs "$PACKAGE_DIR/deps/win_x64/freetype" "$PACKAGE_DIR/deps/win_x64/lua51" "$PACKAGE_DIR/deps/win_x64/vma_no_assert" platform="x86_64"
+copyFiles "$PACKAGE_DIR/deps/COPYING_sdl2.txt" "$PACKAGE_DIR/deps/LICENSE_lodepng" "deps/FTL.TXT"
+copyFiles "$PACKAGE_DIR/deps/win_x64/*.dll" platform="x86_64"
+copyFiles "$PACKAGE_DIR/deps/win_x86/*.dll" platform="x86"
 versions "SDL_206" "FT_210" "LUA_51" "BindFT_Static" "BindLua_Static"
 configuration "default" {
 	targetType "executable"
 }
 configuration "library" {
-	targetType "executable"
+	targetType "library"
 	versions "Engine_Library"
 }
 configuration "debug-log" {

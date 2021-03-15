@@ -1,7 +1,7 @@
 module engine.gameplay.loop;
 
 import std.datetime, std.datetime.stopwatch : StdStopWatch = StopWatch, StopWatchAutoStart = AutoStart;
-import engine.core, engine.util, engine.gameplay;
+import engine.core, engine.util, engine.gameplay, engine.vulkan;
 
 private bool g_loopRunning;
 
@@ -27,6 +27,8 @@ void loopStart()
 
         while(lag >= MS_PER_FRAME)
         {
+            resourceGlobalOnFrame();
+            resourcePerThreadOnFrame();
             threadMainResetKeepAlive();
             // TODO: Fixed Step Update
             const dt = GameTime(MS_PER_FRAME.msecs);
@@ -35,8 +37,8 @@ void loopStart()
 
         if(logFlushTimer.peek >= TIME_BETWEEN_LOG_FLUSH)
         {
-            logFlushTimer.reset();
-            logFlush();
+            if(logFlush())
+                logFlushTimer.reset();
         }
 
         // TODO: Render

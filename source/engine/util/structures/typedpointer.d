@@ -1,5 +1,7 @@
 module engine.util.structures.typedpointer;
 
+import std.traits : isBuiltinType;
+
 struct TypedPointer
 {
     this(this){ assert(this._canPostBlit, "This TypedPointer cannot be copied."); }
@@ -43,8 +45,17 @@ struct TypedPointer
     }
 
     T as(T)()
+    if(is(T == struct) || isBuiltinType!T)
     {
         return *this.asPtr!T;
+    }
+
+    T as(T)()
+    if(is(T == class) || is(T == Interface))
+    {
+        assert(!this.isNull);
+        assert(typeid(T) == this._typeInfo, "Cannot cast "~this._typeInfo.toString()~" into "~T.stringof);
+        return cast(T)this._data;
     }
 }
 
@@ -59,6 +70,28 @@ TypedPointer copyToGcTypedPointer(T)(T value)
         true,
         typeid(T),
         ptr,
+        null
+    );
+}
+
+/// Uses TypedPointer as a wrapper around another pointer. Does not perform any memory management.
+TypedPointer copyToBorrowedTypedPointer(T)(T* value)
+{
+    return TypedPointer(
+        true,
+        typeid(T),
+        value,
+        null
+    );
+}
+
+TypedPointer copyToBorrowedTypedPointer(T)(T value)
+if(is(T == class) || is(T == interface))
+{
+    return TypedPointer(
+        true,
+        typeid(T),
+        cast(void*)value,
         null
     );
 }

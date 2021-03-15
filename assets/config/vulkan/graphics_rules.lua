@@ -45,9 +45,11 @@ local function getDeviceQueueFamiliesNonPresent(device)
 
     for index, family in ipairs(device.queueFamilies) do
         if bit.band(family.queueFlags, queueFlags.VK_QUEUE_GRAPHICS_BIT) and not device.queueFamilyIndicies.graphics then
-            device.queueFamilyIndicies.graphics = index
+            device.queueFamilyIndicies.graphics = index - 1
         elseif bit.band(family.queueFlags, queueFlags.VK_QUEUE_TRANSFER_BIT) and not device.queueFamilyIndicies.transfer then
-            device.queueFamilyIndicies.transfer = index
+            device.queueFamilyIndicies.transfer = index - 1
+        elseif bit.band(family.queueFlags, queueFlags.VK_QUEUE_COMPUTE_BIT) and not device.queueFamilyIndicies.compute then
+            device.queueFamilyIndicies.compute = index - 1
         end
     end
 
@@ -104,6 +106,15 @@ local function scoreDevice(device, wantedExtensions)
         Logger.logDebug("Device uses the graphics family as the transfer family.");
         device.score = device.score + 1
     end
+    if Config.getBoolean(g_config, "requireCompute") then
+        if not device.queueFamilyIndicies.compute then
+            Logger.logDebug("Device does not contain a compute queue, which is required by this application.")
+            device.score = -1
+        else
+            Logger.logDebug("Device contains a compute queue")
+            device.score = device.score + 1
+        end
+    end
 end
 
 --[[
@@ -130,7 +141,7 @@ function funcs.determineCoreVulkanDevice(devices, wantedExtensions)
     end
 
     local selectedDevice = devices[highScoreIndex]
-    Logger.logTrace("Device "..selectedDevice.props.deviceName.." was selected a primary graphics device.");
+    Logger.logTrace("Device "..selectedDevice.props.deviceName.." was selected as primary graphics device.");
     return {
         deviceIndex         = highScoreIndex - 1, -- This is going back to D, so make the index 0-based.
         enabledExtensions   = selectedDevice.extensionInfo.enabled,

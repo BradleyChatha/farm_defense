@@ -36,3 +36,7 @@ bool threadIsMainResponding()
 
     return false;
 }
+
+void threadJoinVulkanThreads()
+{
+}

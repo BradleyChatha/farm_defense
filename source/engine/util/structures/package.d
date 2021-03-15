@@ -7,4 +7,5 @@ public import
     engine.util.structures.typedpointer,
     engine.util.structures.objectpool,
     engine.util.structures.growthrange,
-    engine.util.structures.eventbus;
+    engine.util.structures.eventbus,
+    engine.util.structures.mpscboundedqueue;

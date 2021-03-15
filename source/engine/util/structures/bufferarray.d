@@ -1,6 +1,7 @@
 module engine.util.structures.bufferarray;
 
-import engine.util.structures.growthrange;
+import std.traits;
+import engine.util.structures.growthrange, engine.core.interfaces;
 import stdx.allocator, stdx.allocator.mallocator;
 
 /++
@@ -16,6 +17,8 @@ struct BufferArray(
     Growth = DefaultGrowthRange
 )
 {
+    mixin IDisposableBoilerplate;
+
     @disable this(this) {}
 
     private
@@ -42,6 +45,12 @@ struct BufferArray(
     }
 
     ~this()
+    {
+        if(!this.isDisposed)
+            this.dispose();
+    }
+
+    private void disposeImpl()
     {
         if(this._array !is null)
             this._alloc.dispose(this._array);
@@ -146,9 +155,16 @@ struct BufferArray(
         assert(end <= this._length, "Index out of bounds.");
 
         const count = (end - start);
-        assert(values.length >= count, "Not enough values.");
+        assert(values.length == count, "Not enough values.");
 
-        this._array[start..end] = values[0..count];
+        const valuePtrInt = cast(size_t)values.ptr;
+        const arrayPtrInt = cast(size_t)this._array.ptr;
+        assert(
+            !(valuePtrInt >= arrayPtrInt && valuePtrInt <= arrayPtrInt + (values.length * T.sizeof)),
+            "Overlapping memory ranges, D no likey. You'll have to perform a 1-by-1 copy."
+        );
+
+        this._array[start..end] = values[0..$];
     }
 
     ref T opIndex()(size_t index)
@@ -169,10 +185,17 @@ struct BufferArray(
     }
 
     void opOpAssign(string op, T2)(T2 right)
-    if(op == "~")
+    if(op == "~" && !isArray!T2)
     {
         this.length = this.length + 1;
         this._array[this.length - 1] = right;
+    }
+
+    void opOpAssign(string op, T2)(T2[] right)
+    if(op == "~")
+    {
+        this.length = this.length + right.length;
+        this._array[this.length - right.length..this.length] = right[0..$];
     }
 
     bool opBinary(string op, T2)(T2 right)
