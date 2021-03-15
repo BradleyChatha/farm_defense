@@ -190,9 +190,6 @@ final class TextureStitchAction : IPipelineAction
                        new RawImageAsset(actionContext.buffer.value.mappedSlice.dup, OUTPUT_FORMAT, actionContext.size, alias_),
                        null
                    );
-
-                   import imagefmt;
-                   write_image("test.png", actionContext.size.x, actionContext.size.y, actionContext.buffer.value.mappedSlice, 4);
                });
     }
 }
