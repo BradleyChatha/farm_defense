@@ -5,5 +5,5 @@ import common, interfaces;
 
 interface IAssetExporter
 {
-    void exportAsset(IAsset asset, SDLNode node, PathResolver buildDirResolver);
+    void exportAsset(IAsset asset, SDLNode node, PathResolver buildDirResolver, PackageFileList files);
 }

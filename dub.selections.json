@@ -19,7 +19,7 @@
 		"sdlang-d": "0.10.6",
 		"silly": "1.0.2",
 		"stdx-allocator": "3.1.0-beta.2",
-		"taggedalgebraic": "0.11.19",
+		"taggedalgebraic": "0.11.20",
 		"unit-threaded": "1.0.11"
 	}
 }

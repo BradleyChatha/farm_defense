@@ -1,6 +1,6 @@
 module interfaces.iasset;
 
-import engine.util;
+import engine.util, engine.graphics;
 import common;
 
 interface IAsset
@@ -22,4 +22,10 @@ interface IRawImageAsset : IRawAsset
 
     @property
     vec2u size() const;
+}
+
+interface ITextureContainerAsset : IRawImageAsset
+{
+    @property
+    TextureFrame[] frames();
 }

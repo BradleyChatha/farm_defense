@@ -3,7 +3,7 @@ module implementations.rawimageasset;
 import engine.util;
 import common, interfaces;
 
-final class RawImageAsset : IRawImageAsset
+class RawImageAsset : IRawImageAsset
 {
     private ubyte[] _data;
     private TextureFormats _format;

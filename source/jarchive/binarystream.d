@@ -3,6 +3,8 @@ module jarchive.binarystream;
 import core.stdc.stdio, core.stdc.config;
 import jarchive;
 
+public import core.stdc.config : c_long;
+
 @nogc nothrow:
 
 //////// START TYPES ////////
@@ -113,7 +115,7 @@ JarcBinaryStream* jarcBinaryStream_openNewMemory(JarcReadWrite readWrite)
     return alloc!JarcBinaryStream(null, readWrite, true);
 }
 
-JarcBinaryStream* jarcBinaryStream_openFileByNamez(JarcReadWrite readWrite, scope const ubyte* name)
+JarcBinaryStream* jarcBinaryStream_openFileByNamez(JarcReadWrite readWrite, scope const ubyte* name, bool truncate = true)
 {
     // Taken from std.file. It's a private method unfortunately.
     bool existsImpl(const(char)* namez) @trusted nothrow @nogc
@@ -133,7 +135,7 @@ JarcBinaryStream* jarcBinaryStream_openFileByNamez(JarcReadWrite readWrite, scop
             static assert(0);
     }
     const fileExists = existsImpl(cast(char*)name);
-    string fileMode  = (fileExists) ? "r+" : "w+";
+    string fileMode  = (truncate && !(readWrite & JarcReadWrite.read)) ? "w" : (fileExists) ? "r+" : "w+";
 
     FILE* file = fopen(cast(char*)name, fileMode.ptr); // Literals always have a null terminator.
     if(file is null)
@@ -146,7 +148,7 @@ JarcBinaryStream* jarcBinaryStream_openFileByNamez(JarcReadWrite readWrite, scop
     return stream;
 }
 
-JarcBinaryStream* jarcBinaryStream_openFileByName(JarcReadWrite readWrite, scope const ubyte* name_, size_t length)
+JarcBinaryStream* jarcBinaryStream_openFileByName(JarcReadWrite readWrite, scope const ubyte* name_, size_t length, bool truncate = true)
 {
     scope name = allocArray!ubyte(length + 1);
     if(name is null)
@@ -155,7 +157,7 @@ JarcBinaryStream* jarcBinaryStream_openFileByName(JarcReadWrite readWrite, scope
     name[0..$-1] = name_[0..length];
     name[$-1] = '\0';
 
-    scope stream = jarcBinaryStream_openFileByNamez(readWrite, name.ptr);
+    scope stream = jarcBinaryStream_openFileByNamez(readWrite, name.ptr, truncate);
     free(name);
 
     return stream;

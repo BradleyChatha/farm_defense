@@ -6,4 +6,5 @@ public import
     implementations.totextureaction,
     implementations.rawimageasset,
     implementations.texturestitchaction,
-    implementations.textureexporter;
+    implementations.textureexporter,
+    implementations.rawtexturecontainerasset;

@@ -133,6 +133,7 @@ final class PackagecCore
 
         this._assetGraph.enforceGraphIsValid();
         auto nodes = this._assetGraph.topSort();
+        auto fileList = new PackageFileList(this._buildDirResolver.root);
 
         foreach(node; nodes)
         {
@@ -154,8 +155,12 @@ final class PackagecCore
             node.value = info;
 
             if(info.exporter !is null)
-                info.exporter.exportAsset(info.asset, info.exporterNode, this._buildDirResolver);
+                info.exporter.exportAsset(info.asset, info.exporterNode, this._buildDirResolver, fileList);
         }
+
+        import std.file : fwrite = write;
+        const lstFile = this._buildDirResolver.resolve("package.lst");
+        fwrite(lstFile, fileList.exportToBinary());
     }
 
     string assetGraphToString()

@@ -3,9 +3,9 @@ module implementations.texturestitchaction;
 import std.typecons : Nullable;
 import std.exception : enforce;
 import common, interfaces, implementations;
-import engine.vulkan, engine.util;
+import engine.vulkan, engine.util, engine.graphics;
 
-private enum MAX_IMAGE_DIMENSION = 16384; // Most widely supported max texture size throughout all Vulkan devices.
+private enum MAX_IMAGE_DIMENSION = 16_384; // Most widely supported max texture size throughout all Vulkan devices.
 
 private struct TextureStitchInput
 {
@@ -19,6 +19,7 @@ private struct TextureStitchContext
 {
     VObjectRef!VBuffer buffer;
     vec2u size;
+    TextureFrame[] frames;
 }
 
 final class TextureStitchAction : IPipelineAction
@@ -109,9 +110,15 @@ final class TextureStitchAction : IPipelineAction
                        0
                     );
 
-                   // Blit all the images into our mega image.
+                   // Blit all the images into our mega image, and also build up the texture frame array.
+                   TextureFrame[] frames;
                    foreach(texture; input)
                    {
+                       frames ~= TextureFrame(
+                           texture.asset.name,
+                           rectangleu(texture.stitchOffset.x, texture.stitchOffset.y, texture.asset.size.x, texture.asset.size.y)
+                       );
+
                        texture.buffer.value.uploadMapped(texture.asset.bytes, 0);
                        graphics.barrier(
                            VBufferBarrier()
@@ -169,7 +176,8 @@ final class TextureStitchAction : IPipelineAction
 
                    ctx.pushUserContext(copyToGcTypedPointer(TextureStitchContext(
                        buffer,
-                       textureSize
+                       textureSize,
+                       frames
                    )));
                })
                .submit(VQueueType.graphics, 0)
@@ -187,7 +195,7 @@ final class TextureStitchAction : IPipelineAction
 
                    import implementations;
                    pipelineContext.setAsset(
-                       new RawImageAsset(actionContext.buffer.value.mappedSlice.dup, OUTPUT_FORMAT, actionContext.size, alias_),
+                       new RawTextureContainerAsset(actionContext.buffer.value.mappedSlice.dup, OUTPUT_FORMAT, actionContext.size, alias_, actionContext.frames),
                        null
                    );
                });
