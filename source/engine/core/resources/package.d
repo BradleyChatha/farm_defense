@@ -9,4 +9,6 @@ public import
     engine.core.resources.iresourceloader,
     engine.core.resources.resourceloadinfo,
     engine.core.resources.luainterface,
-    engine.core.resources.globals;
+    engine.core.resources.globals,
+    engine.core.resources.loaders,
+    engine.core.resources.loadinfo;

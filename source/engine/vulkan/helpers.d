@@ -60,3 +60,20 @@ auto vkGetArrayJAST(alias Func, Args...)(Args args)
 
     return data;
 }
+
+@safe @nogc
+uint bytesPerPixel(VkFormat format) nothrow pure
+{
+    import std.exception : assumeWontThrow;
+    import std.stdio : writeln;
+
+    switch(format)
+    {
+        case VK_FORMAT_R8G8B8A8_SINT:
+        case VK_FORMAT_R8G8B8A8_UINT:
+            return 4;
+        default: 
+            debug writeln(format).assumeWontThrow;
+            assert(false);
+    }
+}

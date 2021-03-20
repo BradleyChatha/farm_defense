@@ -29,6 +29,7 @@ else
         init_03_load_config();
         init_06_init_resources();
         init_09_init_graphics();
+        init_12_load_packages();
         profileFlush();
         logForceFlush();
         loopStart();

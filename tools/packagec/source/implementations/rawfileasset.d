@@ -22,6 +22,12 @@ final class RawFileAsset : IRawAsset
     }
 
     @property
+    override protected void name(string value)
+    {
+        this._name = value;
+    }
+
+    @property
     override ubyte[] bytes()
     {
         import std.exception : enforce;

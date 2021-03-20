@@ -7,8 +7,8 @@ import std.meta : AliasSeq;
 import stdx.allocator, stdx.allocator.building_blocks;
 import engine.core.logging, engine.core.threading, engine.vulkan, engine.vulkan.types._vkhandlewrapper;
 
-version = VObjectPoolDebug;
-version = VFreeDebug;
+// version = VObjectPoolDebug;
+// version = VFreeDebug;
 
 /++ DATA TYPES ++/
 private enum VRefCountedGenericSize = size_t.sizeof * 2;

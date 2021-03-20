@@ -48,6 +48,6 @@ final class PipelineBuilder
 
     Pipeline build()
     {
-        return new Pipeline(this._core, this._imports, this._actions, this._export);
+        return new Pipeline(this._core, this._imports, this._actions, this._export, this._name);
     }
 }

@@ -25,6 +25,12 @@ class RawImageAsset : IRawImageAsset
     }
 
     @property
+    override protected void name(string value)
+    {
+        this._name = value;
+    }
+
+    @property
     override ubyte[] bytes()
     {
         return this._data;

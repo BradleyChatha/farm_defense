@@ -127,8 +127,6 @@ final class PackagecCore
 
     void executePipelines()
     {
-        import engine.vulkan;
-
         logfInfo("Executing pipelines for loaded packages.");
 
         this._assetGraph.enforceGraphIsValid();

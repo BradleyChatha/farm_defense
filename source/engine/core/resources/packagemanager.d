@@ -71,14 +71,14 @@ final class PackageManager
 
     Result!void loadFromFile(string fileName, string typeName)
     {
-        import std.path : absolutePath;
+        import std.path : absolutePath, buildNormalizedPath;
         import std.file : exists;
 
         auto packagePtr = (typeName in this._packageLoadersByTypeName);
         if(packagePtr is null)
             return Result!void.failure("No loader for package type: "~typeName);
 
-        auto path = fileName.absolutePath;
+        auto path = fileName.absolutePath.buildNormalizedPath;
         if(!path.exists && fileName != "UNITTEST")
             return Result!void.failure("No file exists at path: "~path);
 

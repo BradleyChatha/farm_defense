@@ -5,6 +5,13 @@ import jarchive;
 
 public import core.stdc.config : c_long;
 
+void CHECK_JARC_EX(JarcResult result)
+{
+    import std.conv;
+    if(result != JARC_OK)
+        throw new Exception("Jarchive exception: "~result.to!string);
+}
+
 @nogc nothrow:
 
 //////// START TYPES ////////
@@ -135,7 +142,7 @@ JarcBinaryStream* jarcBinaryStream_openFileByNamez(JarcReadWrite readWrite, scop
             static assert(0);
     }
     const fileExists = existsImpl(cast(char*)name);
-    string fileMode  = (truncate && !(readWrite & JarcReadWrite.read)) ? "w" : (fileExists) ? "r+" : "w+";
+    string fileMode  = (truncate && !(readWrite & JarcReadWrite.read)) ? "wb" : (fileExists) ? "rb+" : "wb+";
 
     FILE* file = fopen(cast(char*)name, fileMode.ptr); // Literals always have a null terminator.
     if(file is null)

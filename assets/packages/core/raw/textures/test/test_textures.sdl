@@ -9,7 +9,6 @@ define "test" {
     
     output:texture {
         raw "test_stitch.png"
-        compiled "test_stitch.tex"
     }
     export "result"
 }
@@ -25,8 +24,24 @@ define "test2" {
     
     output:texture {
         raw "test_stitch2.png"
-        compiled "test_stitch2.tex"
     }
+    export "result"
+}
+
+define "loadable_test" {
+    use:file "1.png"
+    use:asset "test_image_2"
+
+    pipeline {
+        to:texture "1.png" format="rgba_u8" alias="image1"
+        texture:stitch "image1" "test_image_2" alias="result"
+    }
+
+    output:texture {
+        raw "loadable_test.png"
+        compiled "loadable_test.tex"
+    }
+
     export "result"
 }
 

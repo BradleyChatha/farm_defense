@@ -28,15 +28,15 @@ private auto DEFAULT_UPLOAD_TEXTURE_PIPELINE =
             VK_SHARING_MODE_EXCLUSIVE, 
             VK_IMAGE_LAYOUT_UNDEFINED, 
             0, 
-            VMA_MEMORY_USAGE_GPU_ONLY
+            VmaMemoryUsage.VMA_MEMORY_USAGE_GPU_ONLY
         );
 
         uploadContext.stagingBuffer = createBuffer(
             uploadContext.outputImage.value.memoryReqs.size,
             VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
             VK_SHARING_MODE_EXCLUSIVE,
-            VMA_ALLOCATION_CREATE_MAPPED_BIT,
-            VMA_MEMORY_USAGE_CPU_TO_GPU
+            VmaAllocationCreateFlagBits.VMA_ALLOCATION_CREATE_MAPPED_BIT,
+            VmaMemoryUsage.VMA_MEMORY_USAGE_CPU_TO_GPU
         );
 
         uploadContext.stagingBuffer.value.uploadMapped(uploadContext.bytes, 0);
@@ -48,6 +48,14 @@ private auto DEFAULT_UPLOAD_TEXTURE_PIPELINE =
             .producerAccess(VK_ACCESS_TRANSFER_WRITE_BIT)
             .consumerStage(VK_PIPELINE_STAGE_TRANSFER_BIT)
             .consumerAccess(VK_ACCESS_TRANSFER_READ_BIT)
+        );
+        uploadContext.outputImage.value.transition(
+            graphics,
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            VK_PIPELINE_STAGE_TRANSFER_BIT,
+            VK_ACCESS_TRANSFER_WRITE_BIT,
+            VK_PIPELINE_STAGE_TRANSFER_BIT,
+            VK_ACCESS_TRANSFER_READ_BIT
         );
         uploadContext.outputImage.value.upload2D(
             graphics,
@@ -115,10 +123,10 @@ struct TextureContainerBuilder
         return this;
     }
 
-    TextureContainerBuilder defineFrame(string name, const TextureFrame frame)
+    TextureContainerBuilder defineFrame(const TextureFrame frame)
     {
-        enforce((name in this._framesByName) is null, "Frame '"~name~"' is already defined!");
-        this._framesByName[name] = frame;
+        enforce((frame.name in this._framesByName) is null, "Frame '"~frame.name~"' is already defined!");
+        this._framesByName[frame.name] = frame;
         return this;
     }
 

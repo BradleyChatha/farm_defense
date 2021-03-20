@@ -26,13 +26,15 @@ final class Pipeline
         PipelineAction[] _actions;
         SubmitPipeline _pipeline;
         string _exportName;
+        string _definitionName;
     }
 
-    package this(PackagecCore core, PipelineImport[] imports, PipelineAction[] actions, string exportName)
+    package this(PackagecCore core, PipelineImport[] imports, PipelineAction[] actions, string exportName, string defineName)
     {
         this._core = core;
         this._imports = imports;
         this._exportName = exportName;
+        this._definitionName = defineName;
         this._actions = actions;
         
         auto builder = new SubmitPipelineBuilder();
@@ -64,6 +66,8 @@ final class Pipeline
         submitExecute(SubmitPipelineExecutionType.runToEnd, execution);
 
         context.cleanup();
-        return context.getAsset(this._exportName);
+        auto asset = context.getAsset(this._exportName);
+        asset.changeName(this._definitionName);
+        return asset;
     }
 }
