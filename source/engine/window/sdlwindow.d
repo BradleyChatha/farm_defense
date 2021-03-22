@@ -3,6 +3,11 @@ module engine.window.sdlwindow;
 import bindbc.sdl;
 import engine.core, engine.util;
 
+final class CoreWindowEventMessage : CoreMessage
+{
+    SDL_Event event;
+}
+
 final class Window : IDisposable
 {
     mixin IDisposableBoilerplate;
@@ -35,6 +40,24 @@ final class Window : IDisposable
     private void disposeImpl()
     {
         SDL_DestroyWindow(this._handle);
+    }
+
+    void handleEvents()
+    {
+        // We only need one instance, no point angering the GC a million times per frame.
+        static CoreWindowEventMessage messageInstance;
+        if(messageInstance is null)
+        {
+            logfTrace("Creating messageInstance");
+            messageInstance = new CoreWindowEventMessage();
+        }
+
+        SDL_Event event;
+        while(SDL_PollEvent(&event))
+        {
+            messageInstance.event = event;
+            g_coreEventBus.emit(CoreEventChannel.window, CoreEventType.windowEvent, messageInstance);
+        }
     }
 
     @property

@@ -239,6 +239,7 @@ private vec2u calculateStitchOffsets(ref TextureStitchInput[] input, uint dimens
         return smallestBlock;
     }
 
+    uint furthestX;
     foreach(ref texture; input)
     {
         auto block = findSmallestValidBlock(texture.asset.size);
@@ -259,8 +260,10 @@ private vec2u calculateStitchOffsets(ref TextureStitchInput[] input, uint dimens
 
         texture.stitchOffset = block.get.min;
         block.get.min.x += texture.asset.size.x;
-        if(block.get.min.x > 0)
+        if(block.get.width > 0)
             availableBlocks ~= block.get;
+        if(block.get.min.x > furthestX)
+            furthestX = block.get.min.x;
 
         availableBlocks ~= rectangleu(
             texture.stitchOffset.x,
@@ -270,5 +273,6 @@ private vec2u calculateStitchOffsets(ref TextureStitchInput[] input, uint dimens
         );
     }
 
+    finalTextureSize.x = furthestX;
     return finalTextureSize;
 }

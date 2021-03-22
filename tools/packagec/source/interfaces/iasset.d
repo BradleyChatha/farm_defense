@@ -38,3 +38,25 @@ interface ITextureContainerAsset : IRawImageAsset
     @property
     TextureFrame[] frames();
 }
+
+// bytes are compiled SPIRV
+interface IRawShaderModuleAsset : IRawAsset
+{
+    @property
+    SpirvShaderModuleType type();
+
+    @property
+    SpirvReflection reflection();
+}
+
+interface IMaterialAsset : IAsset
+{
+    @property
+    IRawShaderModuleAsset vertexShader();
+
+    @property
+    IRawShaderModuleAsset fragmentShader();
+
+    @property
+    MaterialRenderer renderer();
+}

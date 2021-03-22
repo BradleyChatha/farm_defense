@@ -11,4 +11,5 @@ public import
     common.pipelinebuilder,
     common.path,
     common.texture,
-    common.packagefilelist;
+    common.packagefilelist,
+    common.spirv;

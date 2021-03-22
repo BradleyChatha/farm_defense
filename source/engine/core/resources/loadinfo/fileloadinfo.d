@@ -6,3 +6,4 @@ struct FileLoadInfo(string identifier)
 }
 
 alias TexFileLoadInfo = FileLoadInfo!"tex";
+alias MatFileLoadInfo = FileLoadInfo!"mat";

@@ -1,0 +1,34 @@
+// Shaders' code are currently in "this is what I'm aiming for" state.
+// Not 100% sure it'll work, but we'll seeeeeeeeeeeeeeeeeeeeeee.
+
+define "quad_renderer:general:vert" {
+    use:file "vert/quad_renderer_general.vert" alias="code"
+
+    pipeline {
+        to:shader_module "code" stage="vert" alias="result"
+    }
+
+    export "result"
+}
+
+define "quad_renderer:general:frag" {
+    use:file "frag/quad_renderer_general.frag" alias="code"
+
+    pipeline {
+        to:shader_module "code" stage="frag" alias="result"
+    }
+
+    export "result"
+}
+
+define "quad_renderer:general" {
+    use:asset "quad_renderer:general:frag" alias="frag"
+    use:asset "quad_renderer:general:vert" alias="vert"
+
+    pipeline {
+        to:material renderer="quad" vert="vert" frag="frag" alias="shader"
+    }
+
+    output:material "quad_general.mat"
+    export "shader"
+}

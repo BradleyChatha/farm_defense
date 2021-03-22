@@ -134,6 +134,9 @@ final class TexFileLoadInfoResourceLoader : IResourceLoader
 
     private string processFrameBlock(ref TextureContainerBuilder builder, const ubyte[] block)
     {
+        if(block.length == 0)
+            return null;
+
         auto stream = jarcBinaryStream_openBorrowedMemory(JarcReadWrite.read, cast(ubyte*)block.ptr, block.length);
         scope(exit) jarcBinaryStream_free(stream);
 

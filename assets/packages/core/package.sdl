@@ -1,4 +1,5 @@
 name "core"
 description "description"
 
-include "./raw/textures/test/test_textures.sdl"
+include "./textures/test/test_textures.sdl"
+include "./shaders/shaders.sdl"

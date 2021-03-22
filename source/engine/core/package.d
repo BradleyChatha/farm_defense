@@ -7,4 +7,5 @@ public import
     engine.core.logging,
     engine.core.threading,
     engine.core.profile,
-    engine.core.interfaces;
+    engine.core.interfaces,
+    engine.core.events;

@@ -8,7 +8,8 @@ import engine.core, engine.graphics, engine.util;
 private enum LstFileType : ubyte
 {
     ERROR,
-    texture
+    texture,
+    material
 }
 
 private struct LstFileEntry
@@ -46,6 +47,7 @@ final class LstPackageLoader : IPackageLoader
         {
             case ERROR: return typeof(return).failure("Type of file is ERROR: "~entry.absolutePath);
             case texture: return typeof(return).ok(ResourceLoadInfo(TexFileLoadInfo(entry.absolutePath)));
+            case material: return typeof(return).ok(ResourceLoadInfo(MatFileLoadInfo(entry.absolutePath)));
         }
     }
 

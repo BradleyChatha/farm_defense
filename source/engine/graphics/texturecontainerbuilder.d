@@ -10,6 +10,11 @@ private enum ContainerSourceType
     bytes
 }
 
+private void resourceFreeProxy(VObjectRef!VBuffer buffer)
+{
+    resourceFree(buffer);
+}
+
 // Create a staging buffer; upload to staging buffer; transfer from buffer into image; done.
 // By default we'll assume that the texture is used for colour attachments, because that's going to be the most common case.
 private auto DEFAULT_UPLOAD_TEXTURE_PIPELINE = 
@@ -77,7 +82,8 @@ private auto DEFAULT_UPLOAD_TEXTURE_PIPELINE =
     .waitOnFence!0
     .then((SubmitPipelineContext* ctx)
     {
-        resourceFree(ctx.userContext.as!TextureContainerUploadPipelineContext.stagingBuffer);
+        resourceFreeProxy(ctx.userContext.as!TextureContainerUploadPipelineContext.stagingBuffer);
+        //resourceFree(ctx.userContext.as!TextureContainerUploadPipelineContext.stagingBuffer);
     })
     .build();
 

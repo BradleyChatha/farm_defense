@@ -38,6 +38,10 @@ bool logFlush()
         return true;
     }
 
+    // No point going for a lock if we have nothing to write.
+    if(g_logLocalQueue.length == 0)
+        return true;
+
     if(!cas(&g_logQueueLock, false, true))
     {
         logDebugWritefln("Logging thread is busy.");

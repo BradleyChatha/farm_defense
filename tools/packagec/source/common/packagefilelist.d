@@ -16,7 +16,8 @@ private struct PackageFile
 enum PackageFileType : ubyte
 {
     ERROR,
-    texture
+    texture,
+    material
 }
 
 final class PackageFileList

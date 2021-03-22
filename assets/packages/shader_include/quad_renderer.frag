@@ -1,0 +1,1 @@
+layout(binding = 0, set = 1) uniform sampler2D[1024] textures;

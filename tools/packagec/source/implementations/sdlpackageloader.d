@@ -77,7 +77,7 @@ final class SdlPackageLoader : IPackageLoader
                 {
                     const depName = child.values[0].textValue;
                     graph.addDependency(assetName, depName);
-                    pipelineBuilder.imports(depName, depName);
+                    pipelineBuilder.imports(depName, child.getAttribute("alias", SDLValue(depName)).textValue);
                     continue;
                 }
 

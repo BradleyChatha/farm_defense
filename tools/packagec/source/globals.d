@@ -13,8 +13,11 @@ PackagecCore getCore()
         builder.withLoader(".sdl", new SdlPackageLoader())
                .withImporter("file", new RawFileAssetImporter())
                .withExporter("texture", new TextureExporter())
+               .withExporter("material", new MaterialExporter())
                .withAction("to:texture", new ToTextureAction())
-               .withAction("texture:stitch", new TextureStitchAction());
+               .withAction("texture:stitch", new TextureStitchAction())
+               .withAction("to:shader_module", new ToShaderModuleAction())
+               .withAction("to:material", new ToMaterialAction());
 
         g_core = builder.build();
     }
